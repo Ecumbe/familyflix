@@ -1,233 +1,96 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FamilyFlix — Acceso</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
-
-    .login-page {
-      position: relative; z-index: 1;
-      width: 100%; max-width: 420px;
-      padding: 20px;
-      animation: fadeUp 0.7s cubic-bezier(0.4,0,0.2,1) both;
-    }
-    @keyframes fadeUp {
-      from { opacity:0; transform: translateY(32px); }
-      to   { opacity:1; transform: translateY(0); }
-    }
-
-    .logo-wrap { text-align: center; margin-bottom: 36px; }
-    .logo-icon {
-      display: inline-flex; align-items: center; justify-content: center;
-      width: 80px; height: 80px; border-radius: 24px;
-      background: var(--glass-bg);
-      backdrop-filter: var(--blur);
-      border: 1px solid var(--glass-border);
-      font-size: 36px; margin-bottom: 16px;
-      box-shadow: var(--glass-shadow);
-      animation: logoFloat 4s ease-in-out infinite;
-    }
-    @keyframes logoFloat {
-      0%,100% { transform: translateY(0); }
-      50% { transform: translateY(-6px); }
-    }
-    .logo-title {
-      font-family: var(--font-display);
-      font-size: 46px; font-weight: 700;
-      color: var(--text-1); letter-spacing: -1px;
-      line-height: 1;
-    }
-    .logo-title em { color: var(--accent); font-style: normal; }
-    .logo-sub {
-      font-size: 13px; color: var(--text-3);
-      letter-spacing: 2.5px; text-transform: uppercase;
-      margin-top: 8px;
-    }
-
-    .login-card {
-      background: var(--glass-bg);
-      backdrop-filter: var(--blur-strong);
-      -webkit-backdrop-filter: var(--blur-strong);
-      border: 1px solid var(--glass-border-strong);
-      border-radius: var(--radius-xl);
-      padding: 36px 32px;
-      box-shadow: var(--glass-shadow);
-    }
-
-    .login-card h2 {
-      font-family: var(--font-display);
-      font-size: 26px; font-weight: 700;
-      margin-bottom: 4px;
-    }
-    .login-card .sub {
-      font-size: 13px; color: var(--text-3); margin-bottom: 28px;
-    }
-
-    /* Perfiles */
-    .profiles { display: flex; gap: 10px; margin-bottom: 28px; }
-    .profile-btn {
-      flex: 1; display: flex; flex-direction: column; align-items: center;
-      gap: 8px; padding: 14px 8px;
-      background: var(--glass-bg);
-      backdrop-filter: var(--blur);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      cursor: pointer; color: var(--text-3);
-      font-family: var(--font-body); font-size: 12px; font-weight: 500;
-      transition: all var(--transition);
-    }
-    .profile-btn:hover {
-      border-color: rgba(200,162,255,0.3);
-      color: var(--text-2);
-    }
-    .profile-btn.active {
-      background: rgba(200,162,255,0.12);
-      border-color: rgba(200,162,255,0.5);
-      color: var(--accent);
-    }
-    .profile-avatar {
-      width: 48px; height: 48px; border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      background: var(--glass-bg);
-      border: 1px solid var(--glass-border);
-      transition: all var(--transition);
-    }
-    .profile-btn.active .profile-avatar {
-      background: rgba(200,162,255,0.15);
-      border-color: rgba(200,162,255,0.4);
-    }
-
-    .error-box {
-      display: none;
-      background: rgba(255,95,109,0.1);
-      border: 1px solid rgba(255,95,109,0.25);
-      color: var(--danger); border-radius: var(--radius-sm);
-      padding: 10px 14px; font-size: 13px; margin-bottom: 16px;
-    }
-    .error-box.show { display: block; }
-
-    .login-footer {
-      text-align: center; margin-top: 20px;
-      font-size: 12px; color: var(--text-3);
-    }
-    .login-footer strong { color: var(--accent); }
-
-    .theme-row {
-      display: flex; align-items: center; justify-content: center;
-      gap: 10px; margin-top: 24px; font-size: 12px; color: var(--text-3);
-    }
+    body{display:flex;align-items:center;justify-content:center;min-height:100vh}
+    .login-page{position:relative;z-index:1;width:100%;max-width:420px;padding:20px;animation:fadeUp .7s var(--ease) both}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+    .logo-wrap{text-align:center;margin-bottom:36px}
+    .logo-icon{display:inline-flex;align-items:center;justify-content:center;width:84px;height:84px;border-radius:26px;background:var(--g-bg);backdrop-filter:var(--blur);border:1px solid var(--g-border);font-size:38px;margin-bottom:16px;box-shadow:var(--g-shadow);animation:iconFloat 4s ease-in-out infinite}
+    @keyframes iconFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+    .logo-title{font-family:var(--font-display);font-size:50px;font-weight:700;line-height:1;letter-spacing:-1px}
+    .logo-title em{color:var(--accent);font-style:normal}
+    .logo-sub{font-size:12px;color:var(--text-3);letter-spacing:3px;text-transform:uppercase;margin-top:8px}
+    .login-card{background:var(--g-bg);backdrop-filter:var(--blur-s);-webkit-backdrop-filter:var(--blur-s);border:1px solid var(--g-border-s);border-radius:var(--r-xl);padding:36px 32px;box-shadow:var(--g-shadow)}
+    .login-card h2{font-family:var(--font-display);font-size:28px;font-weight:700;margin-bottom:4px}
+    .login-card .sub{font-size:13px;color:var(--text-3);margin-bottom:28px}
+    .profiles{display:flex;gap:10px;margin-bottom:28px}
+    .profile-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 8px;background:var(--g-bg);backdrop-filter:var(--blur);border:1px solid var(--g-border);border-radius:var(--r-md);cursor:pointer;color:var(--text-3);font-family:var(--font-body);font-size:12px;font-weight:500;transition:all var(--t) var(--ease)}
+    .profile-btn:hover{border-color:rgba(179,136,255,.35);color:var(--text-2)}
+    .profile-btn.active{background:rgba(179,136,255,.12);border-color:rgba(179,136,255,.5);color:var(--accent)}
+    .profile-avatar{width:50px;height:50px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--g-bg);border:1px solid var(--g-border);transition:all var(--t)}
+    .profile-btn.active .profile-avatar{background:rgba(179,136,255,.15);border-color:rgba(179,136,255,.4)}
+    .error-box{display:none;background:rgba(255,82,82,.1);border:1px solid rgba(255,82,82,.25);color:var(--danger);border-radius:var(--r-sm);padding:10px 14px;font-size:13px;margin-bottom:16px}
+    .error-box.show{display:block}
+    .form-group{margin-bottom:18px}
+    label{display:block;font-size:11px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:8px}
+    .login-footer{text-align:center;margin-top:20px;font-size:12px;color:var(--text-3)}
+    .login-footer strong{color:var(--accent)}
+    .theme-row{display:flex;align-items:center;justify-content:center;gap:10px;margin-top:24px;font-size:12px;color:var(--text-3)}
   </style>
 </head>
 <body>
-<div class="bg-orbs">
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-</div>
-
+<div class="bg-orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 <div class="login-page">
   <div class="logo-wrap">
     <div class="logo-icon">🎬</div>
     <div class="logo-title">Family<em>Flix</em></div>
     <div class="logo-sub">Tus recuerdos, siempre contigo</div>
   </div>
-
   <div class="login-card">
     <h2>¡Bienvenido!</h2>
-    <p class="sub">Selecciona tu perfil para continuar</p>
-
+    <p class="sub">Selecciona tu perfil y entra</p>
     <div class="profiles">
-      <button class="profile-btn active" onclick="selectProfile(this,'admin')" data-role="admin">
-        <div class="profile-avatar">👑</div>
-        <span>Admin</span>
-      </button>
-      <button class="profile-btn" onclick="selectProfile(this,'viewer')" data-role="viewer">
-        <div class="profile-avatar">👨‍👩‍👧</div>
-        <span>Familia</span>
-      </button>
-      <button class="profile-btn" onclick="selectProfile(this,'guest')" data-role="guest">
-        <div class="profile-avatar">👤</div>
-        <span>Invitado</span>
-      </button>
+      <button class="profile-btn active" onclick="selectProfile(this,'admin')"><div class="profile-avatar">👑</div><span>Admin</span></button>
+      <button class="profile-btn" onclick="selectProfile(this,'viewer')"><div class="profile-avatar">👨‍👩‍👧</div><span>Familia</span></button>
+      <button class="profile-btn" onclick="selectProfile(this,'guest')"><div class="profile-avatar">👤</div><span>Invitado</span></button>
     </div>
-
     <div class="error-box" id="errBox"></div>
-
     <div class="form-group">
       <label>Contraseña</label>
-      <input class="input" type="password" id="passInput" placeholder="Ingresa tu contraseña"
-        onkeydown="if(event.key==='Enter') doLogin()">
+      <input class="input" type="password" id="passInput" placeholder="Ingresa tu contraseña" onkeydown="if(event.key==='Enter')doLogin()">
     </div>
-
-    <button class="btn btn-accent btn-lg btn-full" id="loginBtn" onclick="doLogin()">
-      Entrar &nbsp;▶
-    </button>
-
-    <div class="login-footer">
-      Acceso privado · Solo familia 🏠<br>
-      <strong>FamilyFlix</strong> — Versión 2.0
-    </div>
+    <button class="btn btn-accent btn-lg btn-full" id="loginBtn" onclick="doLogin()">Entrar &nbsp;▶</button>
+    <div class="login-footer">Acceso privado · Solo familia 🏠<br><strong>FamilyFlix v3</strong></div>
   </div>
-
   <div class="theme-row">
-    <span>☀️</span>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema"></button>
-    <span>🌙</span>
+    <span>☀️</span><button class="theme-toggle" onclick="toggleTheme()"></button><span>🌙</span>
   </div>
 </div>
-
 <script src="js/shared.js"></script>
 <script>
-  // Si ya está logueado, redirigir
-  if (sessionStorage.getItem('ff_auth') === 'true') window.location.href = 'home.html';
-
-  let selectedRole = 'admin';
-
-  function selectProfile(btn, role) {
-    document.querySelectorAll('.profile-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedRole = role;
-    document.getElementById('passInput').value = '';
+  if(sessionStorage.getItem('ff_auth')==='true') window.location.href='home.html';
+  let selectedRole='admin';
+  function selectProfile(btn,role){
+    document.querySelectorAll('.profile-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active'); selectedRole=role;
+    document.getElementById('passInput').value='';
     document.getElementById('errBox').classList.remove('show');
     document.getElementById('passInput').focus();
   }
-
-  function doLogin() {
-    const pass = document.getElementById('passInput').value;
-    const err  = document.getElementById('errBox');
-    const btn  = document.getElementById('loginBtn');
-
+  function doLogin(){
+    const pass=document.getElementById('passInput').value;
+    const err=document.getElementById('errBox');
+    const btn=document.getElementById('loginBtn');
     err.classList.remove('show');
-    if (!pass) {
-      err.textContent = '⚠️ Ingresa tu contraseña.';
-      err.classList.add('show'); return;
-    }
-
-    btn.textContent = '⏳ Verificando...';
-    btn.disabled = true;
-
-    setTimeout(() => {
-      if (pass === PASSWORDS[selectedRole]) {
-        sessionStorage.setItem('ff_auth', 'true');
-        sessionStorage.setItem('ff_role', selectedRole);
-        const names = { admin:'👑 Admin', viewer:'👨‍👩‍👧 Familia', guest:'👤 Invitado' };
-        sessionStorage.setItem('ff_profile', names[selectedRole]);
-        window.location.href = 'home.html';
+    if(!pass){err.textContent='⚠️ Ingresa tu contraseña.';err.classList.add('show');return;}
+    btn.textContent='⏳ Verificando...';btn.disabled=true;
+    setTimeout(()=>{
+      if(pass===PASSWORDS[selectedRole]){
+        sessionStorage.setItem('ff_auth','true');
+        sessionStorage.setItem('ff_role',selectedRole);
+        sessionStorage.setItem('ff_profile',{admin:'👑 Admin',viewer:'👨‍👩‍👧 Familia',guest:'👤 Invitado'}[selectedRole]);
+        window.location.href='home.html';
       } else {
-        err.textContent = '❌ Contraseña incorrecta. Inténtalo de nuevo.';
-        err.classList.add('show');
-        btn.textContent = 'Entrar &nbsp;▶';
-        btn.innerHTML = 'Entrar &nbsp;▶';
-        btn.disabled = false;
-        document.getElementById('passInput').value = '';
+        err.textContent='❌ Contraseña incorrecta.';err.classList.add('show');
+        btn.innerHTML='Entrar &nbsp;▶';btn.disabled=false;
+        document.getElementById('passInput').value='';
         document.getElementById('passInput').focus();
       }
-    }, 500);
+    },500);
   }
 </script>
-</body>
-</html>
+</body></html>
