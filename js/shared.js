@@ -5,7 +5,7 @@
 
 // ─── GOOGLE SHEETS CONFIG ───────────────────────────────────
 const SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?output=csv';
-const COL = { titulo:0, driveId:1, categoria:2, anio:3, duracion:4, sinopsis:5, tags:6, portadaId:7 };
+const COL = { titulo:0, driveId:1, categoria:2, anio:3, duracion:4, sinopsis:5, tags:6, portadaId:7, r2Url:8 };
 
 // ─── DRIVE HELPERS ────────────────────────────────────────────
 // Acepta tanto ID puro como URL completa de Drive
@@ -52,6 +52,7 @@ function parseCSV(csv) {
       synopsis:  cols[COL.sinopsis]  ? cols[COL.sinopsis].replace(/"/g,'').trim()  : '',
       tags:      cols[COL.tags]      ? cols[COL.tags].replace(/"/g,'').split(',').map(t=>t.trim()).filter(Boolean) : [],
       thumbnail: portadaId ? driveThumb(portadaId) : '',
+      r2Url: cols[COL.r2Url] ? cols[COL.r2Url].replace(/"/g,'').trim() : '',
     });
   }
   return videos.length ? videos : getSampleVideos();
