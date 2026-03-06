@@ -1,0 +1,40 @@
+{
+  "categories": [
+    "Viajes", "Cumpleaños", "Navidad", "Vacaciones", "Familia", "Eventos"
+  ],
+  "videos": [
+    {
+      "id": "v001",
+      "title": "Viaje a París 2022",
+      "synopsis": "Nuestro increíble viaje a la ciudad del amor. Visitamos la Torre Eiffel, el Louvre y disfrutamos de la gastronomía francesa.",
+      "category": "Viajes",
+      "year": 2022,
+      "duration": "45:30",
+      "thumbnail": "https://drive.google.com/thumbnail?id=TU_ID_AQUI&sz=w400",
+      "driveId": "TU_ID_DE_VIDEO_AQUI",
+      "tags": ["París", "Europa", "2022"]
+    },
+    {
+      "id": "v002",
+      "title": "Navidad en Casa 2023",
+      "synopsis": "La reunión familiar más especial del año. Risas, regalos y momentos únicos junto a todos los que más queremos.",
+      "category": "Navidad",
+      "year": 2023,
+      "duration": "1:20:15",
+      "thumbnail": "https://drive.google.com/thumbnail?id=TU_ID_AQUI&sz=w400",
+      "driveId": "TU_ID_DE_VIDEO_AQUI",
+      "tags": ["Navidad", "Familia", "2023"]
+    },
+    {
+      "id": "v003",
+      "title": "Cumpleaños de Sofía",
+      "synopsis": "El primer cumpleaños de nuestra pequeña Sofía. Una fiesta llena de color, globos y la alegría de verla crecer.",
+      "category": "Cumpleaños",
+      "year": 2023,
+      "duration": "32:10",
+      "thumbnail": "https://drive.google.com/thumbnail?id=TU_ID_AQUI&sz=w400",
+      "driveId": "TU_ID_DE_VIDEO_AQUI",
+      "tags": ["Cumpleaños", "Sofía", "2023"]
+    }
+  ]
+}
