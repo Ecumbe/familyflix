@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FamilyFlix — Reproductor</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { background: #000; }
+    [data-theme="light"] body { background: var(--bg-1); }
+
+    .player-nav {
+      position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 100;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: var(--blur-strong);
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: center; padding: 0 20px; gap: 16px;
+    }
+    .nav-logo { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #fff; text-decoration: none; }
+    .nav-logo em { color: var(--accent); font-style: normal; }
+
+    /* ── Zona del player ── */
+    .player-zone {
+      padding-top: 60px;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+    }
+
+    .video-stage {
+      position: relative;
+      background: #000;
+      width: 100%;
+    }
+
+    /* El iframe de Drive */
+    .drive-frame {
+      width: 100%;
+      aspect-ratio: 16/9;
+      border: none;
+      display: block;
+    }
+
+    /* Pantalla de loading antes de que Drive cargue */
+    .frame-loader {
+      position: absolute; inset: 0;
+      background: #000;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 16px; color: rgba(255,255,255,0.5);
+      font-size: 14px; pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    .frame-loader.hidden { opacity: 0; }
+    .spinner { width:36px; height:36px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* ── Info debajo del video ── */
+    .player-info {
+      flex: 1;
+      padding: 28px 24px 50px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 280px;
+      gap: 28px;
+      align-items: start;
+    }
+
+    .info-cat { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:8px; }
+    .info-title { font-family:var(--font-display); font-size:clamp(24px,4vw,40px); font-weight:700; margin-bottom:10px; color:var(--text-1); }
+    .info-meta { display:flex; gap:14px; font-size:13px; color:var(--text-3); margin-bottom:16px; }
+    .info-synopsis { font-size:14px; line-height:1.8; color:var(--text-2); margin-bottom:16px; }
+    .info-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
+    .drive-direct-link {
+      display:inline-flex; align-items:center; gap:8px;
+      background:var(--glass-bg); backdrop-filter:var(--blur);
+      border:1px solid var(--glass-border);
+      color:var(--text-3); border-radius:var(--radius-sm);
+      padding:10px 16px; font-size:13px;
+      text-decoration:none; transition:all var(--transition);
+    }
+    .drive-direct-link:hover { border-color:rgba(200,162,255,0.4); color:var(--accent); }
+
+    /* ── Progress card ── */
+    .progress-card {
+      background:var(--glass-bg);
+      backdrop-filter:var(--blur);
+      border:1px solid var(--glass-border);
+      border-radius:var(--radius-lg);
+      padding:24px;
+    }
+    .progress-card h4 {
+      font-size:12px; letter-spacing:1.5px; text-transform:uppercase;
+      color:var(--text-3); margin-bottom:20px;
+    }
+
+    /* Ring */
+    .ring-wrap { position:relative; width:100px; height:100px; margin:0 auto 16px; }
+    .progress-ring { transform:rotate(-90deg); }
+    .ring-track { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:8; }
+    .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; stroke-dasharray:251; stroke-dashoffset:251; transition:stroke-dashoffset 0.6s ease; stroke:url(#ringGrad); }
+    .ring-label {
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      font-size:20px; font-weight:700; color:var(--accent);
+    }
+    .ring-sublabel { text-align:center; font-size:12px; color:var(--text-3); margin-bottom:16px; }
+
+    .progress-slider-wrap { margin-bottom:14px; }
+    .progress-slider-wrap label { margin-bottom:6px; }
+    .progress-slider {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      appearance: none;
+      outline: none;
+      cursor: pointer;
+      background: rgba(255,255,255,0.1);
+      accent-color: var(--accent);
+    }
+    .progress-slider::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 3px;
+    }
+    .progress-slider::-webkit-slider-thumb {
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 2px 8px rgba(200,162,255,0.5);
+      cursor: pointer;
+      margin-top: -6px;
+    }
+    .progress-slider::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+    }
+    .slider-val { font-size:13px; color:var(--accent); text-align:center; margin-top:6px; font-weight:600; }
+
+    .btn-row { display:flex; gap:8px; flex-direction:column; }
+
+    /* No video configurado */
+    .no-video-msg {
+      aspect-ratio:16/9; background:#000;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      gap:14px; color:rgba(255,255,255,0.4); text-align:center; padding:20px;
+    }
+    .no-video-msg .icon { font-size:56px; }
+    .no-video-msg h3 { font-size:20px; color:rgba(255,255,255,0.7); }
+    .no-video-msg code {
+      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
+      border-radius:8px; padding:8px 16px; font-size:12px; color:var(--accent);
+      font-family:monospace; max-width:440px;
+    }
+
+    @media (max-width:768px) {
+      .player-info { grid-template-columns:1fr; }
+    }
+  </style>
+</head>
+<body>
+<div class="bg-orbs" style="opacity:0.3">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-3"></div>
+</div>
+
+<div class="player-nav">
+  <a href="home.html" class="btn btn-glass" style="font-size:13px">← Catálogo</a>
+  <a href="home.html" class="nav-logo">Family<em>Flix</em></a>
+  <div style="flex:1"></div>
+  <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema"></button>
+</div>
+
+<div class="player-zone">
+  <!-- Stage del video -->
+  <div class="video-stage" id="videoStage">
+    <div class="frame-loader" id="frameLoader">
+      <div class="spinner"></div>
+      <span>Cargando video...</span>
+    </div>
+  </div>
+
+  <!-- Info -->
+  <div class="player-info" id="playerInfo" style="display:none">
+    <div>
+      <div class="info-cat" id="infoCat"></div>
+      <h1 class="info-title" id="infoTitle"></h1>
+      <div class="info-meta" id="infoMeta"></div>
+      <p class="info-synopsis" id="infoSynopsis"></p>
+      <div class="info-tags" id="infoTags"></div>
+      <a class="drive-direct-link" id="driveLink" href="#" target="_blank">
+        🔗 Abrir en Google Drive
+      </a>
+    </div>
+
+    <div class="progress-card">
+      <h4>📍 Tu progreso</h4>
+      <div class="ring-wrap">
+        <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
+          <defs>
+            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="var(--accent)"/>
+              <stop offset="100%" stop-color="var(--gold)"/>
+            </linearGradient>
+          </defs>
+          <circle class="ring-track" cx="50" cy="50" r="40"/>
+          <circle class="ring-fill" id="ringFill" cx="50" cy="50" r="40"/>
+        </svg>
+        <div class="ring-label" id="ringLabel">0%</div>
+      </div>
+      <div class="ring-sublabel" id="ringSub">Sin progreso</div>
+
+      <div class="progress-slider-wrap">
+        <label>¿Dónde quedaste?</label>
+        <input type="range" class="progress-slider" id="progSlider" min="0" max="100" value="0"
+          oninput="onSliderChange(this.value)">
+        <div class="slider-val" id="sliderVal">0%</div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-accent btn-full" onclick="saveProgress()">💾 Guardar progreso</button>
+        <button class="btn btn-glass btn-full" onclick="markComplete()" style="font-size:13px">✅ Marcar como completo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="js/shared.js"></script>
+<script>
+  checkAuth();
+
+  const params = new URLSearchParams(window.location.search);
+  const videoId = params.get('id');
+  let currentVideo = null;
+
+  async function init() {
+    if (!videoId) { showError('No se especificó un video.'); return; }
+
+    const videos = await fetchVideos();
+    const v = videos.find(x => x.id === videoId);
+    if (!v) { showError('Video no encontrado.'); return; }
+    currentVideo = v;
+
+    document.title = `${v.title} — FamilyFlix`;
+    renderPlayer(v);
+    renderInfo(v);
+  }
+
+  function renderPlayer(v) {
+    const stage = document.getElementById('videoStage');
+    const loader = document.getElementById('frameLoader');
+
+    if (v.driveId) {
+      const iframe = document.createElement('iframe');
+      iframe.className = 'drive-frame';
+      iframe.src = driveEmbed(v.driveId);
+      iframe.allow = 'autoplay; fullscreen';
+      iframe.allowFullscreen = true;
+      iframe.onload = () => loader.classList.add('hidden');
+      stage.appendChild(iframe);
+      // fallback: si tarda más de 8s, ocultamos loader igual
+      setTimeout(() => loader.classList.add('hidden'), 8000);
+    } else {
+      stage.innerHTML = `<div class="no-video-msg">
+        <div class="icon">🎬</div>
+        <h3>${v.title}</h3>
+        <p>Este video no tiene ID de Google Drive configurado aún.</p>
+        <code>Agrega el ID en tu Google Sheet columna "driveId"</code>
+      </div>`;
+    }
+  }
+
+  function renderInfo(v) {
+    document.getElementById('playerInfo').style.display = 'grid';
+    document.getElementById('infoCat').textContent = v.category;
+    document.getElementById('infoTitle').textContent = v.title;
+    document.getElementById('infoMeta').innerHTML = `
+      ${v.year ? `<span>📅 ${v.year}</span>` : ''}
+      ${v.duration ? `<span>⏱ ${v.duration}</span>` : ''}
+      <span>🗂 ${v.category}</span>`;
+    document.getElementById('infoSynopsis').textContent = v.synopsis || '';
+    document.getElementById('infoTags').innerHTML = (v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
+    if (v.driveId) {
+      document.getElementById('driveLink').href = `https://drive.google.com/file/d/${v.driveId}/view`;
+    }
+
+    // Cargar progreso guardado
+    const prog = getProgress();
+    const pct = prog[videoId] || 0;
+    setProgressUI(pct);
+    document.getElementById('progSlider').value = pct;
+    document.getElementById('progSlider').style.setProperty('--pct', pct + '%');
+  }
+
+  function showError(msg) {
+    document.getElementById('videoStage').innerHTML = `<div class="no-video-msg">
+      <div class="icon">❌</div><h3>Error</h3><p>${msg}</p></div>`;
+  }
+
+  function setProgressUI(pct) {
+    // Ring: circunferencia 2π×40 ≈ 251
+    const offset = 251 - (pct / 100) * 251;
+    document.getElementById('ringFill').style.strokeDashoffset = offset;
+    document.getElementById('ringLabel').textContent = Math.round(pct) + '%';
+    document.getElementById('ringSub').textContent = fmtPct(pct);
+    document.getElementById('sliderVal').textContent = Math.round(pct) + '%';
+  }
+
+  function onSliderChange(val) {
+    const v = parseInt(val);
+    document.getElementById('progSlider').style.setProperty('--pct', v + '%');
+    setProgressUI(v);
+  }
+
+  function saveProgress() {
+    const pct = parseInt(document.getElementById('progSlider').value);
+    saveVideoProgress(videoId, pct);
+    showToast('✅ Progreso guardado', 'success');
+  }
+
+  function markComplete() {
+    document.getElementById('progSlider').value = 100;
+    onSliderChange(100);
+    saveProgress();
+  }
+
+  init();
+</script>
+</body>
+</html>
