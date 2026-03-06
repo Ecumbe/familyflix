@@ -11,7 +11,7 @@
 
     .player-nav {
       position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 100;
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.7);
       backdrop-filter: var(--blur-strong);
       border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex; align-items: center; padding: 0 20px; gap: 16px;
@@ -19,132 +19,100 @@
     .nav-logo { font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #fff; text-decoration: none; }
     .nav-logo em { color: var(--accent); font-style: normal; }
 
-    /* ── Zona del player ── */
-    .player-zone {
-      padding-top: 60px;
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-    }
+    .player-zone { padding-top: 60px; min-height: 100vh; display: flex; flex-direction: column; }
 
-    .video-stage {
-      position: relative;
-      background: #000;
-      width: 100%;
-    }
+    .video-stage { position: relative; background: #000; width: 100%; }
 
-    /* El iframe de Drive */
-    .drive-frame {
-      width: 100%;
-      aspect-ratio: 16/9;
-      border: none;
-      display: block;
-    }
+    .drive-frame { width: 100%; aspect-ratio: 16/9; border: none; display: block; }
 
-    /* Pantalla de loading antes de que Drive cargue */
     .frame-loader {
-      position: absolute; inset: 0;
-      background: #000;
-      display: flex; flex-direction: column;
-      align-items: center; justify-content: center;
-      gap: 16px; color: rgba(255,255,255,0.5);
-      font-size: 14px; pointer-events: none;
-      transition: opacity 0.5s ease;
+      position: absolute; inset: 0; background: #000;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 16px; color: rgba(255,255,255,0.5); font-size: 14px;
+      pointer-events: none; transition: opacity 0.5s ease; z-index: 2;
     }
-    .frame-loader.hidden { opacity: 0; }
+    .frame-loader.hidden { opacity: 0; pointer-events: none; }
     .spinner { width:36px; height:36px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
-    /* ── Info debajo del video ── */
+    /* ── Info panel ── */
     .player-info {
-      flex: 1;
-      padding: 28px 24px 50px;
-      max-width: 1100px;
-      margin: 0 auto;
-      width: 100%;
-      display: grid;
-      grid-template-columns: 1fr 280px;
-      gap: 28px;
-      align-items: start;
+      flex: 1; padding: 28px 24px 50px;
+      max-width: 1100px; margin: 0 auto; width: 100%;
+      display: grid; grid-template-columns: 1fr 300px;
+      gap: 28px; align-items: start;
     }
 
     .info-cat { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:8px; }
     .info-title { font-family:var(--font-display); font-size:clamp(24px,4vw,40px); font-weight:700; margin-bottom:10px; color:var(--text-1); }
-    .info-meta { display:flex; gap:14px; font-size:13px; color:var(--text-3); margin-bottom:16px; }
+    .info-meta { display:flex; gap:14px; font-size:13px; color:var(--text-3); margin-bottom:16px; flex-wrap:wrap; }
     .info-synopsis { font-size:14px; line-height:1.8; color:var(--text-2); margin-bottom:16px; }
     .info-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
     .drive-direct-link {
       display:inline-flex; align-items:center; gap:8px;
       background:var(--glass-bg); backdrop-filter:var(--blur);
-      border:1px solid var(--glass-border);
-      color:var(--text-3); border-radius:var(--radius-sm);
-      padding:10px 16px; font-size:13px;
+      border:1px solid var(--glass-border); color:var(--text-3);
+      border-radius:var(--radius-sm); padding:10px 16px; font-size:13px;
       text-decoration:none; transition:all var(--transition);
     }
     .drive-direct-link:hover { border-color:rgba(200,162,255,0.4); color:var(--accent); }
 
     /* ── Progress card ── */
     .progress-card {
-      background:var(--glass-bg);
-      backdrop-filter:var(--blur);
-      border:1px solid var(--glass-border);
-      border-radius:var(--radius-lg);
-      padding:24px;
+      background:var(--glass-bg); backdrop-filter:var(--blur);
+      border:1px solid var(--glass-border); border-radius:var(--radius-lg); padding:24px;
+      position: sticky; top: 76px;
     }
-    .progress-card h4 {
-      font-size:12px; letter-spacing:1.5px; text-transform:uppercase;
-      color:var(--text-3); margin-bottom:20px;
+    .progress-card h4 { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:20px; }
+
+    /* Auto-save badge */
+    .autosave-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(80,216,144,0.1); border: 1px solid rgba(80,216,144,0.2);
+      color: var(--success); border-radius: 20px;
+      padding: 4px 10px; font-size: 11px; font-weight: 600;
+      margin-bottom: 16px;
     }
+    .autosave-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
     /* Ring */
-    .ring-wrap { position:relative; width:100px; height:100px; margin:0 auto 16px; }
+    .ring-wrap { position:relative; width:100px; height:100px; margin:0 auto 12px; }
     .progress-ring { transform:rotate(-90deg); }
     .ring-track { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:8; }
     .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; stroke-dasharray:251; stroke-dashoffset:251; transition:stroke-dashoffset 0.6s ease; stroke:url(#ringGrad); }
-    .ring-label {
-      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
-      font-size:20px; font-weight:700; color:var(--accent);
-    }
-    .ring-sublabel { text-align:center; font-size:12px; color:var(--text-3); margin-bottom:16px; }
+    .ring-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:700; color:var(--accent); }
+    .ring-sublabel { text-align:center; font-size:12px; color:var(--text-3); margin-bottom:18px; }
 
-    .progress-slider-wrap { margin-bottom:14px; }
-    .progress-slider-wrap label { margin-bottom:6px; }
+    /* Slider */
+    .progress-slider-wrap { margin-bottom:6px; }
+    .progress-slider-wrap label { margin-bottom:8px; display:block; }
     .progress-slider {
-      width: 100%;
-      height: 6px;
-      border-radius: 3px;
-      appearance: none;
-      outline: none;
-      cursor: pointer;
-      background: rgba(255,255,255,0.1);
-      accent-color: var(--accent);
-    }
-    .progress-slider::-webkit-slider-runnable-track {
-      height: 6px;
-      border-radius: 3px;
+      width: 100%; height: 6px; border-radius: 3px;
+      appearance: none; outline: none; cursor: pointer;
+      background: rgba(255,255,255,0.1); accent-color: var(--accent);
     }
     .progress-slider::-webkit-slider-thumb {
-      appearance: none;
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 2px 8px rgba(200,162,255,0.5);
-      cursor: pointer;
-      margin-top: -6px;
+      appearance: none; width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); box-shadow: 0 2px 8px rgba(200,162,255,0.5);
+      cursor: pointer; margin-top: -6px;
     }
     .progress-slider::-moz-range-thumb {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      background: var(--accent);
-      border: none;
-      cursor: pointer;
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--accent); border: none; cursor: pointer;
     }
-    .slider-val { font-size:13px; color:var(--accent); text-align:center; margin-top:6px; font-weight:600; }
+    .slider-hint { font-size:11px; color:var(--text-3); text-align:center; margin-top:6px; margin-bottom:14px; }
 
     .btn-row { display:flex; gap:8px; flex-direction:column; }
 
-    /* No video configurado */
+    /* Last saved */
+    .last-saved { font-size:11px; color:var(--text-3); text-align:center; margin-top:10px; min-height:16px; }
+
+    /* No video */
     .no-video-msg {
       aspect-ratio:16/9; background:#000;
       display:flex; flex-direction:column; align-items:center; justify-content:center;
@@ -160,11 +128,12 @@
 
     @media (max-width:768px) {
       .player-info { grid-template-columns:1fr; }
+      .progress-card { position: static; }
     }
   </style>
 </head>
 <body>
-<div class="bg-orbs" style="opacity:0.3">
+<div class="bg-orbs" style="opacity:0.25">
   <div class="orb orb-1"></div>
   <div class="orb orb-3"></div>
 </div>
@@ -177,7 +146,6 @@
 </div>
 
 <div class="player-zone">
-  <!-- Stage del video -->
   <div class="video-stage" id="videoStage">
     <div class="frame-loader" id="frameLoader">
       <div class="spinner"></div>
@@ -185,7 +153,6 @@
     </div>
   </div>
 
-  <!-- Info -->
   <div class="player-info" id="playerInfo" style="display:none">
     <div>
       <div class="info-cat" id="infoCat"></div>
@@ -194,12 +161,18 @@
       <p class="info-synopsis" id="infoSynopsis"></p>
       <div class="info-tags" id="infoTags"></div>
       <a class="drive-direct-link" id="driveLink" href="#" target="_blank">
-        🔗 Abrir en Google Drive
+        🔗 Ver en pantalla completa en Drive
       </a>
     </div>
 
     <div class="progress-card">
       <h4>📍 Tu progreso</h4>
+
+      <div class="autosave-badge">
+        <div class="autosave-dot"></div>
+        Guardado automático
+      </div>
+
       <div class="ring-wrap">
         <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
           <defs>
@@ -216,16 +189,19 @@
       <div class="ring-sublabel" id="ringSub">Sin progreso</div>
 
       <div class="progress-slider-wrap">
-        <label>¿Dónde quedaste?</label>
-        <input type="range" class="progress-slider" id="progSlider" min="0" max="100" value="0"
-          oninput="onSliderChange(this.value)">
-        <div class="slider-val" id="sliderVal">0%</div>
+        <label>Arrastra para actualizar</label>
+        <input type="range" class="progress-slider" id="progSlider"
+          min="0" max="100" value="0"
+          oninput="onSliderChange(this.value)"
+          onchange="saveProgress(true)">
       </div>
+      <div class="slider-hint">Mueve el slider y se guarda solo</div>
 
       <div class="btn-row">
-        <button class="btn btn-accent btn-full" onclick="saveProgress()">💾 Guardar progreso</button>
-        <button class="btn btn-glass btn-full" onclick="markComplete()" style="font-size:13px">✅ Marcar como completo</button>
+        <button class="btn btn-accent btn-full" onclick="saveProgress(true)">💾 Guardar ahora</button>
+        <button class="btn btn-glass btn-full" onclick="markComplete()" style="font-size:13px">✅ Marcar completo</button>
       </div>
+      <div class="last-saved" id="lastSaved"></div>
     </div>
   </div>
 </div>
@@ -234,100 +210,112 @@
 <script>
   checkAuth();
 
-  const params = new URLSearchParams(window.location.search);
+  const params  = new URLSearchParams(window.location.search);
   const videoId = params.get('id');
-  let currentVideo = null;
+  let autoSaveTimer = null;
 
   async function init() {
     if (!videoId) { showError('No se especificó un video.'); return; }
-
     const videos = await fetchVideos();
     const v = videos.find(x => x.id === videoId);
     if (!v) { showError('Video no encontrado.'); return; }
-    currentVideo = v;
 
     document.title = `${v.title} — FamilyFlix`;
     renderPlayer(v);
     renderInfo(v);
+    startAutoSave();
   }
 
   function renderPlayer(v) {
-    const stage = document.getElementById('videoStage');
+    const stage  = document.getElementById('videoStage');
     const loader = document.getElementById('frameLoader');
 
     if (v.driveId) {
       const iframe = document.createElement('iframe');
       iframe.className = 'drive-frame';
-      iframe.src = driveEmbed(v.driveId);
-      iframe.allow = 'autoplay; fullscreen';
-      iframe.allowFullscreen = true;
-      iframe.onload = () => loader.classList.add('hidden');
+      iframe.src = `https://drive.google.com/file/d/${v.driveId}/preview`;
+      // Corrección: usar el atributo allow correcto sin allowfullscreen duplicado
+      iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
+      iframe.onload = () => setTimeout(() => loader.classList.add('hidden'), 500);
       stage.appendChild(iframe);
-      // fallback: si tarda más de 8s, ocultamos loader igual
-      setTimeout(() => loader.classList.add('hidden'), 8000);
+      setTimeout(() => loader.classList.add('hidden'), 9000);
     } else {
       stage.innerHTML = `<div class="no-video-msg">
         <div class="icon">🎬</div>
-        <h3>${v.title}</h3>
-        <p>Este video no tiene ID de Google Drive configurado aún.</p>
-        <code>Agrega el ID en tu Google Sheet columna "driveId"</code>
+        <h3>Sin video configurado</h3>
+        <p>Agrega el ID de Google Drive en tu Sheet.</p>
+        <code>columna driveId → ID del archivo</code>
       </div>`;
     }
   }
 
   function renderInfo(v) {
     document.getElementById('playerInfo').style.display = 'grid';
-    document.getElementById('infoCat').textContent = v.category;
-    document.getElementById('infoTitle').textContent = v.title;
+    document.getElementById('infoCat').textContent     = v.category;
+    document.getElementById('infoTitle').textContent   = v.title;
     document.getElementById('infoMeta').innerHTML = `
-      ${v.year ? `<span>📅 ${v.year}</span>` : ''}
-      ${v.duration ? `<span>⏱ ${v.duration}</span>` : ''}
+      ${v.year     ? `<span>📅 ${v.year}</span>`     : ''}
+      ${v.duration ? `<span>⏱ ${v.duration}</span>`  : ''}
       <span>🗂 ${v.category}</span>`;
     document.getElementById('infoSynopsis').textContent = v.synopsis || '';
     document.getElementById('infoTags').innerHTML = (v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
-    if (v.driveId) {
-      document.getElementById('driveLink').href = `https://drive.google.com/file/d/${v.driveId}/view`;
-    }
+    if (v.driveId) document.getElementById('driveLink').href = `https://drive.google.com/file/d/${v.driveId}/view`;
 
-    // Cargar progreso guardado
-    const prog = getProgress();
-    const pct = prog[videoId] || 0;
-    setProgressUI(pct);
+    // Cargar progreso guardado y mostrar en UI
+    const pct = getProgress()[videoId] || 0;
     document.getElementById('progSlider').value = pct;
-    document.getElementById('progSlider').style.setProperty('--pct', pct + '%');
+    setProgressUI(pct);
+    if (pct > 0) updateLastSaved();
   }
 
   function showError(msg) {
-    document.getElementById('videoStage').innerHTML = `<div class="no-video-msg">
-      <div class="icon">❌</div><h3>Error</h3><p>${msg}</p></div>`;
+    document.getElementById('videoStage').innerHTML =
+      `<div class="no-video-msg"><div class="icon">❌</div><h3>Error</h3><p>${msg}</p></div>`;
   }
 
   function setProgressUI(pct) {
-    // Ring: circunferencia 2π×40 ≈ 251
     const offset = 251 - (pct / 100) * 251;
     document.getElementById('ringFill').style.strokeDashoffset = offset;
     document.getElementById('ringLabel').textContent = Math.round(pct) + '%';
-    document.getElementById('ringSub').textContent = fmtPct(pct);
-    document.getElementById('sliderVal').textContent = Math.round(pct) + '%';
+    document.getElementById('ringSub').textContent   = fmtPct(pct);
   }
 
   function onSliderChange(val) {
-    const v = parseInt(val);
-    document.getElementById('progSlider').style.setProperty('--pct', v + '%');
-    setProgressUI(v);
+    setProgressUI(parseInt(val));
   }
 
-  function saveProgress() {
+  function saveProgress(showFeedback = false) {
     const pct = parseInt(document.getElementById('progSlider').value);
     saveVideoProgress(videoId, pct);
-    showToast('✅ Progreso guardado', 'success');
+    updateLastSaved();
+    if (showFeedback) showToast('✅ Progreso guardado', 'success');
   }
 
   function markComplete() {
     document.getElementById('progSlider').value = 100;
-    onSliderChange(100);
-    saveProgress();
+    setProgressUI(100);
+    saveProgress(true);
   }
+
+  function updateLastSaved() {
+    const now = new Date();
+    const h = now.getHours().toString().padStart(2,'0');
+    const m = now.getMinutes().toString().padStart(2,'0');
+    document.getElementById('lastSaved').textContent = `Última vez guardado: ${h}:${m}`;
+  }
+
+  // Guardar automáticamente cada 30 segundos
+  function startAutoSave() {
+    autoSaveTimer = setInterval(() => saveProgress(false), 30000);
+  }
+
+  // Guardar al salir/cerrar la pestaña
+  window.addEventListener('beforeunload', () => saveProgress(false));
+  // Guardar al volver al catálogo
+  document.querySelector('a[href="home.html"]') &&
+    document.querySelectorAll('a[href="home.html"]').forEach(a =>
+      a.addEventListener('click', () => saveProgress(false))
+    );
 
   init();
 </script>
