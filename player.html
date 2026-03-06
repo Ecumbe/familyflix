@@ -1,149 +1,107 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>FamilyFlix — Reproductor</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    body { background: #000; }
-    [data-theme="light"] body { background: var(--bg-1); }
+    body{background:#000}
+    [data-theme="light"] body{background:var(--bg)}
+    .player-nav{position:fixed;top:0;left:0;right:0;height:60px;z-index:100;background:rgba(0,0,0,.75);backdrop-filter:var(--blur-s);border-bottom:1px solid rgba(255,255,255,.07);display:flex;align-items:center;padding:0 20px;gap:14px}
+    .nav-logo{font-family:var(--font-display);font-size:22px;font-weight:700;color:#fff;text-decoration:none}
+    .nav-logo em{color:var(--accent);font-style:normal}
+    .player-zone{padding-top:60px;min-height:100vh;display:flex;flex-direction:column}
+    .video-stage{position:relative;background:#000;width:100%}
+    .native-video{width:100%;aspect-ratio:16/9;display:block;background:#000;outline:none}
+    .native-video:fullscreen,.native-video:-webkit-full-screen{width:100vw;height:100vh}
+    .video-loader{position:absolute;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;color:rgba(255,255,255,.5);font-size:14px;transition:opacity .5s;z-index:2;pointer-events:none}
+    .video-loader.hidden{opacity:0;pointer-events:none}
+    .real-prog-bar{position:absolute;bottom:0;left:0;right:0;height:4px;background:rgba(255,255,255,.12);z-index:3;pointer-events:none}
+    .real-prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--gold));transition:width .8s linear}
 
-    .player-nav {
-      position: fixed; top: 0; left: 0; right: 0; height: 60px; z-index: 100;
-      background: rgba(0,0,0,0.7); backdrop-filter: var(--blur-strong);
-      border-bottom: 1px solid rgba(255,255,255,0.08);
-      display: flex; align-items: center; padding: 0 20px; gap: 16px;
+    /* Siguiente episodio overlay */
+    .next-ep-overlay{
+      display:none;position:absolute;bottom:60px;right:20px;z-index:10;
+      background:var(--g-bg);backdrop-filter:var(--blur-s);
+      border:1px solid var(--g-border-s);border-radius:var(--r-lg);
+      padding:20px 24px;min-width:280px;
+      animation:slideInRight .4s var(--ease);
     }
-    .nav-logo { font-family:var(--font-display); font-size:22px; font-weight:700; color:#fff; text-decoration:none; }
-    .nav-logo em { color:var(--accent); font-style:normal; }
+    .next-ep-overlay.show{display:block}
+    @keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+    .next-ep-label{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:6px}
+    .next-ep-title{font-size:16px;font-weight:600;margin-bottom:14px}
+    .next-ep-timer{font-family:var(--font-display);font-size:36px;font-weight:700;color:var(--accent);text-align:center;margin-bottom:12px}
+    .next-ep-actions{display:flex;gap:10px}
 
-    .player-zone { padding-top:60px; min-height:100vh; display:flex; flex-direction:column; }
+    /* Info panel */
+    .player-info{flex:1;padding:28px 24px 50px;max-width:1100px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 300px;gap:28px;align-items:start}
+    .info-cat{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--accent);font-weight:600;margin-bottom:6px}
+    .info-title{font-family:var(--font-display);font-size:clamp(24px,4vw,40px);font-weight:700;margin-bottom:8px;color:var(--text-1)}
+    .info-meta{display:flex;gap:14px;font-size:13px;color:var(--text-3);margin-bottom:14px;flex-wrap:wrap}
+    .info-synopsis{font-size:14px;line-height:1.8;color:var(--text-2);margin-bottom:14px}
+    .info-tags{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
 
-    /* ── VIDEO NATIVO ── */
-    .video-stage { position:relative; background:#000; width:100%; }
+    /* Progress card */
+    .progress-card{background:var(--g-bg);backdrop-filter:var(--blur);border:1px solid var(--g-border);border-radius:var(--r-lg);padding:24px;position:sticky;top:76px}
+    .progress-card h4{font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:14px}
+    .autosave-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(105,240,174,.1);border:1px solid rgba(105,240,174,.2);color:var(--success);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;margin-bottom:14px}
+    .autosave-dot{width:6px;height:6px;border-radius:50%;background:var(--success);animation:pdot 2s ease-in-out infinite}
+    @keyframes pdot{0%,100%{opacity:1}50%{opacity:.3}}
+    .ring-wrap{position:relative;width:100px;height:100px;margin:0 auto 10px}
+    .progress-ring{transform:rotate(-90deg)}
+    .ring-track{fill:none;stroke:rgba(255,255,255,.06);stroke-width:8}
+    .ring-fill{fill:none;stroke-width:8;stroke-linecap:round;stroke-dasharray:251;stroke-dashoffset:251;transition:stroke-dashoffset .6s ease;stroke:url(#rg)}
+    .ring-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:20px;font-weight:700;color:var(--accent)}
+    .ring-sub{text-align:center;font-size:12px;color:var(--text-3);margin-bottom:14px}
+    .time-display{background:rgba(179,136,255,.07);border:1px solid rgba(179,136,255,.13);border-radius:var(--r-sm);padding:10px 14px;text-align:center;margin-bottom:14px}
+    .time-cur{font-size:22px;font-weight:700;color:var(--accent);font-family:var(--font-display)}
+    .time-tot{font-size:11px;color:var(--text-3);margin-top:2px}
+    .btn-row{display:flex;gap:8px;flex-direction:column}
+    .last-saved{font-size:11px;color:var(--text-3);text-align:center;margin-top:10px;min-height:16px}
 
-    .native-video {
-      width: 100%;
-      aspect-ratio: 16/9;
-      display: block;
-      background: #000;
-      outline: none;
-    }
-    /* Fullscreen real en móvil */
-    .native-video:fullscreen { width:100vw; height:100vh; }
-    .native-video:-webkit-full-screen { width:100vw; height:100vh; }
+    /* Episodios sidebar */
+    .ep-sidebar{margin-top:20px;border-top:1px solid var(--g-border);padding-top:16px}
+    .ep-sidebar h5{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text-3);margin-bottom:12px}
+    .ep-item-sm{display:flex;gap:10px;padding:8px;border-radius:var(--r-sm);cursor:pointer;transition:background var(--t);align-items:center}
+    .ep-item-sm:hover{background:var(--g-bg-h)}
+    .ep-item-sm.active{background:rgba(179,136,255,.1);border:1px solid rgba(179,136,255,.2)}
+    .ep-n{width:26px;height:26px;border-radius:50%;background:var(--g-bg);border:1px solid var(--g-border);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--accent);flex-shrink:0}
+    .ep-i{flex:1;min-width:0}
+    .ep-t{font-size:12px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ep-d{font-size:10px;color:var(--text-3)}
 
-    /* Overlay de carga */
-    .video-loader {
-      position:absolute; inset:0; background:#000;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:16px; color:rgba(255,255,255,0.5); font-size:14px;
-      transition:opacity 0.5s ease; z-index:2; pointer-events:none;
-    }
-    .video-loader.hidden { opacity:0; pointer-events:none; }
-    .spinner { width:36px; height:36px; border:3px solid rgba(255,255,255,0.1); border-top-color:var(--accent); border-radius:50%; animation:spin 0.8s linear infinite; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    .no-video-msg{aspect-ratio:16/9;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:rgba(255,255,255,.4);text-align:center;padding:20px}
+    .no-video-msg .icon{font-size:56px}
+    .no-video-msg h3{font-size:20px;color:rgba(255,255,255,.7)}
+    .no-video-msg code{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 16px;font-size:12px;color:var(--accent);font-family:monospace;max-width:440px}
 
-    /* Barra de progreso real encima del video */
-    .real-progress-bar {
-      position:absolute; bottom:0; left:0; right:0;
-      height:4px; background:rgba(255,255,255,0.15); z-index:3;
-      pointer-events:none;
-    }
-    .real-progress-fill {
-      height:100%; width:0%;
-      background:linear-gradient(90deg, var(--accent), var(--gold));
-      transition:width 1s linear;
-    }
-
-    /* ── INFO PANEL ── */
-    .player-info {
-      flex:1; padding:28px 24px 50px;
-      max-width:1100px; margin:0 auto; width:100%;
-      display:grid; grid-template-columns:1fr 300px;
-      gap:28px; align-items:start;
-    }
-    .info-cat { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--accent); font-weight:600; margin-bottom:8px; }
-    .info-title { font-family:var(--font-display); font-size:clamp(24px,4vw,40px); font-weight:700; margin-bottom:10px; color:var(--text-1); }
-    .info-meta { display:flex; gap:14px; font-size:13px; color:var(--text-3); margin-bottom:16px; flex-wrap:wrap; }
-    .info-synopsis { font-size:14px; line-height:1.8; color:var(--text-2); margin-bottom:16px; }
-    .info-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:20px; }
-
-    /* ── PROGRESS CARD ── */
-    .progress-card {
-      background:var(--glass-bg); backdrop-filter:var(--blur);
-      border:1px solid var(--glass-border); border-radius:var(--radius-lg);
-      padding:24px; position:sticky; top:76px;
-    }
-    .progress-card h4 { font-size:12px; letter-spacing:1.5px; text-transform:uppercase; color:var(--text-3); margin-bottom:16px; }
-
-    .autosave-badge {
-      display:inline-flex; align-items:center; gap:6px;
-      background:rgba(80,216,144,0.1); border:1px solid rgba(80,216,144,0.2);
-      color:var(--success); border-radius:20px;
-      padding:4px 10px; font-size:11px; font-weight:600; margin-bottom:16px;
-    }
-    .autosave-dot { width:6px; height:6px; border-radius:50%; background:var(--success); animation:pulse-dot 2s ease-in-out infinite; }
-    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-    /* Ring */
-    .ring-wrap { position:relative; width:100px; height:100px; margin:0 auto 12px; }
-    .progress-ring { transform:rotate(-90deg); }
-    .ring-track { fill:none; stroke:rgba(255,255,255,0.06); stroke-width:8; }
-    .ring-fill { fill:none; stroke-width:8; stroke-linecap:round; stroke-dasharray:251; stroke-dashoffset:251; transition:stroke-dashoffset 0.6s ease; stroke:url(#ringGrad); }
-    .ring-label { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:20px; font-weight:700; color:var(--accent); }
-    .ring-sublabel { text-align:center; font-size:12px; color:var(--text-3); margin-bottom:16px; }
-
-    /* Tiempo real */
-    .time-display {
-      background:rgba(200,162,255,0.08); border:1px solid rgba(200,162,255,0.15);
-      border-radius:var(--radius-sm); padding:10px 14px;
-      text-align:center; margin-bottom:14px;
-    }
-    .time-current { font-size:22px; font-weight:700; color:var(--accent); font-family:var(--font-display); }
-    .time-total { font-size:12px; color:var(--text-3); margin-top:2px; }
-
-    .btn-row { display:flex; gap:8px; flex-direction:column; }
-    .last-saved { font-size:11px; color:var(--text-3); text-align:center; margin-top:10px; min-height:16px; }
-
-    /* No video */
-    .no-video-msg {
-      aspect-ratio:16/9; background:#000;
-      display:flex; flex-direction:column; align-items:center; justify-content:center;
-      gap:14px; color:rgba(255,255,255,0.4); text-align:center; padding:20px;
-    }
-    .no-video-msg .icon { font-size:56px; }
-    .no-video-msg h3 { font-size:20px; color:rgba(255,255,255,0.7); }
-    .no-video-msg code {
-      background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.1);
-      border-radius:8px; padding:8px 16px; font-size:12px; color:var(--accent);
-      font-family:monospace; max-width:440px;
-    }
-
-    @media (max-width:768px) {
-      .player-info { grid-template-columns:1fr; }
-      .progress-card { position:static; }
-    }
+    @media(max-width:768px){.player-info{grid-template-columns:1fr}.progress-card{position:static}}
   </style>
 </head>
 <body>
-<div class="bg-orbs" style="opacity:0.2">
-  <div class="orb orb-1"></div><div class="orb orb-3"></div>
-</div>
+<div class="bg-orbs" style="opacity:.2"><div class="orb o1"></div><div class="orb o3"></div></div>
 
 <div class="player-nav">
   <a href="home.html" class="btn btn-glass" id="backBtn" style="font-size:13px">← Catálogo</a>
   <a href="home.html" class="nav-logo">Family<em>Flix</em></a>
   <div style="flex:1"></div>
-  <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema"></button>
+  <span id="navEpTitle" style="font-size:13px;color:var(--text-3);display:none"></span>
+  <button class="theme-toggle" onclick="toggleTheme()"></button>
 </div>
 
 <div class="player-zone">
   <div class="video-stage" id="videoStage">
-    <div class="video-loader" id="videoLoader">
-      <div class="spinner"></div>
-      <span>Cargando video...</span>
+    <div class="video-loader" id="videoLoader"><div class="spinner"></div><span>Cargando...</span></div>
+    <!-- Siguiente episodio overlay -->
+    <div class="next-ep-overlay" id="nextEpOverlay">
+      <div class="next-ep-label">A continuación</div>
+      <div class="next-ep-title" id="nextEpTitle"></div>
+      <div class="next-ep-timer" id="nextEpTimer">10</div>
+      <div class="next-ep-actions">
+        <button class="btn btn-accent" style="flex:1" onclick="playNextEp()">▶ Siguiente</button>
+        <button class="btn btn-glass" onclick="cancelNextEp()">✕ Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -155,39 +113,32 @@
       <p class="info-synopsis" id="infoSynopsis"></p>
       <div class="info-tags" id="infoTags"></div>
     </div>
-
     <div class="progress-card">
       <h4>📍 Tu progreso</h4>
-      <div class="autosave-badge">
-        <div class="autosave-dot"></div>
-        Guardado automático
-      </div>
-
+      <div class="autosave-badge"><div class="autosave-dot"></div>Guardado auto</div>
       <div class="ring-wrap">
         <svg class="progress-ring" width="100" height="100" viewBox="0 0 100 100">
-          <defs>
-            <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="var(--accent)"/>
-              <stop offset="100%" stop-color="var(--gold)"/>
-            </linearGradient>
-          </defs>
+          <defs><linearGradient id="rg" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="var(--gold)"/></linearGradient></defs>
           <circle class="ring-track" cx="50" cy="50" r="40"/>
           <circle class="ring-fill" id="ringFill" cx="50" cy="50" r="40"/>
         </svg>
         <div class="ring-label" id="ringLabel">0%</div>
       </div>
-      <div class="ring-sublabel" id="ringSub">Sin progreso</div>
-
+      <div class="ring-sub" id="ringSub">Sin progreso</div>
       <div class="time-display">
-        <div class="time-current" id="timeCurrent">0:00:00</div>
-        <div class="time-total" id="timeTotal">Duración total</div>
+        <div class="time-cur" id="timeCur">0:00:00</div>
+        <div class="time-tot" id="timeTot">— duración total</div>
       </div>
-
       <div class="btn-row">
         <button class="btn btn-accent btn-full" onclick="saveNow()">💾 Guardar ahora</button>
-        <button class="btn btn-glass btn-full" onclick="markComplete()" style="font-size:13px">✅ Marcar completo</button>
+        <button class="btn btn-glass btn-full" onclick="markComplete()" style="font-size:13px">✅ Completado</button>
       </div>
       <div class="last-saved" id="lastSaved"></div>
+      <!-- Episodios de la serie en sidebar -->
+      <div class="ep-sidebar" id="epSidebar" style="display:none">
+        <h5>Episodios</h5>
+        <div id="epSidebarList"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -195,208 +146,204 @@
 <script src="js/shared.js"></script>
 <script>
   checkAuth();
-
   const params  = new URLSearchParams(window.location.search);
-  const videoId = params.get('id');
-  let videoEl   = null;
-  let autoTimer = null;
-  let currentVideo = null;
+  const itemId  = params.get('id');     // puede ser id de película o id de episodio
+  const serieId = params.get('serie');  // si es episodio, viene el id de la serie
 
-  // ── STORAGE KEY por dispositivo/usuario ──────────────────
-  // Guarda tiempo en segundos (más preciso que porcentaje)
-  function getStorageKey() { return `ff_time_${videoId}`; }
-  function getSavedTime()  { return parseFloat(localStorage.getItem(getStorageKey()) || '0'); }
-  function saveTime(secs)  { localStorage.setItem(getStorageKey(), secs); }
+  let videoEl    = null;
+  let autoTimer  = null;
+  let nextEpTimer= null;
+  let nextEpItem = null;
+  let allContent = [];
+  let allEps     = [];
+  let currentItem= null; // película o episodio actual
 
   async function init() {
-    if (!videoId) { showError('No se especificó un video.'); return; }
-    const videos = await fetchVideos();
-    const v = videos.find(x => x.id === videoId);
-    if (!v) { showError('Video no encontrado.'); return; }
-    currentVideo = v;
-    document.title = `${v.title} — FamilyFlix`;
-    renderPlayer(v);
-    renderInfo(v);
+    if (!itemId) { showError('No se especificó un video.'); return; }
+    [allContent, allEps] = await Promise.all([fetchContent(), fetchEpisodes()]);
+
+    // Buscar si es episodio o película
+    let item = null;
+    if (serieId) {
+      // Es un episodio
+      item = allEps.find(e => e.id === itemId);
+      if (!item) { showError('Episodio no encontrado.'); return; }
+    } else {
+      item = allContent.find(v => v.id === itemId);
+      if (!item) { showError('Video no encontrado.'); return; }
+    }
+    currentItem = item;
+    document.title = `${item.title} — FamilyFlix`;
+    renderPlayer(item);
+    renderInfo(item);
   }
 
-  function renderPlayer(v) {
+  function renderPlayer(item) {
     const stage  = document.getElementById('videoStage');
     const loader = document.getElementById('videoLoader');
-
-    // Prioridad: R2 URL > Drive embed
-    const r2Url = v.r2Url || '';
+    const r2Url  = item.r2Url || '';
 
     if (r2Url) {
-      // ✅ VIDEO NATIVO con R2 — streaming real, fullscreen móvil
       videoEl = document.createElement('video');
-      videoEl.className     = 'native-video';
-      videoEl.controls      = true;
-      videoEl.controlsList  = 'nodownload';
-      videoEl.playsInline   = true;
-      videoEl.preload       = 'metadata';
-      videoEl.src           = r2Url;
+      videoEl.className    = 'native-video';
+      videoEl.controls     = true;
+      videoEl.controlsList = 'nodownload';
+      videoEl.playsInline  = true;
+      videoEl.preload      = 'metadata';
+      videoEl.src          = r2Url;
 
-      // Barra de progreso visual
-      const progressBar  = document.createElement('div');
-      progressBar.className = 'real-progress-bar';
-      const progressFill = document.createElement('div');
-      progressFill.className = 'real-progress-fill';
-      progressFill.id = 'realProgressFill';
-      progressBar.appendChild(progressFill);
+      const progBar  = document.createElement('div'); progBar.className  = 'real-prog-bar';
+      const progFill = document.createElement('div'); progFill.className = 'real-prog-fill'; progFill.id = 'rpf';
+      progBar.appendChild(progFill);
 
-      // Cuando carga los metadatos: ir al tiempo guardado
       videoEl.addEventListener('loadedmetadata', () => {
         loader.classList.add('hidden');
-        const saved = getSavedTime();
-        if (saved > 5) {
-          videoEl.currentTime = saved;
-          showToast(`▶ Continuando desde ${formatTime(saved)}`, 'success');
-        }
-        updateTimeDisplay();
-        updateTotalTime();
+        const saved = getTimeSecs(itemId);
+        if (saved > 5) { videoEl.currentTime = saved; showToast(`▶ Desde ${fmtTime(saved)}`, 'success'); }
+        updateTime(); updateTotalTime();
       });
-
-      // Actualizar progreso en tiempo real
       videoEl.addEventListener('timeupdate', () => {
-        updateTimeDisplay();
-        updateRing();
-        // Actualizar barra visual
-        const pct = videoEl.duration ? (videoEl.currentTime / videoEl.duration) * 100 : 0;
-        document.getElementById('realProgressFill').style.width = pct + '%';
+        updateTime(); updateRing();
+        if (videoEl.duration) document.getElementById('rpf').style.width = (videoEl.currentTime/videoEl.duration*100)+'%';
       });
-
-      // Guardar al pausar
-      videoEl.addEventListener('pause',  () => doSave());
-      // Guardar al terminar
-      videoEl.addEventListener('ended',  () => { saveTime(0); saveVideoProgress(videoId, 100); updateLastSaved(); showToast('✅ Video completado', 'success'); });
-      // Ocultar loader cuando puede reproducir
+      videoEl.addEventListener('pause', () => doSave());
+      videoEl.addEventListener('ended', () => onVideoEnded());
       videoEl.addEventListener('canplay', () => loader.classList.add('hidden'));
 
       stage.appendChild(videoEl);
-      stage.appendChild(progressBar);
-
-      // Autosave cada 15 segundos
+      stage.appendChild(progBar);
       autoTimer = setInterval(() => doSave(), 15000);
 
-    } else if (v.driveId) {
-      // Fallback: iframe de Drive si no hay R2
+    } else if (item.driveId) {
       const iframe = document.createElement('iframe');
       iframe.className = 'native-video';
-      iframe.src = `https://drive.google.com/file/d/${v.driveId}/preview`;
-      iframe.setAttribute('allow', 'autoplay; encrypted-media; fullscreen');
-      iframe.onload = () => setTimeout(() => loader.classList.add('hidden'), 500);
+      iframe.src = driveEmbed(item.driveId);
+      iframe.setAttribute('allow','autoplay; encrypted-media; fullscreen');
+      iframe.onload = () => setTimeout(()=>loader.classList.add('hidden'),500);
       stage.appendChild(iframe);
-      setTimeout(() => loader.classList.add('hidden'), 9000);
-      autoTimer = setInterval(() => doSave(), 15000);
+      setTimeout(()=>loader.classList.add('hidden'),9000);
+      autoTimer = setInterval(()=>doSave(), 15000);
     } else {
-      stage.innerHTML = `<div class="no-video-msg">
-        <div class="icon">🎬</div>
-        <h3>Sin video configurado</h3>
-        <p>Agrega la URL de R2 en la columna <code>r2Url</code> de tu Google Sheet.</p>
-      </div>`;
+      stage.innerHTML = `<div class="no-video-msg"><div class="icon">🎬</div><h3>Sin video configurado</h3><p>Agrega r2Url o driveId en tu Google Sheet.</p></div>`;
       loader.classList.add('hidden');
     }
   }
 
-  function renderInfo(v) {
+  function renderInfo(item) {
     document.getElementById('playerInfo').style.display = 'grid';
-    document.getElementById('infoCat').textContent   = v.category;
-    document.getElementById('infoTitle').textContent = v.title;
+    // Si es episodio, mostrar nombre serie + ep
+    const isSerie = !!serieId;
+    const serie   = isSerie ? allContent.find(v=>v.id===serieId) : null;
+    document.getElementById('infoCat').textContent   = serie ? `📺 ${serie.title}` : (item.category || '');
+    document.getElementById('infoTitle').textContent = isSerie ? `${item.number}. ${item.title}` : item.title;
     document.getElementById('infoMeta').innerHTML = `
-      ${v.year     ? `<span>📅 ${v.year}</span>`    : ''}
-      ${v.duration ? `<span>⏱ ${v.duration}</span>` : ''}
-      <span>🗂 ${v.category}</span>`;
-    document.getElementById('infoSynopsis').textContent = v.synopsis || '';
-    document.getElementById('infoTags').innerHTML = (v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
+      ${item.duration ? `<span>⏱ ${item.duration}</span>` : ''}
+      ${item.category ? `<span>🗂 ${item.category}</span>` : ''}`;
+    document.getElementById('infoSynopsis').textContent = item.synopsis || '';
+    document.getElementById('infoTags').innerHTML = (item.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
 
-    // Mostrar progreso guardado
-    const saved = getSavedTime();
-    if (saved > 0 && v.duration) {
-      const totalSecs = parseDuration(v.duration);
-      const pct = totalSecs ? Math.round((saved / totalSecs) * 100) : 0;
-      updateRingManual(pct);
-      document.getElementById('timeCurrent').textContent = formatTime(saved);
-      document.getElementById('ringSub').textContent = fmtPct(pct);
+    // Titulo en nav si es episodio
+    if (isSerie) {
+      const navTitle = document.getElementById('navEpTitle');
+      navTitle.textContent = `${serie?.title || ''} · Ep. ${item.number}`;
+      navTitle.style.display = 'inline';
+    }
+
+    // Progreso
+    const saved = getTimeSecs(itemId);
+    if (saved > 0) { document.getElementById('timeCur').textContent = fmtTime(saved); }
+    const pct = getPct(itemId);
+    updateRingManual(pct);
+
+    // Sidebar de episodios si es serie
+    if (isSerie) {
+      const eps = allEps.filter(e=>e.serieId===serieId).sort((a,b)=>a.number-b.number);
+      if (eps.length > 1) {
+        document.getElementById('epSidebar').style.display = 'block';
+        document.getElementById('epSidebarList').innerHTML = eps.map(ep => `
+          <div class="ep-item-sm ${ep.id===itemId?'active':''}" onclick="goToEp('${ep.id}')">
+            <div class="ep-n">${ep.number}</div>
+            <div class="ep-i"><div class="ep-t">${ep.title}</div><div class="ep-d">${ep.duration||''}</div></div>
+          </div>`).join('');
+      }
     }
   }
 
-  // ── GUARDAR ──────────────────────────────────────────────
-  function doSave() {
-    if (!videoEl || !videoId) return;
-    const secs = videoEl.currentTime;
-    const pct  = videoEl.duration ? Math.round((secs / videoEl.duration) * 100) : 0;
-    saveTime(secs);
-    saveVideoProgress(videoId, pct);
-    updateLastSaved();
+  function goToEp(epId) {
+    doSave();
+    window.location.href = `player.html?id=${epId}&serie=${serieId}`;
   }
 
-  function saveNow() { doSave(); showToast('✅ Progreso guardado', 'success'); }
-
-  function markComplete() {
-    if (videoEl) videoEl.currentTime = videoEl.duration || 0;
-    saveTime(0);
-    saveVideoProgress(videoId, 100);
+  // ── SIGUIENTE EPISODIO ────────────────────────────────────
+  function onVideoEnded() {
+    savePct(itemId, 100);
+    saveTimeSecs(itemId, 0);
     updateRingManual(100);
     updateLastSaved();
-    showToast('✅ Marcado como completo', 'success');
+
+    if (!serieId) return; // no es episodio de serie
+
+    const eps     = allEps.filter(e=>e.serieId===serieId).sort((a,b)=>a.number-b.number);
+    const curIdx  = eps.findIndex(e=>e.id===itemId);
+    const nextEp  = eps[curIdx + 1];
+    if (!nextEp) { showToast('✅ Serie completada', 'success'); return; }
+
+    nextEpItem = nextEp;
+    document.getElementById('nextEpTitle').textContent = `Ep. ${nextEp.number}: ${nextEp.title}`;
+    document.getElementById('nextEpOverlay').classList.add('show');
+
+    let count = 10;
+    document.getElementById('nextEpTimer').textContent = count;
+    nextEpTimer = setInterval(() => {
+      count--;
+      document.getElementById('nextEpTimer').textContent = count;
+      if (count <= 0) { clearInterval(nextEpTimer); playNextEp(); }
+    }, 1000);
   }
 
-  // ── UI ───────────────────────────────────────────────────
-  function updateTimeDisplay() {
-    if (!videoEl) return;
-    document.getElementById('timeCurrent').textContent = formatTime(videoEl.currentTime);
+  function playNextEp() {
+    cancelNextEp();
+    if (nextEpItem) window.location.href = `player.html?id=${nextEpItem.id}&serie=${serieId}`;
   }
-  function updateTotalTime() {
-    if (!videoEl || !videoEl.duration) return;
-    document.getElementById('timeTotal').textContent = `de ${formatTime(videoEl.duration)}`;
+  function cancelNextEp() {
+    clearInterval(nextEpTimer);
+    document.getElementById('nextEpOverlay').classList.remove('show');
+    nextEpItem = null;
   }
-  function updateRing() {
-    if (!videoEl || !videoEl.duration) return;
-    const pct = (videoEl.currentTime / videoEl.duration) * 100;
-    updateRingManual(pct);
+
+  // ── GUARDAR ───────────────────────────────────────────────
+  function doSave() {
+    if (!videoEl || !itemId) return;
+    const secs = videoEl.currentTime;
+    const pct  = videoEl.duration ? Math.round((secs/videoEl.duration)*100) : 0;
+    saveTimeSecs(itemId, secs);
+    savePct(itemId, pct);
+    updateLastSaved();
   }
+  function saveNow()      { doSave(); showToast('✅ Guardado', 'success'); }
+  function markComplete() { if(videoEl) videoEl.currentTime = videoEl.duration||0; savePct(itemId,100); saveTimeSecs(itemId,0); updateRingManual(100); updateLastSaved(); showToast('✅ Marcado como completo','success'); }
+
+  // ── UI ─────────────────────────────────────────────────────
+  function updateTime()     { if(videoEl) document.getElementById('timeCur').textContent = fmtTime(videoEl.currentTime); }
+  function updateTotalTime(){ if(videoEl&&videoEl.duration) document.getElementById('timeTot').textContent = `de ${fmtTime(videoEl.duration)}`; }
+  function updateRing()     { if(videoEl&&videoEl.duration) updateRingManual((videoEl.currentTime/videoEl.duration)*100); }
   function updateRingManual(pct) {
-    const offset = 251 - (pct / 100) * 251;
-    document.getElementById('ringFill').style.strokeDashoffset = offset;
-    document.getElementById('ringLabel').textContent = Math.round(pct) + '%';
+    document.getElementById('ringFill').style.strokeDashoffset = 251-(pct/100)*251;
+    document.getElementById('ringLabel').textContent = Math.round(pct)+'%';
     document.getElementById('ringSub').textContent   = fmtPct(pct);
   }
   function updateLastSaved() {
-    const now = new Date();
-    const h = now.getHours().toString().padStart(2,'0');
-    const m = now.getMinutes().toString().padStart(2,'0');
-    const s = now.getSeconds().toString().padStart(2,'0');
-    document.getElementById('lastSaved').textContent = `Guardado a las ${h}:${m}:${s}`;
-  }
-
-  // ── HELPERS ──────────────────────────────────────────────
-  function formatTime(secs) {
-    if (!secs || isNaN(secs)) return '0:00:00';
-    const h = Math.floor(secs / 3600);
-    const m = Math.floor((secs % 3600) / 60);
-    const s = Math.floor(secs % 60);
-    return `${h}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-  }
-  function parseDuration(str) {
-    if (!str) return 0;
-    const parts = str.split(':').map(Number);
-    if (parts.length === 3) return parts[0]*3600 + parts[1]*60 + parts[2];
-    if (parts.length === 2) return parts[0]*60 + parts[1];
-    return 0;
+    const n=new Date();
+    document.getElementById('lastSaved').textContent = `Guardado ${n.getHours().toString().padStart(2,'0')}:${n.getMinutes().toString().padStart(2,'0')}:${n.getSeconds().toString().padStart(2,'0')}`;
   }
   function showError(msg) {
-    document.getElementById('videoStage').innerHTML =
-      `<div class="no-video-msg"><div class="icon">❌</div><h3>Error</h3><p>${msg}</p></div>`;
+    document.getElementById('videoStage').innerHTML = `<div class="no-video-msg"><div class="icon">❌</div><h3>Error</h3><p>${msg}</p></div>`;
     document.getElementById('videoLoader').classList.add('hidden');
   }
 
-  // Guardar al salir
-  window.addEventListener('beforeunload', () => doSave());
-  document.querySelectorAll('a[href="home.html"]').forEach(a =>
-    a.addEventListener('click', () => doSave())
-  );
+  window.addEventListener('beforeunload', ()=>doSave());
+  document.querySelectorAll('a[href="home.html"]').forEach(a=>a.addEventListener('click',()=>doSave()));
 
   init();
 </script>
-</body>
-</html>
+</body></html>
