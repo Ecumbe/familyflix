@@ -1,241 +1,90 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FamilyFlix — Catálogo</title>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FamilyFlix</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    .hero {
-      padding: 52px 0 40px;
-      position: relative;
-    }
-    .hero-title {
-      font-family: var(--font-display);
-      font-size: clamp(36px, 5vw, 60px);
-      font-weight: 700; line-height: 1.08;
-      margin-bottom: 10px;
-    }
-    .hero-title em { color: var(--accent); font-style: normal; }
-    .hero-sub { font-size: 15px; color: var(--text-2); margin-bottom: 30px; max-width: 500px; }
+    .mt-nav{margin-top:var(--nav-h)}
+    /* Hero scroll fade */
+    .navbar.scrolled{background:rgba(7,7,15,.96)}
 
-    .search-filter-row {
-      display: flex; gap: 12px; flex-wrap: wrap; align-items: center;
-    }
-    .search-wrap { flex: 1; min-width: 220px; max-width: 380px; }
+    /* Sección principal */
+    .home-content{padding-bottom:60px}
 
-    .stats-strip {
-      display: flex; gap: 0;
-      margin: 0 0 36px;
-      background: var(--glass-bg);
-      backdrop-filter: var(--blur);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      overflow: hidden;
-    }
-    .stat-item {
-      flex: 1; padding: 16px 20px; text-align: center;
-      border-right: 1px solid var(--glass-border);
-    }
-    .stat-item:last-child { border-right: none; }
-    .stat-num {
-      font-family: var(--font-display);
-      font-size: 28px; font-weight: 700; color: var(--accent);
-      display: block; line-height: 1;
-    }
-    .stat-label { font-size: 11px; color: var(--text-3); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
-
-    .catalog-body { padding-bottom: 60px; }
-
-    /* Continuar viendo */
-    .continue-row {
-      display: flex; gap: 16px; overflow-x: auto;
-      padding-bottom: 8px; margin-bottom: 8px;
-      scrollbar-width: none;
-    }
-    .continue-row::-webkit-scrollbar { display: none; }
-    .continue-card {
-      flex-shrink: 0; width: 220px;
-      background: var(--glass-bg);
-      backdrop-filter: var(--blur);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--radius-md);
-      overflow: hidden; cursor: pointer;
-      transition: all var(--transition);
-    }
-    .continue-card:hover {
-      transform: translateY(-4px);
-      border-color: rgba(200,162,255,0.4);
-    }
-    .continue-thumb {
-      position: relative; aspect-ratio: 16/9;
-      background: var(--bg-3); overflow: hidden;
-    }
-    .continue-thumb img { width:100%; height:100%; object-fit:cover; }
-    .continue-progress-bar {
-      position: absolute; bottom:0; left:0; right:0;
-      height:3px; background: rgba(255,255,255,0.1);
-    }
-    .continue-progress-fill {
-      height:100%;
-      background: linear-gradient(90deg, var(--accent), var(--gold));
-    }
-    .continue-info { padding: 10px 12px; }
-    .continue-title { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-    .continue-pct { font-size:11px; color:var(--accent); margin-top:3px; }
-
-    /* Modal */
-    .modal-thumb {
-      position:relative; aspect-ratio:16/9;
-      background:var(--bg-3); overflow:hidden;
-      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    }
-    .modal-thumb img { width:100%; height:100%; object-fit:cover; }
-    .modal-thumb-placeholder {
-      width:100%; height:100%;
-      display:flex; align-items:center; justify-content:center;
-      font-size:72px;
-      background: linear-gradient(135deg, var(--bg-2), var(--bg-3));
-    }
-    .modal-body { padding: 28px 32px 32px; }
-    .modal-cat {
-      font-size:11px; letter-spacing:2px; text-transform:uppercase;
-      color:var(--accent); font-weight:600; margin-bottom:8px;
-    }
-    .modal-title {
-      font-family:var(--font-display); font-size:32px; font-weight:700;
-      margin-bottom:8px; line-height:1.15;
-    }
-    .modal-meta { display:flex; gap:14px; color:var(--text-3); font-size:13px; margin-bottom:14px; }
-    .modal-progress-wrap { margin-bottom:16px; }
-    .modal-progress-bar {
-      height:4px; background:rgba(255,255,255,0.1);
-      border-radius:2px; overflow:hidden; margin-bottom:6px;
-    }
-    .modal-progress-fill {
-      height:100%;
-      background: linear-gradient(90deg, var(--accent), var(--gold));
-      border-radius:2px;
-    }
-    .modal-progress-label { font-size:12px; color:var(--accent); }
-    .modal-synopsis {
-      font-size:14px; line-height:1.8; color:var(--text-2);
-      margin-bottom:20px;
-    }
-    .modal-tags { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:24px; }
-    .modal-actions { display:flex; gap:12px; }
-    .modal-close-btn {
-      position:absolute; top:16px; right:16px;
-      width:36px; height:36px; border-radius:50%;
-      background:rgba(0,0,0,0.5); backdrop-filter:blur(8px);
-      border:1px solid rgba(255,255,255,0.2);
-      color:#fff; font-size:18px; cursor:pointer;
-      display:flex; align-items:center; justify-content:center;
-      transition:all var(--transition); z-index:10;
-    }
-    .modal-close-btn:hover { background:rgba(255,95,109,0.4); }
-    .modal { position:relative; }
-
-    /* Loading */
-    .loading-state {
-      display:flex; flex-direction:column; align-items:center;
-      justify-content:center; padding:80px; gap:16px; color:var(--text-3);
-    }
-    .spinner {
-      width:36px; height:36px; border:3px solid var(--glass-border);
-      border-top-color:var(--accent); border-radius:50%;
-      animation:spin 0.8s linear infinite;
-    }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    /* Fila "Continuar viendo" especial */
+    .continue-section{padding:28px 0 8px;background:linear-gradient(90deg,rgba(179,136,255,.04) 0%,transparent 100%);margin-bottom:8px}
   </style>
 </head>
 <body>
-<div class="bg-orbs">
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-  <div class="orb orb-3"></div>
-</div>
+<div class="bg-orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
 
 <!-- NAV -->
-<nav class="navbar">
+<nav class="navbar" id="navbar">
   <a href="home.html" class="nav-logo">Family<em>Flix</em></a>
+  <div class="nav-links">
+    <button class="nav-link active" onclick="filterType('',this)">Inicio</button>
+    <button class="nav-link" onclick="filterType('pelicula',this)">🎬 Películas</button>
+    <button class="nav-link" onclick="filterType('serie',this)">📺 Series</button>
+  </div>
   <div class="nav-spacer"></div>
   <div class="nav-actions">
-    <span id="navProfile" style="font-size:13px;color:var(--text-3)"></span>
-    <a href="admin.html" class="btn btn-glass" id="adminBtn" style="display:none">＋ Agregar</a>
-    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema"></button>
-    <button class="btn btn-glass" onclick="logout()">Salir</button>
+    <span class="nav-profile" id="navProfile"></span>
+    <a href="admin.html" class="btn btn-glass" id="adminBtn" style="display:none;font-size:13px">＋ Agregar</a>
+    <button class="theme-toggle" onclick="toggleTheme()"></button>
+    <button class="btn btn-glass" onclick="logout()" style="font-size:13px">Salir</button>
   </div>
 </nav>
 
 <div class="mt-nav">
-  <div class="page-wrap">
-
-    <!-- HERO -->
-    <div class="hero">
-      <h1 class="hero-title">Tus <em>recuerdos</em><br>en un solo lugar</h1>
-      <p class="hero-sub">Revive los momentos más especiales de tu familia, desde cualquier dispositivo.</p>
-
-      <div class="search-filter-row">
-        <div class="search-wrap">
-          <div style="position:relative">
-            <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text-3);pointer-events:none">🔍</span>
-            <input class="input" id="searchInput" style="padding-left:42px"
-              type="text" placeholder="Buscar videos..." oninput="applyFilters()">
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap" id="chips">
-          <button class="chip active" onclick="filterCat('',this)">Todos</button>
-        </div>
-      </div>
+  <!-- HERO -->
+  <div class="hero-banner" id="heroBanner">
+    <div class="hero-bg" id="heroBg"><div class="hero-bg-placeholder">🎬</div></div>
+    <div class="hero-gradient"></div>
+    <div class="hero-content" id="heroContent">
+      <div class="loading-state" style="padding:20px 0"><div class="spinner"></div></div>
     </div>
+  </div>
 
-    <!-- STATS -->
-    <div class="stats-strip">
-      <div class="stat-item"><span class="stat-num" id="sTotal">—</span><div class="stat-label">Videos</div></div>
-      <div class="stat-item"><span class="stat-num" id="sCats">—</span><div class="stat-label">Categorías</div></div>
-      <div class="stat-item"><span class="stat-num" id="sProgress">—</span><div class="stat-label">En progreso</div></div>
+  <!-- STATS -->
+  <div class="stats-strip" id="statsStrip"></div>
+
+  <!-- BÚSQUEDA -->
+  <div class="search-bar" style="padding-top:20px">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="input" id="searchInput" type="text" placeholder="Buscar..." oninput="applySearch()">
     </div>
+    <div class="chips" id="catChips"><button class="chip active" onclick="filterCat('',this)">Todos</button></div>
+  </div>
 
-    <!-- CATÁLOGO -->
-    <div class="catalog-body">
-      <!-- Continuar viendo -->
-      <div id="continueSection" style="display:none; margin-bottom:36px">
-        <div class="section-heading">▶ Continuar viendo</div>
-        <div class="continue-row" id="continueRow"></div>
-      </div>
-
-      <!-- Grid principal -->
-      <div class="section-heading" id="mainHeading">🎬 Toda la colección</div>
-      <div id="gridWrap">
-        <div class="loading-state">
-          <div class="spinner"></div>
-          <span>Cargando tu colección...</span>
-        </div>
-      </div>
-    </div>
+  <!-- CONTENIDO -->
+  <div class="home-content" id="homeContent">
+    <div class="loading-state"><div class="spinner"></div><span style="color:var(--text-3)">Cargando colección...</span></div>
   </div>
 </div>
 
-<!-- MODAL DETALLE -->
-<div class="modal-backdrop" id="modalBackdrop" onclick="closeModal(event)">
-  <div class="modal glass-strong" id="modalEl">
-    <button class="modal-close-btn" onclick="closeModalDirect()">✕</button>
+<!-- MODAL -->
+<div class="modal-bd" id="modalBd" onclick="closeModalOutside(event)">
+  <div class="modal glass-s" id="modalEl">
+    <button class="modal-close" onclick="closeModal()">✕</button>
     <div class="modal-thumb" id="mThumb"></div>
     <div class="modal-body">
-      <div class="modal-cat" id="mCat"></div>
+      <div class="modal-type" id="mType"></div>
       <h2 class="modal-title" id="mTitle"></h2>
       <div class="modal-meta" id="mMeta"></div>
-      <div class="modal-progress-wrap" id="mProgressWrap" style="display:none">
-        <div class="modal-progress-bar"><div class="modal-progress-fill" id="mProgressFill"></div></div>
-        <div class="modal-progress-label" id="mProgressLabel"></div>
+      <div class="modal-progress" id="mProgress" style="display:none">
+        <div class="modal-prog-bar"><div class="modal-prog-fill" id="mProgFill"></div></div>
+        <div class="modal-prog-label" id="mProgLabel"></div>
       </div>
       <p class="modal-synopsis" id="mSynopsis"></p>
       <div class="modal-tags" id="mTags"></div>
-      <div class="modal-actions">
-        <button class="btn btn-accent btn-lg" style="flex:1" id="mPlayBtn">▶ Reproducir</button>
-        <button class="btn btn-glass btn-lg" onclick="closeModalDirect()">✕</button>
+      <!-- Episodios de serie -->
+      <div class="episodes-list" id="mEpisodes" style="display:none">
+        <div class="episodes-title">Episodios</div>
+        <div id="mEpList"></div>
       </div>
+      <div class="modal-actions" id="mActions"></div>
     </div>
   </div>
 </div>
@@ -244,158 +93,265 @@
 <script>
   checkAuth();
   document.getElementById('navProfile').textContent = sessionStorage.getItem('ff_profile') || '';
-  if (sessionStorage.getItem('ff_role') === 'admin') {
-    document.getElementById('adminBtn').style.display = 'inline-flex';
-  }
+  if (sessionStorage.getItem('ff_role') === 'admin') document.getElementById('adminBtn').style.display = 'inline-flex';
 
-  let allVideos = [];
-  let currentCat = '';
-  let currentSearch = '';
+  // Navbar scroll effect
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 80);
+  });
+
+  let allContent  = [];
+  let allEpisodes = [];
+  let activeType  = '';
+  let activeCat   = '';
+  let activeSearch= '';
+  let modalItem   = null;
 
   async function init() {
-    allVideos = await fetchVideos();
-    const cats = [...new Set(allVideos.map(v => v.category).filter(Boolean))];
+    [allContent, allEpisodes] = await Promise.all([fetchContent(), fetchEpisodes()]);
+    renderHero();
+    renderStats();
+    renderCatChips();
+    renderHome();
+  }
 
-    // Chips de categoría
-    const chipsEl = document.getElementById('chips');
+  // ── HERO ─────────────────────────────────────────────────
+  function renderHero() {
+    const featured = allContent.find(v => v.featured) || allContent[0];
+    if (!featured) return;
+    const pct = getPct(featured.id);
+    const bg  = document.getElementById('heroBg');
+    if (featured.thumbnail) {
+      bg.innerHTML = `<img src="${featured.thumbnail}" alt="${featured.title}" onerror="this.parentElement.innerHTML='<div class=\\'hero-bg-placeholder\\'>${catEmoji(featured.category)}</div>'">`;
+    }
+    const typeLabel = featured.type === 'serie' ? '📺 Serie' : '🎬 Película';
+    document.getElementById('heroContent').innerHTML = `
+      <div class="hero-badge"><span class="hero-type-icon">${featured.type==='serie'?'📺':'🎬'}</span>${typeLabel} · ${featured.category}</div>
+      <h1 class="hero-title">${featured.title}</h1>
+      <div class="hero-meta">
+        ${featured.year ? `<span>${featured.year}</span><span class="dot"></span>` : ''}
+        ${featured.tags.slice(0,3).map(t=>`<span>#${t}</span>`).join('<span class="dot"></span>')}
+      </div>
+      <p class="hero-synopsis">${featured.synopsis}</p>
+      <div class="hero-actions">
+        <button class="btn btn-accent btn-lg" onclick="playOrOpen('${featured.id}')">
+          ${pct > 0 && pct < 100 ? '▶ Continuar' : '▶ Reproducir'}
+        </button>
+        <button class="btn btn-glass btn-lg" onclick="openModal('${featured.id}')">ℹ Más info</button>
+      </div>`;
+  }
+
+  // ── STATS ─────────────────────────────────────────────────
+  function renderStats() {
+    const prog = getProgress();
+    const movies = allContent.filter(v=>v.type==='pelicula').length;
+    const series = allContent.filter(v=>v.type==='serie').length;
+    const inProg = allContent.filter(v=>{ const p=prog[v.id]||0; return p>0&&p<100; }).length;
+    document.getElementById('statsStrip').innerHTML = `
+      <div class="stat-item"><span class="stat-num">${movies}</span><div class="stat-label">Películas</div></div>
+      <div class="stat-item"><span class="stat-num">${series}</span><div class="stat-label">Series</div></div>
+      <div class="stat-item"><span class="stat-num">${allEpisodes.length}</span><div class="stat-label">Episodios</div></div>
+      <div class="stat-item"><span class="stat-num">${inProg}</span><div class="stat-label">En progreso</div></div>`;
+  }
+
+  // ── CHIPS ──────────────────────────────────────────────────
+  function renderCatChips() {
+    const cats = [...new Set(allContent.map(v=>v.category))];
+    const el = document.getElementById('catChips');
     cats.forEach(cat => {
       const btn = document.createElement('button');
       btn.className = 'chip';
-      btn.textContent = catEmoji(cat) + ' ' + cat;
+      btn.innerHTML = `${catEmoji(cat)} ${cat}`;
       btn.onclick = () => filterCat(cat, btn);
-      chipsEl.appendChild(btn);
+      el.appendChild(btn);
     });
-
-    // Stats
-    const prog = getProgress();
-    document.getElementById('sTotal').textContent = allVideos.length;
-    document.getElementById('sCats').textContent = cats.length;
-    document.getElementById('sProgress').textContent = Object.keys(prog).filter(k => prog[k] > 0 && prog[k] < 100).length;
-
-    renderContinue();
-    renderGrid(allVideos);
   }
 
-  function renderContinue() {
-    const prog = getProgress();
-    const inProgress = allVideos.filter(v => prog[v.id] > 5 && prog[v.id] < 100);
-    if (!inProgress.length) return;
-    document.getElementById('continueSection').style.display = 'block';
-    document.getElementById('continueRow').innerHTML = inProgress.map(v => {
-      const pct = prog[v.id];
-      const thumb = v.thumbnail ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.style.display='none'">` : '';
-      return `<div class="continue-card" onclick="openModal('${v.id}')">
-        <div class="continue-thumb">
-          ${thumb}
-          <div class="continue-progress-bar"><div class="continue-progress-fill" style="width:${pct}%"></div></div>
-        </div>
-        <div class="continue-info">
-          <div class="continue-title">${v.title}</div>
-          <div class="continue-pct">${pct}% visto</div>
-        </div>
-      </div>`;
-    }).join('');
-  }
+  // ── RENDER HOME ───────────────────────────────────────────
+  function renderHome() {
+    const home = document.getElementById('homeContent');
+    let filtered = allContent;
+    if (activeType)   filtered = filtered.filter(v => v.type === activeType);
+    if (activeCat)    filtered = filtered.filter(v => v.category === activeCat);
+    if (activeSearch) filtered = filtered.filter(v =>
+      v.title.toLowerCase().includes(activeSearch) ||
+      v.synopsis.toLowerCase().includes(activeSearch) ||
+      v.tags.some(t => t.toLowerCase().includes(activeSearch))
+    );
 
-  function renderGrid(videos) {
-    const wrap = document.getElementById('gridWrap');
-    if (!videos.length) {
-      wrap.innerHTML = `<div class="empty-state"><div class="icon">🔍</div><h3>Sin resultados</h3><p style="color:var(--text-3)">Prueba con otro término o categoría.</p></div>`;
+    if (!filtered.length) {
+      home.innerHTML = `<div class="loading-state"><div style="font-size:48px">🔍</div><span style="color:var(--text-3)">Sin resultados</span></div>`;
       return;
     }
+
+    let html = '';
+
+    // Fila: Continuar viendo
     const prog = getProgress();
-    wrap.innerHTML = `<div class="video-grid stagger">${videos.map(v => videoCardHTML(v, prog)).join('')}</div>`;
+    const continueItems = filtered.filter(v => { const p=prog[v.id]||0; return p>0&&p<100; });
+    if (continueItems.length && !activeSearch) {
+      html += rowHTML('▶ Continuar viendo', continueItems, 'card-sm', true);
+    }
+
+    if (activeSearch || activeType || activeCat) {
+      // Vista de búsqueda/filtro: una sola grilla
+      html += `<div style="padding:0 48px 0">
+        <div class="row-header"><div class="row-title">${activeSearch ? `🔍 "${activeSearch}"` : (activeType==='pelicula'?'🎬 Películas':'📺 Series')}</div></div>
+        <div class="row-scroll stagger">${filtered.map(v=>cardHTML(v)).join('')}</div></div>`;
+    } else {
+      // Vista inicio: filas por tipo y categoría
+      const movies = filtered.filter(v=>v.type==='pelicula');
+      const series = filtered.filter(v=>v.type==='serie');
+      if (series.length)  html += rowHTML('📺 Series', series, 'card-wide');
+      if (movies.length)  html += rowHTML('🎬 Películas', movies, 'card-wide');
+
+      // Filas por categoría
+      const cats = [...new Set(filtered.map(v=>v.category))];
+      cats.forEach(cat => {
+        const items = filtered.filter(v=>v.category===cat);
+        if (items.length >= 2) html += rowHTML(`${catEmoji(cat)} ${cat}`, items, 'card-wide');
+      });
+    }
+
+    home.innerHTML = html;
   }
 
-  function videoCardHTML(v, prog) {
-    const pct = prog[v.id] || 0;
-    const thumbContent = v.thumbnail
-      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'thumb-placeholder\\'>${catEmoji(v.category)}</div>'">`
-      : `<div class="thumb-placeholder">${catEmoji(v.category)}</div>`;
-    return `<div class="video-card" onclick="openModal('${v.id}')">
+  function rowHTML(title, items, cardClass='card-wide', small=false) {
+    return `<div class="content-section">
+      <div class="row-header">
+        <div class="row-title">${title}</div>
+      </div>
+      <div class="row-scroll stagger">${items.map(v=>cardHTML(v,cardClass)).join('')}</div>
+    </div>`;
+  }
+
+  function cardHTML(v, cls='card-wide') {
+    const pct    = getPct(v.id);
+    const isNew  = !pct;
+    const badge  = getBadge(v.id, isNew);
+    const isSerie= v.type==='serie';
+    const thumb  = v.thumbnail
+      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'thumb-ph\\'>${catEmoji(v.category)}</div>'">`
+      : `<div class="thumb-ph">${catEmoji(v.category)}</div>`;
+    return `<div class="card ${cls}" onclick="openModal('${v.id}')">
       <div class="card-thumb">
-        ${thumbContent}
-        <div class="card-overlay"><div class="play-btn-circle">▶</div></div>
-        <div class="card-badge">${v.category}</div>
-        ${pct > 0 ? `<div class="progress-strip"><div class="progress-strip-fill" style="width:${pct}%"></div></div>` : ''}
+        ${thumb}
+        <div class="card-overlay"><div class="play-circle">▶</div></div>
+        ${badge ? `<div class="card-badge ${badge.cls}">${badge.label}</div>` : ''}
+        ${isSerie ? `<div class="card-badge badge-series" style="top:auto;bottom:8px;left:8px">📺 SERIE</div>` : ''}
+        ${pct>0&&pct<100 ? `<div class="progress-strip"><div class="progress-strip-fill" style="width:${pct}%"></div></div>` : ''}
       </div>
       <div class="card-body">
         <div class="card-title">${v.title}</div>
-        <div class="card-meta">
-          <span>${v.year || ''}</span>
-          ${v.duration ? `<span>⏱ ${v.duration}</span>` : ''}
-        </div>
+        <div class="card-meta"><span>${v.year||''}</span>${v.category?`<span>${v.category}</span>`:''}</div>
       </div>
     </div>`;
   }
 
-  function filterCat(cat, btn) {
-    currentCat = cat;
-    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  // ── FILTROS ───────────────────────────────────────────────
+  function filterType(type, btn) {
+    activeType = type;
+    document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
     btn.classList.add('active');
-    applyFilters();
+    renderHome();
+  }
+  function filterCat(cat, btn) {
+    activeCat = cat;
+    document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderHome();
+  }
+  function applySearch() {
+    activeSearch = document.getElementById('searchInput').value.toLowerCase();
+    renderHome();
   }
 
-  function applyFilters() {
-    currentSearch = document.getElementById('searchInput').value.toLowerCase();
-    let filtered = allVideos;
-    if (currentCat) filtered = filtered.filter(v => v.category === currentCat);
-    if (currentSearch) filtered = filtered.filter(v =>
-      v.title.toLowerCase().includes(currentSearch) ||
-      (v.synopsis||'').toLowerCase().includes(currentSearch) ||
-      (v.tags||[]).some(t => t.toLowerCase().includes(currentSearch))
-    );
-    const heading = document.getElementById('mainHeading');
-    heading.textContent = currentCat ? `${catEmoji(currentCat)} ${currentCat}` :
-      currentSearch ? `🔍 "${currentSearch}"` : '🎬 Toda la colección';
-    renderGrid(filtered);
-  }
-
-  // Modal
-  let modalVideo = null;
+  // ── MODAL ─────────────────────────────────────────────────
   function openModal(id) {
-    const v = allVideos.find(x => x.id === id);
+    const v = allContent.find(x=>x.id===id);
     if (!v) return;
-    modalVideo = v;
-    const prog = getProgress();
-    const pct = prog[id] || 0;
+    modalItem = v;
+    const pct = getPct(id);
 
     // Thumb
     document.getElementById('mThumb').innerHTML = v.thumbnail
-      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'modal-thumb-placeholder\\'>${catEmoji(v.category)}</div>'">`
-      : `<div class="modal-thumb-placeholder">${catEmoji(v.category)}</div>`;
+      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'modal-thumb-ph\\'>${catEmoji(v.category)}</div>'">`
+      : `<div class="modal-thumb-ph">${catEmoji(v.category)}</div>`;
 
-    document.getElementById('mCat').textContent = v.category;
-    document.getElementById('mTitle').textContent = v.title;
-    document.getElementById('mMeta').innerHTML = `
-      ${v.year ? `<span>📅 ${v.year}</span>` : ''}
-      ${v.duration ? `<span>⏱ ${v.duration}</span>` : ''}`;
+    document.getElementById('mType').textContent     = v.type==='serie' ? '📺 Serie' : '🎬 Película';
+    document.getElementById('mTitle').textContent    = v.title;
     document.getElementById('mSynopsis').textContent = v.synopsis || 'Sin sinopsis disponible.';
+    document.getElementById('mMeta').innerHTML = `
+      ${v.year?`<span>📅 ${v.year}</span>`:''}
+      <span>🗂 ${v.category}</span>`;
     document.getElementById('mTags').innerHTML = (v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
 
+    // Progreso
     if (pct > 0) {
-      document.getElementById('mProgressWrap').style.display = 'block';
-      document.getElementById('mProgressFill').style.width = pct + '%';
-      document.getElementById('mProgressLabel').textContent = fmtPct(pct);
+      document.getElementById('mProgress').style.display = 'block';
+      document.getElementById('mProgFill').style.width   = pct+'%';
+      document.getElementById('mProgLabel').textContent  = fmtPct(pct);
     } else {
-      document.getElementById('mProgressWrap').style.display = 'none';
+      document.getElementById('mProgress').style.display = 'none';
     }
 
-    document.getElementById('mPlayBtn').textContent = pct > 0 ? '▶ Continuar viendo' : '▶ Reproducir';
-    document.getElementById('mPlayBtn').onclick = () => { closeModalDirect(); window.location.href = `player.html?id=${v.id}`; };
+    // Acciones
+    const actions = document.getElementById('mActions');
+    if (v.type === 'serie') {
+      actions.innerHTML = `<button class="btn btn-glass btn-lg" style="flex:1" onclick="closeModal()">✕ Cerrar</button>`;
+      // Episodios
+      const eps = allEpisodes.filter(e=>e.serieId===v.id).sort((a,b)=>a.number-b.number);
+      if (eps.length) {
+        document.getElementById('mEpisodes').style.display = 'block';
+        document.getElementById('mEpList').innerHTML = eps.map(ep => {
+          const epPct = getPct(ep.id);
+          return `<div class="ep-item" onclick="playEpisode('${ep.id}','${v.id}')">
+            <div class="ep-num">${ep.number}</div>
+            <div class="ep-thumb">${ep.thumbnail?`<img src="${ep.thumbnail}" alt="">`:'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>'}</div>
+            <div class="ep-info">
+              <div class="ep-title">${ep.title}</div>
+              <div class="ep-dur">${ep.duration||''}</div>
+            </div>
+            ${epPct>0?`<div class="ep-prog"><div class="ep-prog-fill" style="width:${epPct}%"></div></div>`:''}
+          </div>`;
+        }).join('');
+      } else {
+        document.getElementById('mEpisodes').style.display = 'none';
+      }
+    } else {
+      document.getElementById('mEpisodes').style.display = 'none';
+      actions.innerHTML = `
+        <button class="btn btn-accent btn-lg" style="flex:1" onclick="playOrOpen('${v.id}')">
+          ${pct>0&&pct<100?'▶ Continuar':'▶ Reproducir'}
+        </button>
+        <button class="btn btn-glass btn-lg" onclick="closeModal()">✕</button>`;
+    }
 
-    document.getElementById('modalBackdrop').classList.add('open');
+    document.getElementById('modalBd').classList.add('open');
     document.body.style.overflow = 'hidden';
   }
 
-  function closeModal(e) { if (e.target === document.getElementById('modalBackdrop')) closeModalDirect(); }
-  function closeModalDirect() {
-    document.getElementById('modalBackdrop').classList.remove('open');
-    document.body.style.overflow = '';
+  function playOrOpen(id) {
+    const v = allContent.find(x=>x.id===id);
+    if (!v) return;
+    if (v.type === 'serie') { openModal(id); return; }
+    closeModal();
+    window.location.href = `player.html?id=${id}`;
   }
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModalDirect(); });
+
+  function playEpisode(epId, serieId) {
+    closeModal();
+    window.location.href = `player.html?id=${epId}&serie=${serieId}`;
+  }
+
+  function closeModal() {
+    document.getElementById('modalBd').classList.remove('open');
+    document.body.style.overflow = '';
+    modalItem = null;
+  }
+  function closeModalOutside(e) { if(e.target===document.getElementById('modalBd')) closeModal(); }
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
 
   init();
 </script>
-</body>
-</html>
+</body></html>
