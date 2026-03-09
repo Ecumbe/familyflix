@@ -1,6 +1,7 @@
 /* =========================================================
-   FamilyFlix v6 — shared.js
+   FamilyFlix v6.1 — shared.js
    Base completa para frontend + Google Apps Script + Worker
+   Ajustado para Apps Script vía GET (evita CORS en GitHub Pages)
    ========================================================= */
 
 const FF_CONFIG = {
@@ -218,32 +219,43 @@ function requireAdmin() {
 
 /* -------------------------------
    API Apps Script
+   IMPORTANTE: usamos GET para evitar CORS en GitHub Pages
 --------------------------------*/
-async function apiCall(action, payload = {}, method = 'POST') {
-  if (!FF_CONFIG.APPS_SCRIPT_URL) {
+function normalizeAppsScriptUrl(url = '') {
+  return String(url || '').trim();
+}
+
+async function apiCall(action, payload = {}) {
+  const base = normalizeAppsScriptUrl(FF_CONFIG.APPS_SCRIPT_URL);
+  if (!base) {
     throw new Error('Falta configurar FF_CONFIG.APPS_SCRIPT_URL');
   }
 
-  const body = { action, ...payload };
+  const url = new URL(base);
+  url.searchParams.set('action', action);
+  url.searchParams.set('data', JSON.stringify(payload || {}));
+  url.searchParams.set('_t', Date.now().toString());
 
-  if (method === 'GET') {
-    const url = new URL(FF_CONFIG.APPS_SCRIPT_URL);
-    url.searchParams.set('action', action);
-    url.searchParams.set('data', JSON.stringify(payload));
-    const res = await fetch(url.toString(), { method: 'GET' });
-    const data = await res.json();
-    if (!data.ok) throw new Error(data.error || 'Error de Apps Script');
-    return data;
-  }
-
-  const res = await fetch(FF_CONFIG.APPS_SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body)
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    cache: 'no-store'
   });
 
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok || !data.ok) throw new Error(data.error || 'Error de Apps Script');
+  const text = await res.text();
+  const data = safeJsonParse(text, null);
+
+  if (!res.ok) {
+    throw new Error((data && data.error) || `Error ${res.status} de Apps Script`);
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new Error('Respuesta inválida de Apps Script');
+  }
+
+  if (!data.ok) {
+    throw new Error(data.error || 'Error de Apps Script');
+  }
+
   return data;
 }
 
@@ -358,7 +370,10 @@ function buildR2Url(fileName = '') {
 --------------------------------*/
 async function fetchTsv(url) {
   if (!url) return '';
-  const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+  const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`, {
+    method: 'GET',
+    cache: 'no-store'
+  });
   if (!res.ok) throw new Error(`No se pudo leer ${url}`);
   return res.text();
 }
