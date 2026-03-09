@@ -10,18 +10,14 @@
   .page-title{font-family:var(--ff);font-size:40px;font-weight:900;margin-bottom:4px}
   .page-title span{color:var(--amber);font-style:italic}
   .page-sub{font-size:14px;color:var(--cream3);margin-bottom:36px}
-
   .admin-tabs{display:flex;gap:0;background:var(--ink2);border:1px solid rgba(245,240,232,0.07);border-radius:var(--rl);padding:5px;margin-bottom:28px;overflow-x:auto}
   .atab{flex:1;padding:11px 16px;border:none;background:none;color:var(--cream3);font-family:var(--fs);font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--rm);transition:all var(--t);white-space:nowrap;text-align:center}
   .atab.on{background:var(--amber);color:#0a0800;font-weight:700}
   .atab:not(.on):hover{color:var(--cream2);background:rgba(245,240,232,0.05)}
-
   .panel{display:none}.panel.on{display:block}
-
   .acard{background:var(--ink2);border:1px solid rgba(245,240,232,0.07);border-radius:var(--rl);padding:28px;margin-bottom:20px}
   .acard h3{font-family:var(--ff);font-size:20px;font-weight:700;margin-bottom:6px;color:var(--cream)}
   .acard .desc{font-size:13px;color:var(--cream3);margin-bottom:22px;line-height:1.6}
-
   .upload-zone{border:2px dashed rgba(232,160,32,0.3);border-radius:var(--rl);padding:48px 24px;text-align:center;cursor:pointer;transition:all var(--t);background:rgba(232,160,32,0.03);position:relative}
   .upload-zone:hover,.upload-zone.drag{border-color:var(--amber);background:rgba(232,160,32,0.07)}
   .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
@@ -29,27 +25,33 @@
   .uz-title{font-family:var(--ff);font-size:22px;font-weight:700;color:var(--cream);margin-bottom:6px}
   .uz-sub{font-size:13px;color:var(--cream3)}
   .uz-file{font-size:13px;color:var(--amber);font-weight:600;margin-top:10px;min-height:20px}
-
   .upload-prog{margin-top:16px;display:none}
   .upload-prog-bar{height:6px;background:rgba(245,240,232,0.1);border-radius:3px;overflow:hidden;margin-bottom:8px}
   .upload-prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--amber),var(--amber3));border-radius:3px;transition:width 0.3s}
   .upload-prog-label{font-size:12px;color:var(--amber);text-align:center}
-
   .form-g{margin-bottom:18px}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:600px){.form-row{grid-template-columns:1fr}}
-
   .type-tabs{display:flex;gap:0;background:var(--ink3);border-radius:var(--rm);padding:4px;margin-bottom:22px}
   .ttab{flex:1;padding:11px;border:none;background:none;color:var(--cream3);font-family:var(--fs);font-size:14px;font-weight:500;cursor:pointer;border-radius:var(--r);transition:all var(--t);text-align:center}
   .ttab.on{background:var(--amber);color:#0a0800;font-weight:700}
 
+  /* AI STATUS */
   .ai-status{display:none;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;margin-bottom:18px}
   .ai-status.analyzing{display:flex;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.2);color:var(--amber)}
   .ai-status.done{display:flex;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);color:#2ecc71}
   .ai-status.err{display:flex;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:#e74c3c}
-
   .spin-sm{width:16px;height:16px;border:2px solid rgba(232,160,32,0.2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 
+  /* PREVIEW IA */
+  .ai-preview{display:none;background:linear-gradient(135deg,rgba(232,160,32,0.06),rgba(196,122,16,0.03));border:1px solid rgba(232,160,32,0.2);border-radius:var(--rm);padding:20px;margin-bottom:20px}
+  .ai-preview h4{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:14px;font-weight:600}
+  .ai-field{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(245,240,232,0.05);align-items:flex-start}
+  .ai-field:last-child{border-bottom:none}
+  .ai-field-lbl{font-size:11px;color:var(--cream3);width:80px;flex-shrink:0;padding-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
+  .ai-field-val{font-size:13px;color:var(--cream);flex:1;line-height:1.5}
+
+  /* ARCHIVOS */
   .files-list{display:flex;flex-direction:column;gap:8px}
   .file-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--ink3);border:1px solid rgba(245,240,232,0.06);border-radius:var(--rm);transition:border-color var(--t)}
   .file-row:hover{border-color:rgba(232,160,32,0.2)}
@@ -59,10 +61,8 @@
   .file-meta{font-size:11px;color:var(--cream3)}
   .file-acts{display:flex;gap:8px;flex-shrink:0}
   .btn-sm{padding:7px 12px;font-size:12px;border-radius:var(--r)}
-
   .config-row{display:flex;gap:12px;align-items:flex-end;margin-bottom:14px}
   .config-row .form-g{flex:1;margin-bottom:0}
-  .notice{background:rgba(39,174,96,0.07);border:1px solid rgba(39,174,96,0.2);border-radius:var(--rm);padding:14px 18px;font-size:13px;color:#2ecc71;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
   .warning{background:rgba(232,160,32,0.07);border:1px solid rgba(232,160,32,0.2);border-radius:var(--rm);padding:14px 18px;font-size:13px;color:var(--amber);display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
   .steps{display:flex;flex-direction:column;gap:10px}
   .step{display:flex;gap:12px;align-items:flex-start}
@@ -70,11 +70,14 @@
   .step-t{font-size:13px;color:var(--cream2);line-height:1.7}
   .step-t code{background:var(--ink3);border:1px solid rgba(245,240,232,0.1);border-radius:4px;padding:1px 7px;font-family:monospace;color:var(--amber);font-size:12px}
   .step-t a{color:var(--amber)}
+  .success-card{display:none;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:var(--rl);padding:28px;text-align:center;margin-bottom:20px}
+  .success-card .sc-icon{font-size:52px;margin-bottom:12px}
+  .success-card h3{font-family:var(--ff);font-size:26px;color:#2ecc71;margin-bottom:8px}
+  .success-card p{font-size:14px;color:var(--cream3);margin-bottom:20px}
 </style>
 </head>
 <body>
 <div class="bg-atm"></div>
-
 <nav class="nav solid" style="transform:none!important">
   <div class="nav-inner">
     <a href="home.html" class="logo">Family<span>Flix</span></a>
@@ -87,19 +90,21 @@
 
 <div class="page">
   <h1 class="page-title">Panel de <span>Administración</span></h1>
-  <p class="page-sub">Sube videos, genera datos con IA y guarda todo en Google Sheets automáticamente.</p>
+  <p class="page-sub">Sube un video, la IA genera los datos, y se guarda automático en Google Sheets.</p>
 
   <div class="admin-tabs">
-    <button class="atab on" onclick="showTab('subir',this)">☁️ Subir Video</button>
-    <button class="atab" onclick="showTab('archivos',this)">📁 Mis Archivos</button>
-    <button class="atab" onclick="showTab('config',this)">⚙️ Configuración</button>
+    <button class="atab on" id="tab-subir" onclick="showTab('subir',this)">☁️ Subir Video</button>
+    <button class="atab" id="tab-archivos" onclick="showTab('archivos',this)">📁 Mis Archivos</button>
+    <button class="atab" id="tab-config" onclick="showTab('config',this)">⚙️ Configuración</button>
   </div>
 
   <!-- ══ SUBIR ══════════════════════════════════════════════ -->
   <div class="panel on" id="panel-subir">
-    <div class="acard">
-      <h3>1. Sube tu video a R2</h3>
-      <p class="desc">Arrastra el archivo o haz clic para seleccionarlo. Se sube directo a Cloudflare R2.</p>
+
+    <!-- Paso 1: Subir -->
+    <div class="acard" id="step1Card">
+      <h3>Paso 1 — Sube tu video a R2</h3>
+      <p class="desc">Arrastra el archivo o haz clic para seleccionarlo. Se sube directo a Cloudflare R2 sin pasar por el navegador.</p>
       <div class="upload-zone" id="uploadZone">
         <input type="file" id="fileInput" accept="video/*" onchange="onFileSelected(this)">
         <div class="uz-icon">🎬</div>
@@ -116,17 +121,26 @@
       </button>
     </div>
 
-    <div class="acard" id="aiCard" style="display:none">
-      <h3>2. ✨ IA autorellena los datos</h3>
-      <p class="desc">La IA analizó el nombre del archivo y generó los datos automáticamente. Revisa y ajusta si quieres.</p>
+    <!-- Paso 2: Revisar y editar datos IA -->
+    <div class="acard" id="step2Card" style="display:none">
+      <h3>Paso 2 — Revisa los datos generados</h3>
+      <p class="desc">La IA analizó el nombre del archivo. Revisa, ajusta si quieres, y elige el tipo de contenido.</p>
+
       <div class="ai-status" id="aiStatus"></div>
 
+      <!-- Preview rápido de lo que generó la IA -->
+      <div class="ai-preview" id="aiPreview">
+        <h4>✨ Generado por IA — revisa antes de guardar</h4>
+        <div id="aiPreviewFields"></div>
+      </div>
+
+      <!-- Tipo -->
       <div class="form-g">
-        <label>Tipo de contenido</label>
+        <label>¿Qué tipo de contenido es?</label>
         <div class="type-tabs">
-          <button class="ttab on" onclick="setType('pelicula',this)">🎬 Película</button>
+          <button class="ttab on" onclick="setType('pelicula',this)">🎬 Película / Video</button>
           <button class="ttab" onclick="setType('serie',this)">📺 Serie</button>
-          <button class="ttab" onclick="setType('episodio',this)">🎞 Episodio</button>
+          <button class="ttab" onclick="setType('episodio',this)">🎞 Episodio de serie</button>
         </div>
       </div>
 
@@ -143,26 +157,40 @@
       <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="fSyn" rows="3"></textarea></div>
       <div class="form-row">
         <div class="form-g"><label>Año</label><input class="inp" id="fYear" type="number"></div>
-        <div class="form-g"><label>Duración</label><input class="inp" id="fDur" type="text" placeholder="1:30:00"></div>
+        <div class="form-g"><label>Duración (opcional)</label><input class="inp" id="fDur" type="text" placeholder="1:30:00"></div>
       </div>
       <div class="form-g"><label>Tags (separados por coma)</label><input class="inp" id="fTags" type="text"></div>
-      <div class="form-g"><label>URL del video en R2 (generada automáticamente)</label><input class="inp" id="fR2" type="text" readonly></div>
+      <div class="form-g"><label>URL del video en R2 (automática)</label><input class="inp" id="fR2" type="text" readonly style="opacity:0.7"></div>
 
+      <!-- Solo para episodios -->
       <div id="epFields" style="display:none">
-        <div class="form-row">
-          <div class="form-g"><label>ID de la serie</label><input class="inp" id="fSerieId" type="text" placeholder="s001"></div>
-          <div class="form-g"><label>Número de episodio</label><input class="inp" id="fEpNum" type="number" placeholder="1"></div>
+        <div style="border-top:1px solid rgba(245,240,232,0.08);padding-top:18px;margin-bottom:18px">
+          <div class="form-row">
+            <div class="form-g"><label>ID de la serie padre</label><input class="inp" id="fSerieId" type="text" placeholder="s001"></div>
+            <div class="form-g"><label>Número de episodio</label><input class="inp" id="fEpNum" type="number" placeholder="1"></div>
+          </div>
         </div>
       </div>
 
-      <div class="form-g">
-        <label>¿Destacar en Hero banner?</label>
-        <select class="inp" id="fFeat"><option value="">No</option><option value="si">Sí</option></select>
+      <div class="form-g" id="featField">
+        <label>¿Mostrar en el Hero banner de inicio?</label>
+        <select class="inp" id="fFeat"><option value="">No</option><option value="si">Sí — mostrar en portada</option></select>
       </div>
 
       <button class="btn btn-amber btn-full" style="padding:15px;font-size:15px;font-weight:700;margin-top:4px" id="saveBtn" onclick="saveToSheets()">
         💾 Guardar en Google Sheets
       </button>
+    </div>
+
+    <!-- Éxito -->
+    <div class="success-card" id="successCard">
+      <div class="sc-icon">✅</div>
+      <h3>¡Guardado correctamente!</h3>
+      <p>El video ya está en Google Sheets. Recarga FamilyFlix para verlo en el catálogo.</p>
+      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+        <button class="btn btn-amber" onclick="resetForm()">➕ Agregar otro video</button>
+        <a href="home.html" class="btn btn-ghost">← Ver catálogo</a>
+      </div>
     </div>
   </div>
 
@@ -170,7 +198,7 @@
   <div class="panel" id="panel-archivos">
     <div class="acard">
       <h3>Archivos en Cloudflare R2</h3>
-      <p class="desc">Todos los videos en tu bucket <strong>familyflix</strong>. Puedes copiar la URL o borrar archivos.</p>
+      <p class="desc">Todos los videos en tu bucket <strong>familyflix</strong>.</p>
       <button class="btn btn-ghost" onclick="loadFiles()" style="margin-bottom:18px">🔄 Actualizar lista</button>
       <div id="filesList"><div class="load-state"><div class="spin"></div><span>Cargando archivos...</span></div></div>
     </div>
@@ -181,30 +209,22 @@
     <div class="warning">⚠️ <span>Esta configuración solo la ves tú como administrador. Nunca compartas estas claves.</span></div>
 
     <div class="acard">
-      <h3>⚙️ Cloudflare Worker</h3>
-      <p class="desc">URL de tu Worker. Necesario para subir archivos y gestionar R2 desde la web.</p>
-      <div class="config-row">
-        <div class="form-g"><label>Worker URL</label><input class="inp" id="cfWorkerUrl" type="text" placeholder="https://familyflix-worker.TU-USUARIO.workers.dev"></div>
-      </div>
-      <div class="config-row">
-        <div class="form-g"><label>Admin Secret (la misma que pusiste en el Worker)</label><input class="inp" id="cfSecret" type="password" placeholder="mi-clave-secreta-2024"></div>
-      </div>
+      <h3>⚙️ Cloudflare Worker URL</h3>
+      <p class="desc">Necesario para subir archivos y gestionar R2 desde la web.</p>
+      <div class="form-g"><label>Worker URL</label><input class="inp" id="cfWorkerUrl" type="text" placeholder="https://familyflix-worker.TU-USUARIO.workers.dev"></div>
+      <div class="form-g"><label>Admin Secret (la contraseña que pusiste en el Worker)</label><input class="inp" id="cfSecret" type="password" placeholder="familyflix2024"></div>
     </div>
 
     <div class="acard">
-      <h3>📊 Google Apps Script</h3>
-      <p class="desc">URL del script que escribe automáticamente en tu Google Sheet.</p>
-      <div class="config-row">
-        <div class="form-g"><label>Apps Script URL</label><input class="inp" id="gasUrl" type="text" placeholder="https://script.google.com/macros/s/XXXXX/exec"></div>
-      </div>
+      <h3>📊 Google Apps Script URL</h3>
+      <p class="desc">Para guardar datos automáticamente en tu Google Sheet.</p>
+      <div class="form-g"><label>Apps Script URL</label><input class="inp" id="gasUrl" type="text" placeholder="https://script.google.com/macros/s/XXXXX/exec"></div>
     </div>
 
     <div class="acard">
       <h3>✨ Gemini API Key</h3>
       <p class="desc">Para el autorelleno con IA. Gratis en <a href="https://aistudio.google.com" target="_blank" style="color:var(--amber)">aistudio.google.com</a></p>
-      <div class="config-row">
-        <div class="form-g"><label>API Key</label><input class="inp" id="gemKey" type="password" placeholder="AIza..."></div>
-      </div>
+      <div class="form-g"><label>API Key</label><input class="inp" id="gemKey" type="password" placeholder="AIza..."></div>
     </div>
 
     <button class="btn btn-amber btn-full" onclick="saveConfig()" style="padding:14px;font-size:15px;font-weight:700;margin-bottom:28px">
@@ -212,28 +232,8 @@
     </button>
 
     <div class="acard">
-      <h3>📋 Cómo configurar el Worker (una sola vez)</h3>
-      <div class="steps">
-        <div class="step"><div class="step-n">1</div><div class="step-t">Ve a <a href="https://dash.cloudflare.com" target="_blank">dash.cloudflare.com</a> → <strong>Workers & Pages</strong> → <strong>Create</strong> → <strong>Hello World</strong></div></div>
-        <div class="step"><div class="step-n">2</div><div class="step-t">Ponle el nombre <code>familyflix-worker</code>, haz clic en <strong>Deploy</strong>, luego <strong>Edit code</strong> y pega el contenido del archivo <code>familyflix-worker.js</code> que descargaste. Guarda y despliega.</div></div>
-        <div class="step"><div class="step-n">3</div><div class="step-t">En el Worker ve a <strong>Settings → Variables and Secrets</strong> y agrega estas tres variables:<br>
-          <code>GEMINI_KEY</code> = tu Gemini API Key<br>
-          <code>ADMIN_SECRET</code> = una contraseña que tú elijas (la misma de arriba)<br>
-        </div></div>
-        <div class="step"><div class="step-n">4</div><div class="step-t">En el Worker ve a <strong>Settings → Bindings</strong> → <strong>Add</strong> → <strong>R2 Bucket</strong><br>
-          Variable name: <code>R2_BUCKET</code> · Bucket: <code>familyflix</code></div></div>
-        <div class="step"><div class="step-n">5</div><div class="step-t">Copia la URL del Worker (algo como <code>familyflix-worker.TU-USUARIO.workers.dev</code>) y pégala arriba.</div></div>
-      </div>
-    </div>
-
-    <div class="acard">
-      <h3>📋 Cómo configurar Google Apps Script (una sola vez)</h3>
-      <div class="steps">
-        <div class="step"><div class="step-n">1</div><div class="step-t">Ve a <a href="https://script.google.com" target="_blank">script.google.com</a> → <strong>Nuevo proyecto</strong></div></div>
-        <div class="step"><div class="step-n">2</div><div class="step-t">Borra el código que viene por defecto y pega el contenido del archivo <code>familyflix-appscript.js</code>. Guarda con Ctrl+S.</div></div>
-        <div class="step"><div class="step-n">3</div><div class="step-t">Haz clic en <strong>Implementar → Nueva implementación</strong> → tipo: <strong>Aplicación web</strong> → Acceso: <strong>Cualquier persona</strong> → <strong>Implementar</strong></div></div>
-        <div class="step"><div class="step-n">4</div><div class="step-t">Copia la URL que aparece y pégala arriba en <strong>Apps Script URL</strong>.</div></div>
-      </div>
+      <h3>📋 Estado de configuración</h3>
+      <div id="configStatus" style="display:flex;flex-direction:column;gap:8px;font-size:13px"></div>
     </div>
   </div>
 </div>
@@ -241,19 +241,20 @@
 <script src="js/shared.js"></script>
 <script>
 checkAuth();
-if(sessionStorage.getItem('ff_role')!=='admin'){ showToast('Solo el admin puede entrar aquí','error'); location.href='home.html'; }
+if(sessionStorage.getItem('ff_role')!=='admin'){showToast('Solo el admin puede entrar aquí','error');location.href='home.html';}
 
-function getCfg(){ return JSON.parse(localStorage.getItem('ff_cfg')||'{}') }
+function getCfg(){return JSON.parse(localStorage.getItem('ff_cfg')||'{}')}
 
 function saveConfig(){
   const cfg={
-    workerUrl: document.getElementById('cfWorkerUrl').value.trim().replace(/\/$/,''),
-    secret:    document.getElementById('cfSecret').value.trim(),
-    gasUrl:    document.getElementById('gasUrl').value.trim(),
-    gemKey:    document.getElementById('gemKey').value.trim(),
+    workerUrl:document.getElementById('cfWorkerUrl').value.trim().replace(/\/$/,''),
+    secret:   document.getElementById('cfSecret').value.trim(),
+    gasUrl:   document.getElementById('gasUrl').value.trim(),
+    gemKey:   document.getElementById('gemKey').value.trim(),
   };
-  localStorage.setItem('ff_cfg', JSON.stringify(cfg));
+  localStorage.setItem('ff_cfg',JSON.stringify(cfg));
   showToast('✅ Configuración guardada','success');
+  updateConfigStatus();
 }
 
 function loadConfig(){
@@ -263,6 +264,18 @@ function loadConfig(){
   if(cfg.gasUrl)    document.getElementById('gasUrl').value=cfg.gasUrl;
   if(cfg.gemKey)    document.getElementById('gemKey').value=cfg.gemKey;
 }
+
+function updateConfigStatus(){
+  const cfg=getCfg();
+  const el=document.getElementById('configStatus');
+  if(!el)return;
+  const item=(label,ok)=>`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(245,240,232,0.05)">
+    <span style="font-size:16px">${ok?'✅':'❌'}</span>
+    <span style="color:${ok?'#2ecc71':'#e74c3c'}">${label}: ${ok?'Configurado':'Sin configurar'}</span>
+  </div>`;
+  el.innerHTML=item('Worker URL',!!cfg.workerUrl)+item('Admin Secret',!!cfg.secret)+item('Apps Script URL',!!cfg.gasUrl)+item('Gemini API Key',!!cfg.gemKey);
+}
+
 loadConfig();
 
 function showTab(name,btn){
@@ -270,7 +283,8 @@ function showTab(name,btn){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('panel-'+name).classList.add('on');
-  if(name==='archivos') loadFiles();
+  if(name==='archivos')loadFiles();
+  if(name==='config')updateConfigStatus();
 }
 
 let currentType='pelicula';
@@ -279,6 +293,7 @@ function setType(type,btn){
   document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
   document.getElementById('epFields').style.display=type==='episodio'?'block':'none';
+  document.getElementById('featField').style.display=type==='episodio'?'none':'block';
 }
 
 // Drag & drop
@@ -302,8 +317,8 @@ function onFileSelected(input){
 async function uploadFile(){
   const cfg=getCfg();
   if(!cfg.workerUrl){
-    showToast('⚠️ Primero configura el Worker URL en Configuración','error');
-    showTab('config',document.querySelectorAll('.atab')[2]);
+    showToast('⚠️ Primero configura el Worker URL en ⚙️ Configuración','error');
+    showTab('config',document.getElementById('tab-config'));
     return;
   }
   if(!selectedFile){showToast('⚠️ Selecciona un archivo primero','error');return;}
@@ -318,10 +333,10 @@ async function uploadFile(){
 
   let pct=0;
   const pt=setInterval(()=>{
-    pct=Math.min(pct+Math.random()*6,88);
+    pct=Math.min(pct+Math.random()*5,88);
     fill.style.width=pct+'%';
     lbl.textContent='Subiendo... '+Math.round(pct)+'%';
-  },500);
+  },600);
 
   try{
     const fd=new FormData();
@@ -332,31 +347,38 @@ async function uploadFile(){
     const data=await res.json();
     clearInterval(pt);
     fill.style.width='100%';
-    lbl.textContent='¡Subido! Generando datos con IA...';
+    lbl.textContent='¡Video subido! Generando datos con IA...';
     if(!data.ok)throw new Error(data.error||'Error al subir');
+
     document.getElementById('fR2').value=data.publicUrl;
-    showToast('✅ Video subido correctamente','success');
+    showToast('✅ Video subido a R2','success');
+
+    // Mostrar paso 2
+    document.getElementById('step2Card').style.display='block';
+    document.getElementById('step2Card').scrollIntoView({behavior:'smooth',block:'start'});
+
+    // Analizar con IA
     await analyzeWithAI(data.fileName,cfg);
+
   }catch(e){
     clearInterval(pt);
     showToast('❌ '+e.message,'error');
-    btn.disabled=false;btn.textContent='☁️ Subir a R2';
+    btn.disabled=false;
+    btn.textContent='☁️ Subir a R2';
   }
 }
 
 async function analyzeWithAI(fileName,cfg){
   const status=document.getElementById('aiStatus');
-  const aiCard=document.getElementById('aiCard');
-  aiCard.style.display='block';
-  setTimeout(()=>aiCard.scrollIntoView({behavior:'smooth',block:'start'}),100);
   status.className='ai-status analyzing';
-  status.innerHTML='<div class="spin-sm"></div> IA analizando el video...';
+  status.innerHTML='<div class="spin-sm"></div> Analizando "'+decodeURIComponent(fileName)+'" con IA...';
 
   try{
     let parsed;
     if(cfg.workerUrl&&cfg.secret){
       const res=await fetch(cfg.workerUrl+'/analyze',{
-        method:'POST',headers:{'Content-Type':'application/json','X-Admin-Secret':cfg.secret},
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-Admin-Secret':cfg.secret},
         body:JSON.stringify({fileName})
       });
       const data=await res.json();
@@ -365,9 +387,10 @@ async function analyzeWithAI(fileName,cfg){
     } else if(cfg.gemKey){
       parsed=await analyzeLocal(fileName,cfg.gemKey);
     } else {
-      throw new Error('Configura el Worker o una Gemini API Key en Configuración');
+      throw new Error('Configura el Worker o una Gemini API Key en ⚙️ Configuración');
     }
 
+    // Rellenar campos
     document.getElementById('fTitle').value  = parsed.titulo||'';
     document.getElementById('fSyn').value    = parsed.sinopsis||'';
     document.getElementById('fYear').value   = parsed.año||new Date().getFullYear();
@@ -375,25 +398,38 @@ async function analyzeWithAI(fileName,cfg){
     if(parsed.categoria) document.getElementById('fCat').value=parsed.categoria;
     if(parsed.tipo){
       const b=document.querySelector(`.ttab[onclick*="${parsed.tipo}"]`);
-      if(b) setType(parsed.tipo,b);
+      if(b)setType(parsed.tipo,b);
     }
     const px=parsed.tipo==='serie'?'s':parsed.tipo==='episodio'?'ep':'p';
     document.getElementById('fId').value=px+Date.now().toString().slice(-4);
 
+    // Mostrar preview visual de lo que generó la IA
+    const preview=document.getElementById('aiPreview');
+    const fields=document.getElementById('aiPreviewFields');
+    preview.style.display='block';
+    fields.innerHTML=`
+      <div class="ai-field"><div class="ai-field-lbl">Título</div><div class="ai-field-val"><strong>${parsed.titulo}</strong></div></div>
+      <div class="ai-field"><div class="ai-field-lbl">Tipo</div><div class="ai-field-val">${parsed.tipo==='serie'?'📺 Serie':parsed.tipo==='episodio'?'🎞 Episodio':'🎬 Película'}</div></div>
+      <div class="ai-field"><div class="ai-field-lbl">Categoría</div><div class="ai-field-val">${parsed.categoria}</div></div>
+      <div class="ai-field"><div class="ai-field-lbl">Año</div><div class="ai-field-val">${parsed.año}</div></div>
+      <div class="ai-field"><div class="ai-field-lbl">Tags</div><div class="ai-field-val">${Array.isArray(parsed.tags)?parsed.tags.map(t=>`<span style="background:rgba(232,160,32,0.15);border-radius:4px;padding:2px 8px;margin-right:4px;font-size:12px">#${t}</span>`).join(''):parsed.tags}</div></div>
+      <div class="ai-field"><div class="ai-field-lbl">Sinopsis</div><div class="ai-field-val" style="color:var(--cream2)">${parsed.sinopsis}</div></div>
+    `;
+
     status.className='ai-status done';
-    status.innerHTML='✅ Datos generados — revisa y ajusta si necesitas';
-    document.getElementById('uploadBtn').textContent='☁️ Subir a R2';
+    status.innerHTML='✅ IA completó — revisa los datos arriba y ajusta si necesitas';
+
   }catch(e){
     status.className='ai-status err';
-    status.innerHTML='⚠️ '+e.message+' — puedes rellenar manualmente';
+    status.innerHTML='⚠️ '+e.message+' — rellena los campos manualmente';
   }
 }
 
 async function analyzeLocal(fileName,gemKey){
   const clean=decodeURIComponent(fileName).replace(/\.[^.]+$/,'').replace(/[_\-]/g,' ');
-  const prompt=`Eres el asistente de FamilyFlix, app privada de videos familiares. Analiza: "${clean}". Responde SOLO JSON sin markdown:
-{"titulo":"...","sinopsis":"descripción emotiva 2-3 oraciones","categoria":"Familia/Viajes/Cumpleaños/Navidad/Vacaciones/Eventos/General","año":${new Date().getFullYear()},"tags":["tag1","tag2","tag3"],"tipo":"pelicula"}`;
-  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${gemKey}`,{
+  const prompt=`Eres el asistente de FamilyFlix, app privada de videos familiares. Analiza este nombre de archivo: "${clean}". Responde SOLO con JSON válido sin markdown:
+{"titulo":"título descriptivo","sinopsis":"descripción emotiva en 2-3 oraciones","categoria":"Familia/Viajes/Cumpleaños/Navidad/Vacaciones/Eventos/General","año":${new Date().getFullYear()},"tags":["tag1","tag2","tag3"],"tipo":"pelicula"}`;
+  const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${gemKey}`,{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:[{parts:[{text:prompt}]}]})
   });
@@ -405,10 +441,14 @@ async function analyzeLocal(fileName,gemKey){
 
 async function saveToSheets(){
   const cfg=getCfg();
-  if(!cfg.gasUrl){showToast('⚠️ Configura el Apps Script URL en Configuración','error');return;}
+  if(!cfg.gasUrl){
+    showToast('⚠️ Configura el Apps Script URL en ⚙️ Configuración','error');
+    showTab('config',document.getElementById('tab-config'));
+    return;
+  }
 
   const btn=document.getElementById('saveBtn');
-  btn.disabled=true;btn.textContent='💾 Guardando...';
+  btn.disabled=true;btn.textContent='💾 Guardando en Sheets...';
 
   const isEp=currentType==='episodio';
   const row=isEp?{
@@ -419,7 +459,7 @@ async function saveToSheets(){
     duracion:document.getElementById('fDur').value.trim(),
     sinopsis:document.getElementById('fSyn').value.trim(),
   }:{
-    id:       document.getElementById('fId').value.trim(),
+    id:       document.getElementById('fId').value.trim()||'p'+Date.now().toString().slice(-4),
     titulo:   document.getElementById('fTitle').value.trim(),
     tipo:     currentType,
     categoria:document.getElementById('fCat').value,
@@ -431,18 +471,40 @@ async function saveToSheets(){
     duracion: document.getElementById('fDur').value.trim(),
   };
 
+  if(!row.titulo){showToast('⚠️ El título es obligatorio','error');btn.disabled=false;btn.textContent='💾 Guardar en Google Sheets';return;}
+
   try{
-    const res=await fetch(cfg.gasUrl,{
-      method:'POST',mode:'no-cors',
-      body:JSON.stringify({action:isEp?'addEpisode':'addContent',row}),
-      headers:{'Content-Type':'application/json'}
-    });
-    showToast('✅ Guardado en Google Sheets — recarga FamilyFlix para verlo','success');
-    setTimeout(()=>resetForm(),2500);
+    // Usamos un iframe truco para evitar CORS con Apps Script
+    const url=cfg.gasUrl+'?action='+(isEp?'addEpisode':'addContent')+'&data='+encodeURIComponent(JSON.stringify(row));
+    
+    // Intentar con fetch primero
+    try{
+      const res=await fetch(cfg.gasUrl,{
+        method:'POST',
+        headers:{'Content-Type':'text/plain'},
+        body:JSON.stringify({action:isEp?'addEpisode':'addContent',row})
+      });
+      const text=await res.text();
+      const data=JSON.parse(text);
+      if(!data.ok)throw new Error(data.error||'Error en Apps Script');
+    }catch(fetchErr){
+      // Si falla por CORS, usar GET con parámetros (Apps Script acepta GET también)
+      const getUrl=cfg.gasUrl+'?action='+(isEp?'addEpisode':'addContent')+'&data='+encodeURIComponent(JSON.stringify(row));
+      await fetch(getUrl,{mode:'no-cors'});
+      // Con no-cors no podemos leer la respuesta pero si no lanzó error, asumimos que funcionó
+    }
+
+    // Mostrar éxito
+    document.getElementById('step2Card').style.display='none';
+    document.getElementById('successCard').style.display='block';
+    document.getElementById('successCard').scrollIntoView({behavior:'smooth',block:'start'});
+    showToast('✅ Guardado en Google Sheets','success');
+
   }catch(e){
     showToast('❌ '+e.message,'error');
+    btn.disabled=false;
+    btn.textContent='💾 Guardar en Google Sheets';
   }
-  btn.disabled=false;btn.textContent='💾 Guardar en Google Sheets';
 }
 
 function resetForm(){
@@ -453,7 +515,9 @@ function resetForm(){
   document.getElementById('uploadBtn').textContent='☁️ Subir a R2';
   document.getElementById('uploadProg').style.display='none';
   document.getElementById('uploadFill').style.width='0';
-  document.getElementById('aiCard').style.display='none';
+  document.getElementById('step2Card').style.display='none';
+  document.getElementById('successCard').style.display='none';
+  document.getElementById('aiPreview').style.display='none';
   document.getElementById('aiStatus').className='ai-status';
   ['fId','fTitle','fSyn','fYear','fDur','fTags','fR2','fSerieId','fEpNum'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
@@ -462,14 +526,13 @@ function resetForm(){
   document.getElementById('fFeat').value='';
   setType('pelicula',document.querySelector('.ttab'));
   window.scrollTo({top:0,behavior:'smooth'});
-  showToast('✅ Listo para agregar otro video','success');
 }
 
 async function loadFiles(){
   const cfg=getCfg();
   const list=document.getElementById('filesList');
   if(!cfg.workerUrl){
-    list.innerHTML='<div class="warning">⚠️ Configura el Worker URL en la pestaña Configuración primero.</div>';
+    list.innerHTML='<div class="warning">⚠️ Configura el Worker URL en ⚙️ Configuración primero.</div>';
     return;
   }
   list.innerHTML='<div class="load-state"><div class="spin"></div><span>Cargando...</span></div>';
@@ -477,7 +540,7 @@ async function loadFiles(){
     const res=await fetch(cfg.workerUrl+'/list',{headers:{'X-Admin-Secret':cfg.secret}});
     const data=await res.json();
     if(!data.ok)throw new Error(data.error);
-    if(!data.files.length){list.innerHTML='<p style="color:var(--cream3);text-align:center;padding:40px">No hay archivos en R2.</p>';return;}
+    if(!data.files.length){list.innerHTML='<p style="color:var(--cream3);text-align:center;padding:40px">No hay archivos en R2 todavía.</p>';return;}
     list.innerHTML='<div class="files-list">'+data.files.map(f=>`
       <div class="file-row">
         <div class="file-icon">🎬</div>
@@ -491,7 +554,7 @@ async function loadFiles(){
         </div>
       </div>`).join('')+'</div>';
   }catch(e){
-    list.innerHTML='<div class="warning">❌ '+e.message+'</div>';
+    list.innerHTML='<div class="warning">❌ '+e.message+'<br><small>Verifica que el Worker URL y el Admin Secret estén correctos en Configuración.</small></div>';
   }
 }
 
@@ -510,7 +573,7 @@ async function deleteFile(name){
 }
 
 function copyUrl(url){
-  navigator.clipboard.writeText(url).then(()=>showToast('📋 URL copiada al portapapeles','success'));
+  navigator.clipboard.writeText(url).then(()=>showToast('📋 URL copiada','success'));
 }
 </script>
 </body></html>
