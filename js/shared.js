@@ -1,146 +1,501 @@
-/* ════════════════════════════════════════
-   FAMILYFLIX v4 — shared.js (TSV Engine)
-   ════════════════════════════════════════ */
+/* =========================================================
+   FamilyFlix v5 — shared.js
+   Conecta frontend con Google Apps Script + Cloudflare Worker
+   ========================================================= */
 
-// ¡NUEVO FORMATO! TSV en lugar de CSV para evitar errores de comas
-const SHEET_CONTENT  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=tsv';
-const SHEET_EPISODES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=tsv';
 
-const CC = {id:0,titulo:1,tipo:2,categoria:3,anio:4,sinopsis:5,tags:6,portadaId:7,r2Url:8,driveId:9,destacado:10,duracion:11};
-const CE = {serieId:0,numero:1,titulo:2,r2Url:3,driveId:4,duracion:5,sinopsis:6,portadaId:7};
+const FF_CONFIG = {
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyksursDb7DMx8wXL4nodOqLwI9UvLP-e5PgLF2BTm1wU18MLPgz0va2g_CDPaS5XyZfA/exec',
+  WORKER_URL: 'https://familyflix-worker.canonedu17.workers.dev/',
+  SHEETS: {
+    CONTENT_TSV: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=tsv',
+    EPISODES_TSV: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=tsv'
+  },
+  R2_PUBLIC_BASE: 'https://pub-eb7091956e164433aa5c9ef0bcc70356.r2.dev/',
+  STORAGE_KEYS: {
+    THEME: 'ff_theme',
+    SESSION: 'ff_session',
+    ADMIN_SECRET: 'ff_admin_secret'
+  }
+};
+
+const FF_STATE = {
+  content: [],
+  episodes: [],
+  userState: {
+    progress: [],
+    favorites: []
+  }
+};
+
+/* -------------------------------
+   Utilidades base
+--------------------------------*/
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function slugify(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim();
+}
+
+function fmtDateTime(date = new Date()) {
+  const d = new Date(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function fmtDurationSeconds(seconds = 0) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+function safeJsonParse(text, fallback = null) {
+  try { return JSON.parse(text); } catch { return fallback; }
+}
+
+function debounce(fn, delay = 500) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+/* -------------------------------
+   Tema
+--------------------------------*/
+function initTheme() {
+  const saved = localStorage.getItem(FF_CONFIG.STORAGE_KEYS.THEME);
+  if (saved) {
+    document.documentElement.setAttribute('data-theme', saved);
+    return;
+  }
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, next);
+}
+
+/* -------------------------------
+   Toast
+--------------------------------*/
+function showToast(message, type = 'success') {
+  let el = document.getElementById('_ff_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_ff_toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.className = `toast ${type} show`;
+  el.textContent = message;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3200);
+}
+
+/* -------------------------------
+   Sesión y auth
+--------------------------------*/
+function getSession() {
+  return safeJsonParse(sessionStorage.getItem(FF_CONFIG.STORAGE_KEYS.SESSION), null);
+}
+
+function setSession(data) {
+  sessionStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
+}
+
+function clearSession() {
+  sessionStorage.removeItem(FF_CONFIG.STORAGE_KEYS.SESSION);
+}
+
+function isLoggedIn() {
+  const session = getSession();
+  return Boolean(session?.ok && session?.user?.id);
+}
+
+function getCurrentUser() {
+  return getSession()?.user || null;
+}
+
+function isAdmin() {
+  return getCurrentUser()?.rol === 'admin';
+}
+
+function logout() {
+  clearSession();
+  window.location.href = 'index.html';
+}
+
+function requireAuth() {
+  if (!isLoggedIn()) {
+    window.location.href = 'index.html';
+    return false;
+  }
+  return true;
+}
+
+function requireAdmin() {
+  if (!requireAuth()) return false;
+  if (!isAdmin()) {
+    showToast('No tienes acceso a esta sección.', 'error');
+    window.location.href = 'home.html';
+    return false;
+  }
+  return true;
+}
+
+/* -------------------------------
+   API Apps Script
+--------------------------------*/
+async function apiCall(action, payload = {}, method = 'POST') {
+  if (!FF_CONFIG.APPS_SCRIPT_URL || FF_CONFIG.APPS_SCRIPT_URL.includes('PEGA_AQUI')) {
+    throw new Error('Configura FF_CONFIG.APPS_SCRIPT_URL en shared.js');
+  }
+
+  const body = { action, ...payload };
+
+  if (method === 'GET') {
+    const url = new URL(FF_CONFIG.APPS_SCRIPT_URL);
+    url.searchParams.set('action', action);
+    url.searchParams.set('data', JSON.stringify(payload));
+    const res = await fetch(url.toString(), { method: 'GET' });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || 'Error de Apps Script');
+    return data;
+  }
+
+  const res = await fetch(FF_CONFIG.APPS_SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body)
+  });
+
+  const data = await res.json();
+  if (!data.ok) throw new Error(data.error || 'Error de Apps Script');
+  return data;
+}
+
+async function loginUser(usuario, password) {
+  return apiCall('login', { usuario, password });
+}
+
+async function createUser(payload) {
+  return apiCall('createUser', payload);
+}
+
+async function listUsers() {
+  return apiCall('listUsers', {});
+}
+
+async function addContent(payload) {
+  return apiCall('addContent', { row: payload });
+}
+
+async function addEpisode(payload) {
+  return apiCall('addEpisode', { row: payload });
+}
+
+async function listCatalogFromApi() {
+  return apiCall('listCatalog', {});
+}
+
+async function listEpisodesFromApi() {
+  return apiCall('listEpisodes', {});
+}
+
+async function saveProgressRemote(payload) {
+  return apiCall('saveProgress', payload);
+}
+
+async function getUserStateRemote(usuarioId) {
+  return apiCall('getUserState', { usuarioId });
+}
+
+async function toggleFavoriteRemote(payload) {
+  return apiCall('toggleFavorite', payload);
+}
+
+/* -------------------------------
+   Worker Cloudflare
+--------------------------------*/
+function getAdminSecret() {
+  return localStorage.getItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET) || '';
+}
+
+function setAdminSecret(secret) {
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET, secret || '');
+}
+
+async function workerRequest(path, options = {}) {
+  if (!FF_CONFIG.WORKER_URL || FF_CONFIG.WORKER_URL.includes('PEGA_AQUI')) {
+    throw new Error('Configura FF_CONFIG.WORKER_URL en shared.js');
+  }
+
+  const headers = {
+    ...(options.headers || {}),
+    'X-Admin-Secret': getAdminSecret()
+  };
+
+  const res = await fetch(`${FF_CONFIG.WORKER_URL}${path}`, {
+    ...options,
+    headers
+  });
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `Error ${res.status} del Worker`);
+  }
+  return data;
+}
+
+async function uploadFileToR2(file) {
+  const form = new FormData();
+  form.append('file', file);
+  return workerRequest('/upload', { method: 'POST', body: form });
+}
+
+async function listR2Files() {
+  return workerRequest('/list', { method: 'GET' });
+}
+
+async function deleteR2File(name) {
+  return workerRequest(`/delete?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+async function analyzeWithAI(titleToSearch, contentType) {
+  return workerRequest('/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titleToSearch, contentType })
+  });
+}
+
+function buildR2Url(fileName = '') {
+  return `${FF_CONFIG.R2_PUBLIC_BASE}${encodeURIComponent(fileName)}`;
+}
+
+/* -------------------------------
+   TSV público para catálogo
+--------------------------------*/
+async function fetchTsv(url) {
+  if (!url || url.includes('PEGA_AQUI')) return '';
+  const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`);
+  if (!res.ok) throw new Error(`No se pudo leer ${url}`);
+  return res.text();
+}
+
+function parseTsv(text = '') {
+  const lines = text.trim().split('\n').filter(Boolean);
+  if (!lines.length) return [];
+  const headers = lines[0].split('\t').map(v => v.trim().replace(/\r/g, ''));
+  return lines.slice(1).map(line => {
+    const cols = line.split('\t').map(v => v.trim().replace(/\r/g, ''));
+    const row = {};
+    headers.forEach((h, i) => row[h] = cols[i] || '');
+    return row;
+  });
+}
+
+function normalizeContentRow(row = {}) {
+  return {
+    id: row.id || '',
+    titulo: row.titulo || '',
+    tituloOriginal: row.tituloOriginal || '',
+    tipo: (row.tipo || 'pelicula').toLowerCase(),
+    categoria: row.categoria || 'Familia',
+    generos: splitTags(row.generos),
+    año: Number(row.año) || null,
+    sinopsis: row.sinopsis || '',
+    tags: splitTags(row.tags),
+    portadaUrl: row.portadaUrl || '',
+    backdropUrl: row.backdropUrl || '',
+    r2Url: row.r2Url || '',
+    driveUrl: row.driveUrl || '',
+    destacado: String(row.destacado || '').toLowerCase() === 'si',
+    duracion: row.duracion || '',
+    clasificacion: row.clasificacion || '',
+    idioma: row.idioma || '',
+    estado: (row.estado || 'activo').toLowerCase(),
+    fechaRegistro: row.fechaRegistro || '',
+    creadoPor: row.creadoPor || ''
+  };
+}
+
+function normalizeEpisodeRow(row = {}) {
+  return {
+    id: row.id || '',
+    serieId: row.serieId || '',
+    temporada: Number(row.temporada) || 1,
+    numeroEpisodio: Number(row.numeroEpisodio) || 1,
+    titulo: row.titulo || '',
+    tituloOriginal: row.tituloOriginal || '',
+    sinopsis: row.sinopsis || '',
+    duracion: row.duracion || '',
+    r2Url: row.r2Url || '',
+    driveUrl: row.driveUrl || '',
+    portadaUrl: row.portadaUrl || '',
+    airDate: row.airDate || '',
+    estado: (row.estado || 'activo').toLowerCase(),
+    fechaRegistro: row.fechaRegistro || '',
+    creadoPor: row.creadoPor || ''
+  };
+}
 
 async function fetchContent() {
   try {
-    const r = await fetch(SHEET_CONTENT + '&t=' + Date.now());
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return parseContent(await r.text());
-  } catch (e) { 
-    console.error("Fallo al cargar Contenido:", e);
-    return getSampleContent(); 
+    const tsv = await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV);
+    FF_STATE.content = parseTsv(tsv).map(normalizeContentRow).filter(item => item.estado !== 'oculto');
+    return FF_STATE.content;
+  } catch (error) {
+    console.error(error);
+    FF_STATE.content = [];
+    return [];
   }
 }
 
 async function fetchEpisodes() {
   try {
-    const r = await fetch(SHEET_EPISODES + '&t=' + Date.now());
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return parseEpisodes(await r.text());
-  } catch (e) { 
-    console.error("Fallo al cargar Episodios:", e);
-    return []; 
+    const tsv = await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV);
+    FF_STATE.episodes = parseTsv(tsv).map(normalizeEpisodeRow).filter(item => item.estado !== 'oculto');
+    return FF_STATE.episodes;
+  } catch (error) {
+    console.error(error);
+    FF_STATE.episodes = [];
+    return [];
   }
 }
 
-// Lector TSV a prueba de balas
-function parseContent(tsv) {
-  const lines = tsv.trim().split('\n');
-  if (lines.length < 2) return getSampleContent();
-  
-  const out = [];
-  for (let i = 1; i < lines.length; i++) {
-    const c = lines[i].split('\t').map(x => x.replace(/\r$/, '').trim());
-    if (!c[CC.titulo]) continue;
-    
-    const pid = extractId(c[CC.portadaId]);
-    const did = extractId(c[CC.driveId]);
-    out.push({
-      id:        c[CC.id] || 'c'+i,
-      title:     c[CC.titulo],
-      type:      (c[CC.tipo] || 'pelicula').toLowerCase(),
-      category:  c[CC.categoria] || 'Familia',
-      year:      c[CC.anio] ? parseInt(c[CC.anio]) : null,
-      synopsis:  c[CC.sinopsis],
-      tags:      c[CC.tags] ? c[CC.tags].split(',').map(t=>t.trim()).filter(Boolean) : [],
-      portadaId: pid, r2Url: c[CC.r2Url], driveId: did,
-      duration:  c[CC.duracion],
-      featured:  (c[CC.destacado] || '').toLowerCase() === 'si',
-      thumbnail: pid ? pid : (did ? driveThumb(did) : ''),
-    });
+/* -------------------------------
+   Estado del usuario
+--------------------------------*/
+async function loadUserState() {
+  const user = getCurrentUser();
+  if (!user?.id) {
+    FF_STATE.userState = { progress: [], favorites: [] };
+    return FF_STATE.userState;
   }
-  return out.length ? out : getSampleContent();
-}
 
-function parseEpisodes(tsv) {
-  const lines = tsv.trim().split('\n');
-  if (lines.length < 2) return [];
-  const out = [];
-  
-  for (let i = 1; i < lines.length; i++) {
-    const c = lines[i].split('\t').map(x => x.replace(/\r$/, '').trim());
-    if (!c[CE.serieId]) continue;
-    
-    const pid = extractId(c[CE.portadaId]);
-    const did = extractId(c[CE.driveId]);
-    out.push({
-      id:        `ep_${c[CE.serieId]}_${i}`,
-      serieId:   c[CE.serieId],
-      number:    parseInt(c[CE.numero]) || i,
-      title:     c[CE.titulo] || `Episodio ${i}`,
-      r2Url:     c[CE.r2Url], driveId: did,
-      duration:  c[CE.duracion], synopsis: c[CE.sinopsis],
-      thumbnail: pid ? pid : (did ? driveThumb(did) : ''),
-    });
+  try {
+    const res = await getUserStateRemote(user.id);
+    FF_STATE.userState = {
+      progress: res.progress || [],
+      favorites: res.favorites || []
+    };
+    return FF_STATE.userState;
+  } catch (error) {
+    console.error(error);
+    FF_STATE.userState = { progress: [], favorites: [] };
+    return FF_STATE.userState;
   }
-  return out;
 }
 
-function getSampleContent() {
-  return [{id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'No se pudo leer la hoja. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''}];
+function splitTags(value = '') {
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
 }
 
-function extractId(raw) {
-  if(!raw)return'';
-  raw=raw.trim().replace(/"/g,'');
-  if(raw.startsWith('http')) return raw;
-  const m=raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
-  if(m)return m[1];
-  if(!raw.includes('/')&&raw.length>10)return raw;
-  return raw;
-}
-function driveEmbed(id){return`https://drive.google.com/file/d/${id}/preview`}
-function driveThumb(id,sz=400){return`https://drive.google.com/thumbnail?id=${id}&sz=w${sz}`}
-
-function getProg(){return JSON.parse(localStorage.getItem('ff_p')||'{}')}
-function getTime(){return JSON.parse(localStorage.getItem('ff_t')||'{}')}
-function savePct(id,pct){const p=getProg();p[id]=Math.round(pct);localStorage.setItem('ff_p',JSON.stringify(p))}
-function saveTime(id,s){const p=getTime();p[id]=s;localStorage.setItem('ff_t',JSON.stringify(p))}
-function getPct(id){return getProg()[id]||0}
-function getTimeSec(id){return getTime()[id]||0}
-
-function initTheme(){
-  const s=localStorage.getItem('ff_th');
-  const dark=window.matchMedia('(prefers-color-scheme: dark)').matches;
-  applyTheme(s||(dark?'dark':'light'));
-}
-function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('ff_th',t)}
-function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
-
-const PASSWORDS={admin:'12345',viewer:'familia2024',guest:'invitado123'};
-
-function checkAuth(){
-  const ok=sessionStorage.getItem('ff_ok')||sessionStorage.getItem('ff_auth');
-  if(!ok){window.location.href='index.html';return false}
-  return true;
-}
-function logout(){sessionStorage.clear();window.location.href='index.html'}
-
-const CAT_EMOJI={'Viajes':'✈️','Cumpleaños':'🎂','Navidad':'🎄','Vacaciones':'🏖️','Familia':'👨‍👩‍👧','Eventos':'🎉','General':'🎬'};
-function catEmoji(c){return CAT_EMOJI[c]||'🎬'}
-function fmtPct(p){if(p<=0)return'Sin ver';if(p>=100)return'✓ Completo';return`${p}% visto`}
-function fmtTime(s){if(!s||isNaN(s))return'0:00:00';const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),ss=Math.floor(s%60);return`${h}:${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`}
-
-function getBadge(id){
-  const p=getPct(id);
-  if(p>=100)return{cls:'badge-done',txt:'✓ Visto'};
-  if(p>0)return{cls:'badge-wip',txt:`${p}%`};
-  return{cls:'badge-new',txt:'NUEVO'};
+function favoriteKeyFor(itemType, contenidoId, episodioId = '') {
+  return `${itemType}::${contenidoId || ''}::${episodioId || ''}`;
 }
 
-function showToast(msg,type='success'){
-  let t=document.getElementById('_toast');
-  if(!t){t=document.createElement('div');t.id='_toast';t.className='toast';document.body.appendChild(t)}
-  t.textContent=msg;t.className=`toast ${type} show`;
-  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),3500);
+function isFavorite(itemType, contenidoId, episodioId = '') {
+  const key = favoriteKeyFor(itemType, contenidoId, episodioId);
+  return (FF_STATE.userState.favorites || []).some(f => favoriteKeyFor(f.tipo, f.contenidoId, f.episodioId) === key);
 }
 
+function getProgressRecord(itemType, contenidoId, episodioId = '') {
+  return (FF_STATE.userState.progress || []).find(p =>
+    p.tipo === itemType &&
+    String(p.contenidoId || '') === String(contenidoId || '') &&
+    String(p.episodioId || '') === String(episodioId || '')
+  ) || null;
+}
+
+function getProgressPercent(itemType, contenidoId, episodioId = '') {
+  return Number(getProgressRecord(itemType, contenidoId, episodioId)?.porcentaje || 0);
+}
+
+function getContinueWatchingItems() {
+  const progress = [...(FF_STATE.userState.progress || [])]
+    .filter(p => Number(p.porcentaje) > 0 && String(p.completado).toLowerCase() !== 'si')
+    .sort((a, b) => new Date(b.ultimaVisualizacion || 0) - new Date(a.ultimaVisualizacion || 0));
+
+  return progress.map(p => {
+    if (p.tipo === 'pelicula') {
+      const item = FF_STATE.content.find(c => c.id === p.contenidoId);
+      if (!item) return null;
+      return { kind: 'content', item, progress: p };
+    }
+    const ep = FF_STATE.episodes.find(e => e.id === p.episodioId);
+    const serie = FF_STATE.content.find(c => c.id === p.contenidoId);
+    if (!ep || !serie) return null;
+    return { kind: 'episode', episode: ep, serie, progress: p };
+  }).filter(Boolean);
+}
+
+/* -------------------------------
+   Render helpers
+--------------------------------*/
+function mediaCardImage(url, fallback = '🎬') {
+  if (url) {
+    return `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
+  }
+  return `<div class="card-ph">${fallback}</div>`;
+}
+
+function mediaBadge(itemType, progressPercent) {
+  if (progressPercent >= 100) return '<div class="badge badge-done">✓ Visto</div>';
+  if (progressPercent > 0) return `<div class="badge badge-wip">${progressPercent}%</div>`;
+  return itemType === 'serie'
+    ? '<div class="badge badge-serie">SERIE</div>'
+    : '<div class="badge badge-new">NUEVO</div>';
+}
+
+function buildSeasonsMap(episodes = []) {
+  const map = new Map();
+  episodes.forEach(ep => {
+    const key = Number(ep.temporada) || 1;
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(ep);
+  });
+  for (const [, list] of map.entries()) {
+    list.sort((a, b) => a.numeroEpisodio - b.numeroEpisodio);
+  }
+  return map;
+}
+
+function getSeriesEpisodes(serieId) {
+  return FF_STATE.episodes.filter(ep => ep.serieId === serieId && ep.estado === 'activo');
+}
+
+/* -------------------------------
+   Inicialización global
+--------------------------------*/
 initTheme();
