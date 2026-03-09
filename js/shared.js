@@ -128,20 +128,13 @@ function sleep(ms = 0) {
    Tema
 --------------------------------*/
 function initTheme() {
-  const saved = localStorage.getItem(FF_CONFIG.STORAGE_KEYS.THEME);
-  if (saved) {
-    document.documentElement.setAttribute('data-theme', saved);
-    return;
-  }
-  const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-  document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', 'dark');
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
 }
 
 function toggleTheme() {
-  const current = document.documentElement.getAttribute('data-theme') || 'dark';
-  const next = current === 'dark' ? 'light' : 'dark';
-  document.documentElement.setAttribute('data-theme', next);
-  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, next);
+  document.documentElement.setAttribute('data-theme', 'dark');
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
 }
 
 /* -------------------------------
@@ -353,8 +346,37 @@ async function uploadFileToR2(file) {
   return workerRequest('/upload', { method: 'POST', body: form });
 }
 
-async function listR2Files() {
-  return workerRequest('/list', { method: 'GET' });
+async function listR2Files(options = {}) {
+  const prefix = String(options.prefix || '').trim();
+  const limit = Math.max(1, Math.min(1000, Number(options.limit) || 1000));
+  const allFiles = [];
+  let cursor = '';
+  let pages = 0;
+
+  while (pages < 25) {
+    const params = new URLSearchParams();
+    if (prefix) params.set('prefix', prefix);
+    params.set('limit', String(limit));
+    if (cursor) params.set('cursor', cursor);
+
+    const res = await workerRequest(`/list?${params.toString()}`, { method: 'GET' });
+    allFiles.push(...(res.files || []));
+    pages += 1;
+
+    if (!res.truncated || !res.cursor) {
+      return {
+        ok: true,
+        files: uniqueBy(allFiles, file => file.name)
+      };
+    }
+
+    cursor = res.cursor;
+  }
+
+  return {
+    ok: true,
+    files: uniqueBy(allFiles, file => file.name)
+  };
 }
 
 async function deleteR2File(name) {
@@ -402,6 +424,7 @@ function parseTsv(text = '') {
 }
 
 function normalizeContentRow(row = {}) {
+  const yearValue = Number(row.anio || row['año'] || row['aÃ±o']) || null;
   return {
     id: row.id || '',
     titulo: row.titulo || '',
@@ -409,7 +432,8 @@ function normalizeContentRow(row = {}) {
     tipo: (row.tipo || 'pelicula').toLowerCase(),
     categoria: row.categoria || 'Familia',
     generos: splitTags(row.generos),
-    año: Number(row.año) || null,
+    anio: yearValue,
+    año: yearValue,
     sinopsis: row.sinopsis || '',
     tags: splitTags(row.tags),
     portadaUrl: row.portadaUrl || row.portadaId || '',
@@ -736,11 +760,36 @@ function toDrivePreviewUrl(url = '') {
 /* -------------------------------
    Render helpers
 --------------------------------*/
-function mediaCardImage(url, fallback = '🎬') {
+function mediaCardImage(url, fallback = '🎬', title = '') {
   if (url) {
-    return `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
+    return `<div class="media-image-shell" data-media-fallback="true"><img src="${escapeHtml(url)}" alt="" loading="lazy" data-fallback="${escapeHtml(fallback)}" data-title="${escapeHtml(title)}" onerror="handleMediaImageError(this)"></div>`;
   }
-  return `<div class="card-ph">${fallback}</div>`;
+  return buildMediaFallbackMarkup(fallback, title);
+}
+
+function buildMediaFallbackMarkup(fallback = '🎬', title = '') {
+  const safeFallback = escapeHtml(fallback);
+  const safeTitle = escapeHtml(String(title || '').trim());
+  return `
+    <div class="media-fallback">
+      <strong>${safeFallback}</strong>
+      ${safeTitle ? `<span>${safeTitle}</span>` : ''}
+    </div>
+  `;
+}
+
+function mediaYear(item = {}) {
+  return item.anio || item['año'] || item['aÃ±o'] || '';
+}
+
+function handleMediaImageError(imgEl) {
+  if (!imgEl) return;
+  const fallback = imgEl.getAttribute('data-fallback') || '🎬';
+  const title = imgEl.getAttribute('data-title') || imgEl.getAttribute('alt') || '';
+  const container = imgEl.closest('[data-media-fallback]');
+  if (container) {
+    container.innerHTML = buildMediaFallbackMarkup(fallback, title);
+  }
 }
 
 function mediaBadge(itemType, progressPercent) {
@@ -754,7 +803,8 @@ function mediaBadge(itemType, progressPercent) {
 function buildMediaCard(item) {
   const type = item.tipo || 'pelicula';
   const progress = getProgressPercent(type, item.id, '');
-  const img = mediaCardImage(item.portadaUrl, type === 'serie' ? '📺' : '🎬');
+  const img = mediaCardImage(item.portadaUrl, type === 'serie' ? '📺' : '🎬', item.titulo);
+  const year = mediaYear(item);
   return `
     <article class="media-card" data-id="${escapeHtml(item.id)}" data-type="${escapeHtml(type)}">
       <button class="media-card__btn" type="button" onclick="openContentDetail('${escapeHtml(item.id)}')">
@@ -762,7 +812,7 @@ function buildMediaCard(item) {
         ${mediaBadge(type, progress)}
         <div class="media-card__body">
           <h3 class="media-card__title">${escapeHtml(item.titulo)}</h3>
-          <p class="media-card__meta">${escapeHtml(item.categoria || '')}${item.año ? ` • ${item.año}` : ''}</p>
+          <p class="media-card__meta">${escapeHtml(item.categoria || '')}${year ? ` • ${escapeHtml(String(year))}` : ''}</p>
         </div>
       </button>
     </article>
@@ -771,7 +821,7 @@ function buildMediaCard(item) {
 
 function buildEpisodeCard(ep, serie) {
   const progress = getProgressPercent('episodio', serie.id, ep.id);
-  const img = mediaCardImage(ep.portadaUrl || serie.portadaUrl, '🎞️');
+  const img = mediaCardImage(ep.portadaUrl || serie.portadaUrl, '🎞️', ep.titulo || serie.titulo);
   return `
     <article class="episode-card" data-id="${escapeHtml(ep.id)}">
       <button class="episode-card__btn" type="button" onclick="goToPlayer('${escapeHtml(serie.id)}','${escapeHtml(ep.id)}')">
@@ -824,9 +874,9 @@ function openContentDetail(contenidoId) {
   const seasonsEl = modal.querySelector('[data-detail="seasons"]');
 
   if (titleEl) titleEl.textContent = item.titulo || '';
-  if (metaEl) metaEl.textContent = [item.categoria, item.año].filter(Boolean).join(' • ');
+  if (metaEl) metaEl.textContent = [item.categoria, mediaYear(item)].filter(Boolean).join(' • ');
   if (synopsisEl) synopsisEl.textContent = item.sinopsis || 'Sin sinopsis disponible.';
-  if (imageEl) imageEl.innerHTML = mediaCardImage(item.portadaUrl, item.tipo === 'serie' ? '📺' : '🎬');
+  if (imageEl) imageEl.innerHTML = mediaCardImage(item.portadaUrl, item.tipo === 'serie' ? '📺' : '🎬', item.titulo);
 
   if (actionsEl) {
     const favText = isFavorite(item.tipo, item.id) ? 'Quitar favorito' : 'Favorito';
@@ -904,6 +954,7 @@ function bootstrapShared() {
   window.parseDurationToSeconds = parseDurationToSeconds;
   window.safeJsonParse = safeJsonParse;
   window.debounce = debounce;
+  window.handleMediaImageError = handleMediaImageError;
   window.splitTags = splitTags;
   window.qs = qs;
   window.qsa = qsa;
