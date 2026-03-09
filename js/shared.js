@@ -272,11 +272,11 @@ async function listUsers() {
 }
 
 async function addContent(payload) {
-  return apiCall('addContent', { row: payload });
+  return apiCall('addOrUpdateContent', payload);
 }
 
 async function addEpisode(payload) {
-  return apiCall('addEpisode', { row: payload });
+  return apiCall('addOrUpdateEpisode', payload);
 }
 
 async function listCatalogFromApi() {
@@ -292,7 +292,7 @@ async function saveProgressRemote(payload) {
 }
 
 async function getUserStateRemote(usuarioId) {
-  return apiCall('getUserState', { usuarioId });
+  return apiCall('getUserBootstrap', { usuarioId });
 }
 
 async function toggleFavoriteRemote(payload) {
@@ -353,11 +353,11 @@ async function deleteR2File(name) {
   return workerRequest(`/delete?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
 }
 
-async function analyzeWithAI(titleToSearch, contentType) {
+async function analyzeWithAI(titleToSearch, contentType, extraContext = '') {
   return workerRequest('/analyze', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ titleToSearch, contentType })
+    body: JSON.stringify({ titleToSearch, contentType, extraContext })
   });
 }
 
@@ -438,10 +438,30 @@ function normalizeEpisodeRow(row = {}) {
   };
 }
 
+function pickApiList(res, keys = []) {
+  for (const key of keys) {
+    if (Array.isArray(res?.[key])) return res[key];
+  }
+  return [];
+}
+
 async function fetchContent() {
   try {
     const tsv = await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV);
-    FF_STATE.content = parseTsv(tsv)
+    const items = parseTsv(tsv)
+      .map(normalizeContentRow)
+      .filter(item => item.id && item.estado !== 'oculto');
+    if (items.length) {
+      FF_STATE.content = items;
+      return FF_STATE.content;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  try {
+    const res = await listCatalogFromApi();
+    FF_STATE.content = pickApiList(res, ['content', 'catalog', 'items'])
       .map(normalizeContentRow)
       .filter(item => item.id && item.estado !== 'oculto');
     return FF_STATE.content;
@@ -455,7 +475,20 @@ async function fetchContent() {
 async function fetchEpisodes() {
   try {
     const tsv = await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV);
-    FF_STATE.episodes = parseTsv(tsv)
+    const items = parseTsv(tsv)
+      .map(normalizeEpisodeRow)
+      .filter(item => item.id && item.estado !== 'oculto');
+    if (items.length) {
+      FF_STATE.episodes = items;
+      return FF_STATE.episodes;
+    }
+  } catch (error) {
+    console.error(error);
+  }
+
+  try {
+    const res = await listEpisodesFromApi();
+    FF_STATE.episodes = pickApiList(res, ['episodes', 'items'])
       .map(normalizeEpisodeRow)
       .filter(item => item.id && item.estado !== 'oculto');
     return FF_STATE.episodes;
