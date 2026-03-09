@@ -2,7 +2,6 @@
    FAMILYFLIX v4 — shared.js
    ════════════════════════════════════════ */
 
-// URLs actualizadas forzando el formato CSV
 const SHEET_CONTENT  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=csv';
 const SHEET_EPISODES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=csv';
 
@@ -26,32 +25,46 @@ async function fetchEpisodes() {
     if (!r.ok) throw new Error('Error HTTP: ' + r.status);
     return parseEpisodes(await r.text());
   } catch (err) { 
-    console.error('Error cargando episodios de Sheets:', err);
+    console.error('Error cargando episodios:', err);
     return []; 
   }
+}
+
+// ── FIX: Analizador inteligente que soporta comas y puntos y comas ──
+function csvLine(line, delimiter = ',') {
+  const r=[]; let cur=''; let q=false;
+  for(const ch of line){
+    if(ch==='"'){ q=!q; }
+    else if(ch===delimiter && !q){ r.push(cur); cur=''; }
+    else{ cur+=ch; }
+  }
+  r.push(cur); return r;
 }
 
 function parseContent(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return getSampleContent();
+  
+  // Detectar automáticamente si Google Sheets exportó con "," o ";"
+  const delimiter = lines[0].includes(';') ? ';' : ',';
+  
   const out = [];
   for (let i = 1; i < lines.length; i++) {
-    const c = csvLine(lines[i]);
+    const c = csvLine(lines[i], delimiter);
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
+    
     if (!cl(CC.titulo)) continue;
     
-    // El ID real o uno generado basado en la fila
     const rowId = cl(CC.id) || 'c'+i;
-    
-    // Ajuste para leer portadas desde URL directa o ID de Drive
     let rawPortada = cl(CC.portadaId);
     let thumb = '';
+    
     if (rawPortada.startsWith('http')) {
-      thumb = rawPortada; // Si la IA trajo una URL real
+      thumb = rawPortada;
     } else if (rawPortada) {
-      thumb = driveThumb(extractId(rawPortada)); // Si es un Drive ID
+      thumb = driveThumb(extractId(rawPortada));
     } else if (cl(CC.driveId)) {
-      thumb = driveThumb(extractId(cl(CC.driveId))); // Fallback al Drive ID del video
+      thumb = driveThumb(extractId(cl(CC.driveId)));
     }
 
     out.push({
@@ -76,9 +89,12 @@ function parseContent(csv) {
 function parseEpisodes(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return [];
+  
+  const delimiter = lines[0].includes(';') ? ';' : ',';
   const out = [];
+  
   for (let i = 1; i < lines.length; i++) {
-    const c = csvLine(lines[i]);
+    const c = csvLine(lines[i], delimiter);
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
     if (!cl(CE.serieId)) continue;
     
@@ -107,15 +123,9 @@ function parseEpisodes(csv) {
   return out;
 }
 
-function csvLine(line) {
-  const r=[];let cur='';let q=false;
-  for(const ch of line){if(ch==='"'){q=!q}else if(ch===','&&!q){r.push(cur);cur=''}else{cur+=ch}}
-  r.push(cur);return r;
-}
-
 function getSampleContent() {
   return [
-    {id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'No se pudo cargar la base de datos. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'https://pub-eb7091956e164433aa5c9ef0bcc70356.r2.dev/M%C3%BAsica%20Bosque%20M%C3%A1gico%20Instrumental%E2%94%82M%C3%BAsica%20instrumental%20relajante.mp4',driveId:'',duration:'3:30',featured:true,thumbnail:''},
+    {id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'Si ves esto, hay un error al leer la hoja.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''},
   ];
 }
 
@@ -137,7 +147,6 @@ function saveTime(id,s){const p=getTime();p[id]=s;localStorage.setItem('ff_t',JS
 function getPct(id){return getProg()[id]||0}
 function getTimeSec(id){return getTime()[id]||0}
 
-// Compatibilidad con v3
 function savePcts(id,pct){savePct(id,pct)}
 function saveTimeSecs(id,s){saveTime(id,s)}
 function getPcts(id){return getPct(id)}
