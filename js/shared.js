@@ -1,9 +1,10 @@
 /* ════════════════════════════════════════
-   FAMILYFLIX v4 — shared.js
+   FAMILYFLIX v4 — shared.js (TSV Engine)
    ════════════════════════════════════════ */
 
-const SHEET_CONTENT  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=csv';
-const SHEET_EPISODES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=csv';
+// ¡NUEVO FORMATO! TSV en lugar de CSV para evitar errores de comas
+const SHEET_CONTENT  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=tsv';
+const SHEET_EPISODES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=tsv';
 
 const CC = {id:0,titulo:1,tipo:2,categoria:3,anio:4,sinopsis:5,tags:6,portadaId:7,r2Url:8,driveId:9,destacado:10,duracion:11};
 const CE = {serieId:0,numero:1,titulo:2,r2Url:3,driveId:4,duracion:5,sinopsis:6,portadaId:7};
@@ -11,7 +12,7 @@ const CE = {serieId:0,numero:1,titulo:2,r2Url:3,driveId:4,duracion:5,sinopsis:6,
 async function fetchContent() {
   try {
     const r = await fetch(SHEET_CONTENT + '&t=' + Date.now());
-    if (!r.ok) throw new Error('Error de red: ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     return parseContent(await r.text());
   } catch (e) { 
     console.error("Fallo al cargar Contenido:", e);
@@ -22,7 +23,7 @@ async function fetchContent() {
 async function fetchEpisodes() {
   try {
     const r = await fetch(SHEET_EPISODES + '&t=' + Date.now());
-    if (!r.ok) throw new Error('Error de red: ' + r.status);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
     return parseEpisodes(await r.text());
   } catch (e) { 
     console.error("Fallo al cargar Episodios:", e);
@@ -30,83 +31,67 @@ async function fetchEpisodes() {
   }
 }
 
-// Lector de CSV inteligente a prueba de fallos
-function csvLine(line, delimiter = ',') {
-  const r=[]; let cur=''; let q=false;
-  for(const ch of line){
-    if(ch==='"'){ q=!q; }
-    else if(ch===delimiter && !q){ r.push(cur); cur=''; }
-    else{ cur+=ch; }
-  }
-  r.push(cur); return r;
-}
-
-function parseContent(csv) {
-  const lines = csv.trim().split('\n');
+// Lector TSV a prueba de balas
+function parseContent(tsv) {
+  const lines = tsv.trim().split('\n');
   if (lines.length < 2) return getSampleContent();
   
-  // Detecta si tu Excel usó comas o punto y coma
-  const delimiter = lines[0].includes(';') ? ';' : ',';
   const out = [];
-  
   for (let i = 1; i < lines.length; i++) {
-    const c = csvLine(lines[i], delimiter);
-    const cl = v => (c[v]||'').replace(/"/g,'').trim();
-    if (!cl(CC.titulo)) continue;
+    const c = lines[i].split('\t').map(x => x.replace(/\r$/, '').trim());
+    if (!c[CC.titulo]) continue;
     
-    const pid = extractId(cl(CC.portadaId));
-    const did = extractId(cl(CC.driveId));
+    const pid = extractId(c[CC.portadaId]);
+    const did = extractId(c[CC.driveId]);
     out.push({
-      id:        cl(CC.id)||'c'+i,
-      title:     cl(CC.titulo),
-      type:      cl(CC.tipo).toLowerCase()||'pelicula',
-      category:  cl(CC.categoria)||'Familia',
-      year:      cl(CC.anio)?parseInt(cl(CC.anio)):null,
-      synopsis:  cl(CC.sinopsis),
-      tags:      cl(CC.tags)?cl(CC.tags).split(',').map(t=>t.trim()).filter(Boolean):[],
-      portadaId: pid, r2Url:cl(CC.r2Url), driveId:did,
-      duration:  cl(CC.duracion),
-      featured:  cl(CC.destacado).toLowerCase()==='si',
-      thumbnail: pid?pid:(did?driveThumb(did):''),
+      id:        c[CC.id] || 'c'+i,
+      title:     c[CC.titulo],
+      type:      (c[CC.tipo] || 'pelicula').toLowerCase(),
+      category:  c[CC.categoria] || 'Familia',
+      year:      c[CC.anio] ? parseInt(c[CC.anio]) : null,
+      synopsis:  c[CC.sinopsis],
+      tags:      c[CC.tags] ? c[CC.tags].split(',').map(t=>t.trim()).filter(Boolean) : [],
+      portadaId: pid, r2Url: c[CC.r2Url], driveId: did,
+      duration:  c[CC.duracion],
+      featured:  (c[CC.destacado] || '').toLowerCase() === 'si',
+      thumbnail: pid ? pid : (did ? driveThumb(did) : ''),
     });
   }
   return out.length ? out : getSampleContent();
 }
 
-function parseEpisodes(csv) {
-  const lines = csv.trim().split('\n');
+function parseEpisodes(tsv) {
+  const lines = tsv.trim().split('\n');
   if (lines.length < 2) return [];
-  const delimiter = lines[0].includes(';') ? ';' : ',';
   const out = [];
   
   for (let i = 1; i < lines.length; i++) {
-    const c = csvLine(lines[i], delimiter);
-    const cl = v => (c[v]||'').replace(/"/g,'').trim();
-    if (!cl(CE.serieId)) continue;
+    const c = lines[i].split('\t').map(x => x.replace(/\r$/, '').trim());
+    if (!c[CE.serieId]) continue;
     
-    const pid = extractId(cl(CE.portadaId));
-    const did = extractId(cl(CE.driveId));
+    const pid = extractId(c[CE.portadaId]);
+    const did = extractId(c[CE.driveId]);
     out.push({
-      id:        `ep_${cl(CE.serieId)}_${i}`,
-      serieId:   cl(CE.serieId),
-      number:    parseInt(cl(CE.numero))||i,
-      title:     cl(CE.titulo)||`Episodio ${i}`,
-      r2Url:     cl(CE.r2Url), driveId:did,
-      duration:  cl(CE.duracion), synopsis:cl(CE.sinopsis),
-      thumbnail: pid?pid:(did?driveThumb(did):''),
+      id:        `ep_${c[CE.serieId]}_${i}`,
+      serieId:   c[CE.serieId],
+      number:    parseInt(c[CE.numero]) || i,
+      title:     c[CE.titulo] || `Episodio ${i}`,
+      r2Url:     c[CE.r2Url], driveId: did,
+      duration:  c[CE.duracion], synopsis: c[CE.sinopsis],
+      thumbnail: pid ? pid : (did ? driveThumb(did) : ''),
     });
   }
   return out;
 }
 
 function getSampleContent() {
-  return [{id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'Si ves esto, hay un error al leer la hoja. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''}];
+  return [{id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'No se pudo leer la hoja. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''}];
 }
 
 function extractId(raw) {
   if(!raw)return'';
   raw=raw.trim().replace(/"/g,'');
-  if(raw.startsWith('http')) return raw; // Si es URL directa
+  if(raw.startsWith('http')) return raw;
   const m=raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
   if(m)return m[1];
   if(!raw.includes('/')&&raw.length>10)return raw;
@@ -130,7 +115,7 @@ function initTheme(){
 function applyTheme(t){document.documentElement.setAttribute('data-theme',t);localStorage.setItem('ff_th',t)}
 function toggleTheme(){applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark')}
 
-const PASSWORDS={admin:'familia2024admin',viewer:'familia2024',guest:'invitado123'};
+const PASSWORDS={admin:'12345',viewer:'familia2024',guest:'invitado123'};
 
 function checkAuth(){
   const ok=sessionStorage.getItem('ff_ok')||sessionStorage.getItem('ff_auth');
