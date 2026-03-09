@@ -2,6 +2,7 @@
    FAMILYFLIX v4 — shared.js
    ════════════════════════════════════════ */
 
+// URLs actualizadas forzando el formato CSV
 const SHEET_CONTENT  = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=csv';
 const SHEET_EPISODES = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=csv';
 
@@ -11,16 +12,23 @@ const CE = {serieId:0,numero:1,titulo:2,r2Url:3,driveId:4,duracion:5,sinopsis:6,
 async function fetchContent() {
   try {
     const r = await fetch(SHEET_CONTENT + '&t=' + Date.now());
-    if (!r.ok) throw new Error();
+    if (!r.ok) throw new Error('Error HTTP: ' + r.status);
     return parseContent(await r.text());
-  } catch { return getSampleContent(); }
+  } catch (err) { 
+    console.error('Error cargando contenido de Sheets:', err);
+    return getSampleContent(); 
+  }
 }
+
 async function fetchEpisodes() {
   try {
     const r = await fetch(SHEET_EPISODES + '&t=' + Date.now());
-    if (!r.ok) throw new Error();
+    if (!r.ok) throw new Error('Error HTTP: ' + r.status);
     return parseEpisodes(await r.text());
-  } catch { return []; }
+  } catch (err) { 
+    console.error('Error cargando episodios de Sheets:', err);
+    return []; 
+  }
 }
 
 function parseContent(csv) {
@@ -31,23 +39,38 @@ function parseContent(csv) {
     const c = csvLine(lines[i]);
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
     if (!cl(CC.titulo)) continue;
-    const pid = extractId(cl(CC.portadaId));
-    const did = extractId(cl(CC.driveId));
+    
+    // El ID real o uno generado basado en la fila
+    const rowId = cl(CC.id) || 'c'+i;
+    
+    // Ajuste para leer portadas desde URL directa o ID de Drive
+    let rawPortada = cl(CC.portadaId);
+    let thumb = '';
+    if (rawPortada.startsWith('http')) {
+      thumb = rawPortada; // Si la IA trajo una URL real
+    } else if (rawPortada) {
+      thumb = driveThumb(extractId(rawPortada)); // Si es un Drive ID
+    } else if (cl(CC.driveId)) {
+      thumb = driveThumb(extractId(cl(CC.driveId))); // Fallback al Drive ID del video
+    }
+
     out.push({
-      id:        cl(CC.id)||'c'+i,
+      id:        rowId,
       title:     cl(CC.titulo),
-      type:      cl(CC.tipo).toLowerCase()||'pelicula',
-      category:  cl(CC.categoria)||'Familia',
-      year:      cl(CC.anio)?parseInt(cl(CC.anio)):null,
+      type:      cl(CC.tipo).toLowerCase() || 'pelicula',
+      category:  cl(CC.categoria) || 'Familia',
+      year:      cl(CC.anio) ? parseInt(cl(CC.anio)) : null,
       synopsis:  cl(CC.sinopsis),
-      tags:      cl(CC.tags)?cl(CC.tags).split(',').map(t=>t.trim()).filter(Boolean):[],
-      portadaId: pid, r2Url:cl(CC.r2Url), driveId:did,
+      tags:      cl(CC.tags) ? cl(CC.tags).split(',').map(t=>t.trim()).filter(Boolean) : [],
+      portadaId: rawPortada, 
+      r2Url:     cl(CC.r2Url), 
+      driveId:   extractId(cl(CC.driveId)),
       duration:  cl(CC.duracion),
-      featured:  cl(CC.destacado).toLowerCase()==='si',
-      thumbnail: pid?driveThumb(pid):did?driveThumb(did):'',
+      featured:  cl(CC.destacado).toLowerCase() === 'si',
+      thumbnail: thumb,
     });
   }
-  return out.length?out:getSampleContent();
+  return out.length ? out : getSampleContent();
 }
 
 function parseEpisodes(csv) {
@@ -58,16 +81,27 @@ function parseEpisodes(csv) {
     const c = csvLine(lines[i]);
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
     if (!cl(CE.serieId)) continue;
-    const pid = extractId(cl(CE.portadaId));
-    const did = extractId(cl(CE.driveId));
+    
+    let rawPortada = cl(CE.portadaId);
+    let thumb = '';
+    if (rawPortada.startsWith('http')) {
+      thumb = rawPortada;
+    } else if (rawPortada) {
+      thumb = driveThumb(extractId(rawPortada));
+    } else if (cl(CE.driveId)) {
+      thumb = driveThumb(extractId(cl(CE.driveId)));
+    }
+
     out.push({
       id:        `ep_${cl(CE.serieId)}_${i}`,
       serieId:   cl(CE.serieId),
-      number:    parseInt(cl(CE.numero))||i,
-      title:     cl(CE.titulo)||`Episodio ${i}`,
-      r2Url:     cl(CE.r2Url), driveId:did,
-      duration:  cl(CE.duracion), synopsis:cl(CE.sinopsis),
-      thumbnail: pid?driveThumb(pid):did?driveThumb(did):'',
+      number:    parseInt(cl(CE.numero)) || i,
+      title:     cl(CE.titulo) || `Episodio ${i}`,
+      r2Url:     cl(CE.r2Url), 
+      driveId:   extractId(cl(CE.driveId)),
+      duration:  cl(CE.duracion), 
+      synopsis:  cl(CE.sinopsis),
+      thumbnail: thumb,
     });
   }
   return out;
@@ -81,7 +115,7 @@ function csvLine(line) {
 
 function getSampleContent() {
   return [
-    {id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'Agrega tus videos en el Google Sheet.',tags:['Demo'],portadaId:'',r2Url:'https://pub-eb7091956e164433aa5c9ef0bcc70356.r2.dev/M%C3%BAsica%20Bosque%20M%C3%A1gico%20Instrumental%E2%94%82M%C3%BAsica%20instrumental%20relajante.mp4',driveId:'',duration:'3:30',featured:true,thumbnail:''},
+    {id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'No se pudo cargar la base de datos. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'https://pub-eb7091956e164433aa5c9ef0bcc70356.r2.dev/M%C3%BAsica%20Bosque%20M%C3%A1gico%20Instrumental%E2%94%82M%C3%BAsica%20instrumental%20relajante.mp4',driveId:'',duration:'3:30',featured:true,thumbnail:''},
   ];
 }
 
