@@ -13,28 +13,20 @@
   .admin-tabs{display:flex;gap:0;background:var(--ink2);border:1px solid rgba(245,240,232,0.07);border-radius:var(--rl);padding:5px;margin-bottom:28px;overflow-x:auto}
   .atab{flex:1;padding:11px 16px;border:none;background:none;color:var(--cream3);font-family:var(--fs);font-size:13px;font-weight:500;cursor:pointer;border-radius:var(--rm);transition:all var(--t);white-space:nowrap;text-align:center}
   .atab.on{background:var(--amber);color:#0a0800;font-weight:700}
-  .atab:not(.on):hover{color:var(--cream2);background:rgba(245,240,232,0.05)}
   .panel{display:none}.panel.on{display:block}
   .acard{background:var(--ink2);border:1px solid rgba(245,240,232,0.07);border-radius:var(--rl);padding:28px;margin-bottom:20px}
-  .acard h3{font-family:var(--ff);font-size:20px;font-weight:700;margin-bottom:6px;color:var(--cream)}
-  .acard .desc{font-size:13px;color:var(--cream3);margin-bottom:22px;line-height:1.6}
-  
-  .upload-zone{border:2px dashed rgba(232,160,32,0.3);border-radius:var(--rl);padding:30px 24px;text-align:center;cursor:pointer;transition:all var(--t);background:rgba(232,160,32,0.03);position:relative}
-  .upload-zone:hover{border-color:var(--amber);background:rgba(232,160,32,0.07)}
-  .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-  .uz-icon{font-size:36px;margin-bottom:10px}
-  .uz-title{font-family:var(--ff);font-size:18px;font-weight:700;color:var(--cream);margin-bottom:4px}
   
   .form-g{margin-bottom:18px}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:600px){.form-row{grid-template-columns:1fr}}
-  
-  .type-tabs{display:flex;gap:0;background:var(--ink3);border-radius:var(--rm);padding:4px;margin-bottom:22px}
-  .ttab{flex:1;padding:11px;border:none;background:none;color:var(--cream3);font-family:var(--fs);font-size:14px;font-weight:500;cursor:pointer;border-radius:var(--r);transition:all var(--t);text-align:center}
-  .ttab.on{background:var(--amber);color:#0a0800;font-weight:700}
 
-  /* Buscador IA */
-  .ai-search-box { background: linear-gradient(135deg, rgba(232,160,32,0.1), rgba(196,122,16,0.02)); border: 1px solid rgba(232,160,32,0.3); border-radius: var(--rm); padding: 20px; margin-bottom: 24px; }
+  /* Sub-pestañas del formulario */
+  .sub-tabs{display:flex;gap:10px;margin-bottom:24px;border-bottom:1px solid rgba(255,255,255,0.05);padding-bottom:14px}
+  .stab{padding:10px 20px;background:var(--ink3);border:1px solid rgba(255,255,255,0.05);color:var(--cream3);border-radius:var(--rm);cursor:pointer;font-weight:600;font-size:13px;transition:all var(--t)}
+  .stab.on{background:var(--amber);color:#000;border-color:var(--amber)}
+  .form-section{display:none} .form-section.on{display:block}
+
+  .ai-search-box{background:linear-gradient(135deg, rgba(232,160,32,0.1), rgba(196,122,16,0.02));border:1px solid rgba(232,160,32,0.3);border-radius:var(--rm);padding:20px;margin-bottom:24px}
   .ai-status{display:none;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;margin-top:14px}
   .ai-status.analyzing{display:flex;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.2);color:var(--amber)}
   .ai-status.done{display:flex;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);color:#2ecc71}
@@ -42,12 +34,10 @@
   .spin-sm{width:16px;height:16px;border:2px solid rgba(232,160,32,0.2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 
   .files-list{display:flex;flex-direction:column;gap:8px}
-  .file-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--ink3);border:1px solid rgba(245,240,232,0.06);border-radius:var(--rm);transition:border-color var(--t)}
-  .file-row:hover{border-color:rgba(232,160,32,0.2)}
+  .file-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--ink3);border:1px solid rgba(245,240,232,0.06);border-radius:var(--rm)}
   .file-info{flex:1;min-width:0}
   .file-name{font-size:13px;font-weight:600;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
   .file-meta{font-size:11px;color:var(--cream3)}
-  
   .success-card{display:none;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:var(--rl);padding:28px;text-align:center;margin-bottom:20px}
 </style>
 </head>
@@ -65,101 +55,89 @@
 
 <div class="page">
   <h1 class="page-title">Panel de <span>Administración</span></h1>
-  <p class="page-sub">Rellena los datos a mano o deja que la IA busque la información por ti.</p>
+  <p class="page-sub">Elige la hoja donde quieres guardar la información.</p>
 
   <div class="admin-tabs">
-    <button class="atab on" id="tab-subir" onclick="showTab('subir',this)">📝 Crear Contenido</button>
-    <button class="atab" id="tab-archivos" onclick="showTab('archivos',this)">📁 Mis Archivos R2</button>
-    <button class="atab" id="tab-config" onclick="showTab('config',this)">⚙️ Configuración</button>
+    <button class="atab on" onclick="showTab('subir',this)">📝 Crear Contenido</button>
+    <button class="atab" onclick="showTab('archivos',this)">📁 Mis Archivos R2</button>
+    <button class="atab" onclick="showTab('config',this)">⚙️ Configuración</button>
   </div>
 
   <div class="panel on" id="panel-subir">
-
-    <div class="acard" style="padding:20px">
-      <h3 style="font-size:16px; margin-bottom:10px">Subir video web (Opcional)</h3>
-      <div style="display:flex; gap:14px; align-items:center">
-        <div class="upload-zone" style="flex:1; padding:15px; border-radius:var(--rm)">
-          <input type="file" id="fileInput" accept="video/*" onchange="onFileSelected(this)">
-          <div style="font-size:14px; color:var(--cream2)" id="uzFile">Haz clic para seleccionar un video corto</div>
-        </div>
-        <button class="btn btn-ghost" id="uploadBtn" onclick="uploadFile()" disabled>☁️ Subir a R2</button>
-      </div>
-    </div>
-
+    
     <div class="acard">
       <div class="ai-search-box">
-        <h3 style="font-size:16px; color:var(--amber); margin-bottom:10px">✨ Asistente IA</h3>
-        <p style="font-size:12px; color:var(--cream3); margin-bottom:14px">Escribe el título, selecciona qué es, y la IA rellenará el formulario de abajo.</p>
-        
+        <h3 style="font-size:16px; color:var(--amber); margin-bottom:10px">✨ Autorellenar con IA</h3>
         <div style="display:flex; gap:10px; flex-wrap:wrap">
           <select class="inp" id="searchType" style="width:auto; min-width:120px">
             <option value="pelicula">Película</option>
             <option value="serie">Serie</option>
             <option value="episodio">Episodio</option>
           </select>
-          <input class="inp" id="searchTitle" type="text" placeholder="Ej: Shrek 2 o Viaje a París" style="flex:1; min-width:200px">
-          <button class="btn btn-amber" onclick="searchWithAI()">🔍 Buscar Datos</button>
+          <input class="inp" id="searchTitle" type="text" placeholder="Escribe el título aquí..." style="flex:1; min-width:200px">
+          <button class="btn btn-amber" onclick="searchWithAI()">🔍 Buscar</button>
         </div>
         <div class="ai-status" id="aiStatus"></div>
       </div>
 
-      <h3 style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:20px">Datos a guardar en Sheets</h3>
-
-      <div class="form-g">
-        <div class="type-tabs">
-          <button class="ttab on" id="tabTypePel" onclick="setFormType('pelicula',this)">🎬 Película</button>
-          <button class="ttab" id="tabTypeSer" onclick="setFormType('serie',this)">📺 Serie</button>
-          <button class="ttab" id="tabTypeEpi" onclick="setFormType('episodio',this)">🎞 Episodio</button>
-        </div>
+      <div class="sub-tabs">
+        <button class="stab on" id="btn-tab-cont" onclick="switchForm('contenido')">🎬 Hoja: Contenido</button>
+        <button class="stab" id="btn-tab-epi" onclick="switchForm('episodio')">🎞 Hoja: Episodios</button>
       </div>
 
-      <div class="form-row">
-        <div class="form-g"><label>ID único</label><input class="inp" id="fId" type="text" placeholder="Auto-generado si lo dejas vacío"></div>
-        <div class="form-g"><label>Categoría</label>
-          <select class="inp" id="fCat">
-            <option>Familia</option><option>Viajes</option><option>Cumpleaños</option><option>Navidad</option>
-            <option>Vacaciones</option><option>Eventos</option><option>General</option>
-            <option>Accion</option><option>Comedia</option><option>Drama</option><option>Sci-Fi</option>
-          </select>
-        </div>
-      </div>
-      
-      <div class="form-g"><label>Título Final</label><input class="inp" id="fTitle" type="text"></div>
-      <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="fSyn" rows="3"></textarea></div>
-      
-      <div class="form-row">
-        <div class="form-g"><label>Año</label><input class="inp" id="fYear" type="number"></div>
-        <div class="form-g"><label>Duración</label><input class="inp" id="fDur" type="text" placeholder="1:30:00"></div>
-      </div>
-      
-      <div class="form-row">
-        <div class="form-g"><label>Tags (separados por coma)</label><input class="inp" id="fTags" type="text"></div>
-        <div class="form-g"><label>URL de Portada</label><input class="inp" id="fPortada" type="text" placeholder="https://..."></div>
-      </div>
-
-      <div class="form-g"><label>URL del video (R2 o Drive)</label><input class="inp" id="fR2" type="text" placeholder="Pega el enlace de tu archivo aquí"></div>
-
-      <div id="epFields" style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:var(--r); margin-bottom:18px">
-        <h4 style="font-size:12px; color:var(--amber); margin-bottom:12px">Datos del Episodio</h4>
+      <div class="form-section on" id="form-contenido">
         <div class="form-row">
-          <div class="form-g" style="margin-bottom:0"><label>ID de la Serie a la que pertenece</label><input class="inp" id="fSerieId" type="text" placeholder="s001"></div>
-          <div class="form-g" style="margin-bottom:0"><label>Número de Capítulo</label><input class="inp" id="fEpNum" type="number" placeholder="1"></div>
+          <div class="form-g"><label>Tipo de Contenido</label>
+            <select class="inp" id="c_tipo"><option value="pelicula">Película / Video Único</option><option value="serie">Serie</option></select>
+          </div>
+          <div class="form-g"><label>ID Único (Opcional)</label><input class="inp" id="c_id" type="text" placeholder="Deja vacío para auto-generar"></div>
         </div>
+        
+        <div class="form-g"><label>Título</label><input class="inp" id="c_titulo" type="text"></div>
+        
+        <div class="form-row">
+          <div class="form-g"><label>Categoría</label>
+            <select class="inp" id="c_categoria"><option>Familia</option><option>Viajes</option><option>Cumpleaños</option><option>Navidad</option><option>Vacaciones</option><option>Eventos</option><option>General</option><option>Accion</option><option>Comedia</option><option>Drama</option><option>Sci-Fi</option></select>
+          </div>
+          <div class="form-g"><label>Año</label><input class="inp" id="c_anio" type="number"></div>
+        </div>
+
+        <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="c_sinopsis" rows="3"></textarea></div>
+        
+        <div class="form-row">
+          <div class="form-g"><label>Duración</label><input class="inp" id="c_duracion" type="text" placeholder="1:30:00"></div>
+          <div class="form-g"><label>Tags (separados por coma)</label><input class="inp" id="c_tags" type="text"></div>
+        </div>
+
+        <div class="form-g"><label>URL Portada Oficial (Poster)</label><input class="inp" id="c_portada" type="text" placeholder="https://..."></div>
+        <div class="form-g"><label>URL del Video en R2</label><input class="inp" id="c_r2" type="text" placeholder="https://pub-eb70..."></div>
+        <div class="form-g"><label>¿Destacar en inicio?</label><select class="inp" id="c_destacado"><option value="">No</option><option value="si">Sí</option></select></div>
       </div>
 
-      <div class="form-g" id="featField">
-        <label>¿Destacar en el banner principal?</label>
-        <select class="inp" id="fFeat"><option value="">No</option><option value="si">Sí</option></select>
+      <div class="form-section" id="form-episodio">
+        <div class="form-row">
+          <div class="form-g"><label>ID de la Serie a la que pertenece</label><input class="inp" id="e_serieId" type="text" placeholder="Ej: s001"></div>
+          <div class="form-g"><label>Número de Capítulo</label><input class="inp" id="e_numero" type="number" placeholder="1"></div>
+        </div>
+        
+        <div class="form-g"><label>Título del Episodio</label><input class="inp" id="e_titulo" type="text"></div>
+        <div class="form-g"><label>Sinopsis del Episodio</label><textarea class="inp" id="e_sinopsis" rows="3"></textarea></div>
+        
+        <div class="form-row">
+          <div class="form-g"><label>Duración</label><input class="inp" id="e_duracion" type="text" placeholder="0:45:00"></div>
+          <div class="form-g"><label>URL Portada (Opcional)</label><input class="inp" id="e_portada" type="text" placeholder="https://..."></div>
+        </div>
+
+        <div class="form-g"><label>URL del Video en R2</label><input class="inp" id="e_r2" type="text" placeholder="https://pub-eb70..."></div>
       </div>
 
-      <button class="btn btn-amber btn-full" style="padding:15px;font-size:15px;font-weight:700;margin-top:10px" id="saveBtn" onclick="saveToSheets()">
-        💾 Guardar en Base de Datos
+      <button class="btn btn-amber btn-full" style="padding:15px;font-size:15px;font-weight:700;margin-top:20px" id="saveBtn" onclick="saveToSheets()">
+        💾 Guardar en Google Sheets
       </button>
     </div>
 
     <div class="success-card" id="successCard">
-      <div class="sc-icon">✅</div>
-      <h3>¡Guardado correctamente!</h3>
+      <div class="sc-icon">✅</div><h3>¡Guardado correctamente!</h3>
       <p>Ya puedes verlo en tu catálogo.</p>
       <button class="btn btn-amber" onclick="location.reload()">➕ Agregar otro</button>
     </div>
@@ -167,19 +145,18 @@
 
   <div class="panel" id="panel-archivos">
     <div class="acard">
-      <h3>Archivos en Cloudflare R2</h3>
-      <button class="btn btn-ghost" onclick="loadFiles()" style="margin-bottom:18px">🔄 Actualizar lista</button>
+      <h3>Archivos en R2</h3>
+      <button class="btn btn-ghost" onclick="loadFiles()" style="margin-bottom:18px">🔄 Actualizar</button>
       <div id="filesList"><div class="load-state"><div class="spin"></div></div></div>
     </div>
   </div>
 
   <div class="panel" id="panel-config">
-    <div class="warning">⚠️ Configuración de administrador.</div>
     <div class="acard">
       <div class="form-g"><label>Worker URL</label><input class="inp" id="cfWorkerUrl" type="text"></div>
       <div class="form-g"><label>Admin Secret</label><input class="inp" id="cfSecret" type="password"></div>
       <div class="form-g"><label>Apps Script URL</label><input class="inp" id="gasUrl" type="text"></div>
-      <button class="btn btn-amber btn-full" onclick="saveConfig()">💾 Guardar</button>
+      <button class="btn btn-amber btn-full" onclick="saveConfig()">💾 Guardar Config</button>
     </div>
   </div>
 </div>
@@ -187,7 +164,7 @@
 <script src="js/shared.js"></script>
 <script>
 checkAuth();
-if(sessionStorage.getItem('ff_role')!=='admin'){location.href='home.html';}
+if(sessionStorage.getItem('ff_role')!=='admin') location.href='home.html';
 
 function getCfg(){return JSON.parse(localStorage.getItem('ff_cfg')||'{}')}
 function saveConfig(){
@@ -209,47 +186,23 @@ function showTab(name,btn){
   if(name==='archivos')loadFiles();
 }
 
-// ── LÓGICA DEL FORMULARIO (Película / Serie / Episodio) ──
-let currentFormType='pelicula';
-function setFormType(type, btn){
-  currentFormType = type;
-  document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on')); 
-  btn.classList.add('on');
-  document.getElementById('epFields').style.display = type==='episodio' ? 'block' : 'none';
-  document.getElementById('featField').style.display = type==='episodio' ? 'none' : 'block';
-}
-
-// ── SUBIDA DE ARCHIVO (Separada de la IA) ──
-let selectedFile=null;
-function onFileSelected(input){
-  const f=input.files[0]; if(!f) return; selectedFile=f;
-  document.getElementById('uzFile').textContent='📎 '+f.name;
-  document.getElementById('uploadBtn').disabled=false;
-}
-
-async function uploadFile(){
-  const cfg=getCfg();
-  if(!cfg.workerUrl) return showToast('Configura el Worker URL','error');
-  if(!selectedFile) return;
-
-  const btn=document.getElementById('uploadBtn');
-  btn.disabled=true; btn.textContent='⏳ Subiendo...';
-
-  try{
-    const fd=new FormData(); fd.append('file',selectedFile);
-    const res=await fetch(cfg.workerUrl+'/upload',{method:'POST',headers:{'X-Admin-Secret':cfg.secret},body:fd});
-    const data=await res.json(); 
-    if(!data.ok)throw new Error(data.error||'Error al subir');
-
-    document.getElementById('fR2').value=data.publicUrl;
-    showToast('✅ Video subido. Copia la URL abajo.','success');
-    btn.textContent='☁️ Subir a R2';
-  }catch(e){
-    showToast('❌ '+e.message,'error'); btn.disabled=false; btn.textContent='☁️ Subir a R2';
+let activeForm = 'contenido';
+function switchForm(type) {
+  activeForm = type;
+  document.getElementById('btn-tab-cont').classList.remove('on');
+  document.getElementById('btn-tab-epi').classList.remove('on');
+  document.getElementById('form-contenido').classList.remove('on');
+  document.getElementById('form-episodio').classList.remove('on');
+  
+  if(type === 'contenido') {
+    document.getElementById('btn-tab-cont').classList.add('on');
+    document.getElementById('form-contenido').classList.add('on');
+  } else {
+    document.getElementById('btn-tab-epi').classList.add('on');
+    document.getElementById('form-episodio').classList.add('on');
   }
 }
 
-// ── BÚSQUEDA IA MANUAL ──
 async function searchWithAI(){
   const title = document.getElementById('searchTitle').value.trim();
   const searchType = document.getElementById('searchType').value;
@@ -259,90 +212,83 @@ async function searchWithAI(){
   
   const status=document.getElementById('aiStatus');
   status.style.display='flex'; status.className='ai-status analyzing';
-  status.innerHTML='<div class="spin-sm"></div> Buscando en bases de datos y generando texto...';
+  status.innerHTML='<div class="spin-sm"></div> Buscando en bases de datos...';
 
   try{
-    if(!cfg.workerUrl || !cfg.secret) throw new Error('Worker no configurado');
+    if(!cfg.workerUrl) throw new Error('Worker no configurado');
     const res = await fetch(cfg.workerUrl+'/analyze',{
       method:'POST', headers:{'Content-Type':'application/json','X-Admin-Secret':cfg.secret},
       body:JSON.stringify({ titleToSearch: title, contentType: searchType })
     });
     const data = await res.json();
     if(!data.ok) throw new Error(data.error);
-    const parsed = data.data;
+    const p = data.data;
 
-    // Rellenar formulario
-    document.getElementById('fTitle').value = parsed.titulo||title;
-    document.getElementById('fSyn').value  = parsed.sinopsis||'';
-    document.getElementById('fYear').value = parsed.año||new Date().getFullYear();
-    document.getElementById('fTags').value = Array.isArray(parsed.tags)?parsed.tags.join(', '):(parsed.tags||'');
-    if(parsed.portadaId) document.getElementById('fPortada').value = parsed.portadaId;
-    
-    // Auto-seleccionar categoría si existe
-    if(parsed.categoria) {
-      const catEl = document.getElementById('fCat');
-      if([...catEl.options].some(o => o.value === parsed.categoria)) catEl.value = parsed.categoria;
+    if (searchType === 'episodio') {
+      switchForm('episodio');
+      document.getElementById('e_titulo').value = p.titulo || title;
+      document.getElementById('e_sinopsis').value = p.sinopsis || '';
+      if(p.portadaId) document.getElementById('e_portada').value = p.portadaId;
+    } else {
+      switchForm('contenido');
+      document.getElementById('c_tipo').value = searchType;
+      document.getElementById('c_titulo').value = p.titulo || title;
+      document.getElementById('c_sinopsis').value = p.sinopsis || '';
+      document.getElementById('c_anio').value = p.año || new Date().getFullYear();
+      document.getElementById('c_tags').value = Array.isArray(p.tags) ? p.tags.join(', ') : (p.tags||'');
+      if(p.portadaId) document.getElementById('c_portada').value = p.portadaId;
+      if(p.categoria) {
+        const catEl = document.getElementById('c_categoria');
+        if([...catEl.options].some(o => o.value === p.categoria)) catEl.value = p.categoria;
+      }
     }
-    
-    // Auto-cambiar el tipo de formulario (Pelicula/Serie/Episodio)
-    const typeIdMap = { 'pelicula': 'tabTypePel', 'serie': 'tabTypeSer', 'episodio': 'tabTypeEpi' };
-    const tabBtn = document.getElementById(typeIdMap[parsed.tipo] || 'tabTypePel');
-    if(tabBtn) setFormType(parsed.tipo || 'pelicula', tabBtn);
-    
-    // ID Automático
-    const px = currentFormType==='serie'?'s':currentFormType==='episodio'?'ep':'p';
-    document.getElementById('fId').value = px+Date.now().toString().slice(-4);
-
-    status.className='ai-status done'; status.innerHTML='✅ ¡Datos encontrados! Revisa y guarda.';
+    status.className='ai-status done'; status.innerHTML='✅ ¡Datos encontrados! Revisa abajo.';
   }catch(e){
     status.className='ai-status err'; status.innerHTML='⚠️ '+e.message;
   }
 }
 
-// ── GUARDAR EN SHEETS ──
 async function saveToSheets(){
   const cfg=getCfg();
   if(!cfg.gasUrl) return showToast('Configura el Apps Script','error');
   const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='💾 Guardando...';
 
-  const isEp = currentFormType === 'episodio';
-  const baseId = document.getElementById('fId').value.trim() || 'p'+Date.now().toString().slice(-4);
-  
+  const isEp = (activeForm === 'episodio');
   const row = isEp ? {
-    serieId: document.getElementById('fSerieId').value.trim(), 
-    numero: document.getElementById('fEpNum').value.trim(),
-    titulo: document.getElementById('fTitle').value.trim(), 
-    r2Url: document.getElementById('fR2').value.trim(),
-    duracion: document.getElementById('fDur').value.trim(), 
-    sinopsis: document.getElementById('fSyn').value.trim(),
-    portadaId: document.getElementById('fPortada').value.trim(),
+    serieId: document.getElementById('e_serieId').value.trim(), 
+    numero: document.getElementById('e_numero').value.trim(),
+    titulo: document.getElementById('e_titulo').value.trim(), 
+    r2Url: document.getElementById('e_r2').value.trim(),
+    duracion: document.getElementById('e_duracion').value.trim(), 
+    sinopsis: document.getElementById('e_sinopsis').value.trim(),
+    portadaId: document.getElementById('e_portada').value.trim(),
     driveId: ''
   } : {
-    id: baseId,
-    titulo: document.getElementById('fTitle').value.trim(), 
-    tipo: currentFormType,
-    categoria: document.getElementById('fCat').value, 
-    año: document.getElementById('fYear').value,
-    sinopsis: document.getElementById('fSyn').value.trim(), 
-    tags: document.getElementById('fTags').value.trim(),
-    r2Url: document.getElementById('fR2').value.trim(), 
-    destacado: document.getElementById('fFeat').value,
-    duracion: document.getElementById('fDur').value.trim(), 
-    portadaId: document.getElementById('fPortada').value.trim(),
+    id: document.getElementById('c_id').value.trim() || 'p'+Date.now().toString().slice(-4),
+    titulo: document.getElementById('c_titulo').value.trim(), 
+    tipo: document.getElementById('c_tipo').value,
+    categoria: document.getElementById('c_categoria').value, 
+    año: document.getElementById('c_anio').value,
+    sinopsis: document.getElementById('c_sinopsis').value.trim(), 
+    tags: document.getElementById('c_tags').value.trim(),
+    r2Url: document.getElementById('c_r2').value.trim(), 
+    destacado: document.getElementById('c_destacado').value,
+    duracion: document.getElementById('c_duracion').value.trim(), 
+    portadaId: document.getElementById('c_portada').value.trim(),
     driveId: ''
   };
 
   if(!row.titulo){showToast('⚠️ El título es obligatorio','error');btn.disabled=false;btn.textContent='💾 Guardar';return;}
 
   try{
-    const url=cfg.gasUrl+'?action='+(isEp?'addEpisode':'addContent')+'&data='+encodeURIComponent(JSON.stringify(row));
+    const url = cfg.gasUrl+'?action='+(isEp?'addEpisode':'addContent')+'&data='+encodeURIComponent(JSON.stringify(row));
     try{
-      const res=await fetch(cfg.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:isEp?'addEpisode':'addContent',row})});
-      const data=await res.json(); if(!data.ok)throw new Error(data.error);
+      const res = await fetch(cfg.gasUrl,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({action:isEp?'addEpisode':'addContent',row})});
+      const data = await res.json(); if(!data.ok)throw new Error(data.error);
     }catch(err){ await fetch(url,{mode:'no-cors'}); }
     
     document.getElementById('successCard').style.display='block'; 
-    showToast('✅ Guardado en Sheets','success');
+    showToast('✅ Guardado','success');
   }catch(e){ showToast('❌ '+e.message,'error'); btn.disabled=false; btn.textContent='💾 Guardar'; }
 }
 
@@ -354,11 +300,7 @@ async function loadFiles(){
     const res=await fetch(cfg.workerUrl+'/list',{headers:{'X-Admin-Secret':cfg.secret}});
     const data=await res.json();
     if(!data.files.length) return list.innerHTML='<p style="text-align:center;padding:20px">No hay archivos.</p>';
-    list.innerHTML='<div class="files-list">'+data.files.map(f=>`
-      <div class="file-row">
-        <div class="file-info"><div class="file-name">${f.name}</div><div class="file-meta">${f.sizeMB} MB</div></div>
-        <div class="file-acts"><button class="btn btn-ghost btn-sm" onclick="copyUrl('${f.url}')">📋 Copiar URL</button></div>
-      </div>`).join('')+'</div>';
+    list.innerHTML='<div class="files-list">'+data.files.map(f=>`<div class="file-row"><div class="file-info"><div class="file-name">${f.name}</div><div class="file-meta">${f.sizeMB} MB</div></div><div class="file-acts"><button class="btn btn-ghost btn-sm" onclick="copyUrl('${f.url}')">📋 Copiar URL</button></div></div>`).join('')+'</div>';
   }catch(e){ list.innerHTML='❌ Error de red'; }
 }
 function copyUrl(url){navigator.clipboard.writeText(url).then(()=>showToast('📋 Copiado','success'));}
