@@ -18,51 +18,37 @@
   .acard{background:var(--ink2);border:1px solid rgba(245,240,232,0.07);border-radius:var(--rl);padding:28px;margin-bottom:20px}
   .acard h3{font-family:var(--ff);font-size:20px;font-weight:700;margin-bottom:6px;color:var(--cream)}
   .acard .desc{font-size:13px;color:var(--cream3);margin-bottom:22px;line-height:1.6}
-  .upload-zone{border:2px dashed rgba(232,160,32,0.3);border-radius:var(--rl);padding:48px 24px;text-align:center;cursor:pointer;transition:all var(--t);background:rgba(232,160,32,0.03);position:relative}
-  .upload-zone:hover,.upload-zone.drag{border-color:var(--amber);background:rgba(232,160,32,0.07)}
+  
+  .upload-zone{border:2px dashed rgba(232,160,32,0.3);border-radius:var(--rl);padding:30px 24px;text-align:center;cursor:pointer;transition:all var(--t);background:rgba(232,160,32,0.03);position:relative}
+  .upload-zone:hover{border-color:var(--amber);background:rgba(232,160,32,0.07)}
   .upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
-  .uz-icon{font-size:52px;margin-bottom:14px}
-  .uz-title{font-family:var(--ff);font-size:22px;font-weight:700;color:var(--cream);margin-bottom:6px}
-  .uz-sub{font-size:13px;color:var(--cream3)}
-  .uz-file{font-size:13px;color:var(--amber);font-weight:600;margin-top:10px;min-height:20px}
-  .upload-prog{margin-top:16px;display:none}
-  .upload-prog-bar{height:6px;background:rgba(245,240,232,0.1);border-radius:3px;overflow:hidden;margin-bottom:8px}
-  .upload-prog-fill{height:100%;width:0;background:linear-gradient(90deg,var(--amber),var(--amber3));border-radius:3px;transition:width 0.3s}
-  .upload-prog-label{font-size:12px;color:var(--amber);text-align:center}
+  .uz-icon{font-size:36px;margin-bottom:10px}
+  .uz-title{font-family:var(--ff);font-size:18px;font-weight:700;color:var(--cream);margin-bottom:4px}
+  
   .form-g{margin-bottom:18px}
   .form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
   @media(max-width:600px){.form-row{grid-template-columns:1fr}}
+  
   .type-tabs{display:flex;gap:0;background:var(--ink3);border-radius:var(--rm);padding:4px;margin-bottom:22px}
   .ttab{flex:1;padding:11px;border:none;background:none;color:var(--cream3);font-family:var(--fs);font-size:14px;font-weight:500;cursor:pointer;border-radius:var(--r);transition:all var(--t);text-align:center}
   .ttab.on{background:var(--amber);color:#0a0800;font-weight:700}
 
-  .ai-status{display:none;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;margin-bottom:18px}
+  /* Buscador IA */
+  .ai-search-box { background: linear-gradient(135deg, rgba(232,160,32,0.1), rgba(196,122,16,0.02)); border: 1px solid rgba(232,160,32,0.3); border-radius: var(--rm); padding: 20px; margin-bottom: 24px; }
+  .ai-status{display:none;align-items:center;gap:10px;padding:12px 16px;border-radius:var(--r);font-size:13px;margin-top:14px}
   .ai-status.analyzing{display:flex;background:rgba(232,160,32,0.08);border:1px solid rgba(232,160,32,0.2);color:var(--amber)}
   .ai-status.done{display:flex;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.2);color:#2ecc71}
   .ai-status.err{display:flex;background:rgba(192,57,43,0.08);border:1px solid rgba(192,57,43,0.2);color:#e74c3c}
   .spin-sm{width:16px;height:16px;border:2px solid rgba(232,160,32,0.2);border-top-color:var(--amber);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0}
 
-  .ai-preview{display:none;background:linear-gradient(135deg,rgba(232,160,32,0.06),rgba(196,122,16,0.03));border:1px solid rgba(232,160,32,0.2);border-radius:var(--rm);padding:20px;margin-bottom:20px}
-  .ai-preview h4{font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--amber);margin-bottom:14px;font-weight:600}
-  .ai-field{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid rgba(245,240,232,0.05);align-items:flex-start}
-  .ai-field:last-child{border-bottom:none}
-  .ai-field-lbl{font-size:11px;color:var(--cream3);width:80px;flex-shrink:0;padding-top:2px;font-weight:600;text-transform:uppercase;letter-spacing:0.5px}
-  .ai-field-val{font-size:13px;color:var(--cream);flex:1;line-height:1.5}
-
   .files-list{display:flex;flex-direction:column;gap:8px}
   .file-row{display:flex;align-items:center;gap:14px;padding:14px 16px;background:var(--ink3);border:1px solid rgba(245,240,232,0.06);border-radius:var(--rm);transition:border-color var(--t)}
   .file-row:hover{border-color:rgba(232,160,32,0.2)}
-  .file-icon{font-size:24px;flex-shrink:0}
   .file-info{flex:1;min-width:0}
   .file-name{font-size:13px;font-weight:600;color:var(--cream);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px}
   .file-meta{font-size:11px;color:var(--cream3)}
-  .file-acts{display:flex;gap:8px;flex-shrink:0}
-  .btn-sm{padding:7px 12px;font-size:12px;border-radius:var(--r)}
-  .warning{background:rgba(232,160,32,0.07);border:1px solid rgba(232,160,32,0.2);border-radius:var(--rm);padding:14px 18px;font-size:13px;color:var(--amber);display:flex;gap:10px;align-items:flex-start;margin-bottom:16px}
+  
   .success-card{display:none;background:rgba(39,174,96,0.08);border:1px solid rgba(39,174,96,0.25);border-radius:var(--rl);padding:28px;text-align:center;margin-bottom:20px}
-  .success-card .sc-icon{font-size:52px;margin-bottom:12px}
-  .success-card h3{font-family:var(--ff);font-size:26px;color:#2ecc71;margin-bottom:8px}
-  .success-card p{font-size:14px;color:var(--cream3);margin-bottom:20px}
 </style>
 </head>
 <body>
@@ -79,106 +65,103 @@
 
 <div class="page">
   <h1 class="page-title">Panel de <span>Administración</span></h1>
-  <p class="page-sub">Sube un video, la IA genera los datos, y se guarda automático en Google Sheets.</p>
+  <p class="page-sub">Rellena los datos a mano o deja que la IA busque la información por ti.</p>
 
   <div class="admin-tabs">
-    <button class="atab on" id="tab-subir" onclick="showTab('subir',this)">☁️ Subir / Crear</button>
-    <button class="atab" id="tab-archivos" onclick="showTab('archivos',this)">📁 Mis Archivos</button>
+    <button class="atab on" id="tab-subir" onclick="showTab('subir',this)">📝 Crear Contenido</button>
+    <button class="atab" id="tab-archivos" onclick="showTab('archivos',this)">📁 Mis Archivos R2</button>
     <button class="atab" id="tab-config" onclick="showTab('config',this)">⚙️ Configuración</button>
   </div>
 
   <div class="panel on" id="panel-subir">
 
-    <div class="acard" id="step1Card">
-      <h3>Paso 1 — Sube tu video a R2 (Opcional)</h3>
-      <p class="desc">Arrastra el archivo o haz clic. <strong>Si ya lo subiste por consola, sáltate este paso y ve abajo.</strong></p>
-      <div class="upload-zone" id="uploadZone">
-        <input type="file" id="fileInput" accept="video/*" onchange="onFileSelected(this)">
-        <div class="uz-icon">🎬</div>
-        <div class="uz-title">Arrastra tu video aquí</div>
-        <div class="uz-file" id="uzFile"></div>
+    <div class="acard" style="padding:20px">
+      <h3 style="font-size:16px; margin-bottom:10px">Subir video web (Opcional)</h3>
+      <div style="display:flex; gap:14px; align-items:center">
+        <div class="upload-zone" style="flex:1; padding:15px; border-radius:var(--rm)">
+          <input type="file" id="fileInput" accept="video/*" onchange="onFileSelected(this)">
+          <div style="font-size:14px; color:var(--cream2)" id="uzFile">Haz clic para seleccionar un video corto</div>
+        </div>
+        <button class="btn btn-ghost" id="uploadBtn" onclick="uploadFile()" disabled>☁️ Subir a R2</button>
       </div>
-      <div class="upload-prog" id="uploadProg">
-        <div class="upload-prog-bar"><div class="upload-prog-fill" id="uploadFill"></div></div>
-        <div class="upload-prog-label" id="uploadLabel">Subiendo...</div>
-      </div>
-      <button class="btn btn-amber btn-full" style="margin-top:16px;padding:14px;font-size:15px;font-weight:700" id="uploadBtn" onclick="uploadFile()" disabled>
-        ☁️ Subir a R2
-      </button>
     </div>
 
-    <div class="acard" id="step2Card">
-      <h3>Paso 2 — Datos del Video</h3>
-      <p class="desc">Si subiste el video por consola, escribe el título y dale a "Auto-completar" para que la IA busque los datos.</p>
-
-      <div class="form-g">
-        <label>Título de la Película / Video</label>
-        <div style="display:flex; gap:10px;">
-          <input class="inp" id="fTitle" type="text" placeholder="Ej. Shrek 2 o Viaje a París">
-          <button class="btn btn-outline" style="flex-shrink:0; padding:0 16px;" onclick="analyzeManual()">✨ Auto-completar</button>
+    <div class="acard">
+      <div class="ai-search-box">
+        <h3 style="font-size:16px; color:var(--amber); margin-bottom:10px">✨ Asistente IA</h3>
+        <p style="font-size:12px; color:var(--cream3); margin-bottom:14px">Escribe el título, selecciona qué es, y la IA rellenará el formulario de abajo.</p>
+        
+        <div style="display:flex; gap:10px; flex-wrap:wrap">
+          <select class="inp" id="searchType" style="width:auto; min-width:120px">
+            <option value="pelicula">Película</option>
+            <option value="serie">Serie</option>
+            <option value="episodio">Episodio</option>
+          </select>
+          <input class="inp" id="searchTitle" type="text" placeholder="Ej: Shrek 2 o Viaje a París" style="flex:1; min-width:200px">
+          <button class="btn btn-amber" onclick="searchWithAI()">🔍 Buscar Datos</button>
         </div>
+        <div class="ai-status" id="aiStatus"></div>
       </div>
 
-      <div class="ai-status" id="aiStatus"></div>
-
-      <div class="ai-preview" id="aiPreview">
-        <h4>✨ Generado por IA</h4>
-        <div id="aiPreviewFields"></div>
-      </div>
+      <h3 style="border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:10px; margin-bottom:20px">Datos a guardar en Sheets</h3>
 
       <div class="form-g">
-        <label>¿Qué tipo de contenido es?</label>
         <div class="type-tabs">
-          <button class="ttab on" onclick="setType('pelicula',this)">🎬 Película</button>
-          <button class="ttab" onclick="setType('serie',this)">📺 Serie</button>
-          <button class="ttab" onclick="setType('episodio',this)">🎞 Episodio</button>
+          <button class="ttab on" id="tabTypePel" onclick="setFormType('pelicula',this)">🎬 Película</button>
+          <button class="ttab" id="tabTypeSer" onclick="setFormType('serie',this)">📺 Serie</button>
+          <button class="ttab" id="tabTypeEpi" onclick="setFormType('episodio',this)">🎞 Episodio</button>
         </div>
       </div>
 
       <div class="form-row">
-        <div class="form-g"><label>ID único</label><input class="inp" id="fId" type="text" placeholder="p001"></div>
+        <div class="form-g"><label>ID único</label><input class="inp" id="fId" type="text" placeholder="Auto-generado si lo dejas vacío"></div>
         <div class="form-g"><label>Categoría</label>
           <select class="inp" id="fCat">
-            <option>Familia</option><option>Viajes</option><option>Cumpleaños</option>
-            <option>Navidad</option><option>Vacaciones</option><option>Eventos</option>
-            <option>General</option><option>Accion</option><option>Comedia</option><option>Drama</option><option>Sci-Fi</option>
+            <option>Familia</option><option>Viajes</option><option>Cumpleaños</option><option>Navidad</option>
+            <option>Vacaciones</option><option>Eventos</option><option>General</option>
+            <option>Accion</option><option>Comedia</option><option>Drama</option><option>Sci-Fi</option>
           </select>
         </div>
       </div>
       
+      <div class="form-g"><label>Título Final</label><input class="inp" id="fTitle" type="text"></div>
       <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="fSyn" rows="3"></textarea></div>
+      
       <div class="form-row">
         <div class="form-g"><label>Año</label><input class="inp" id="fYear" type="number"></div>
         <div class="form-g"><label>Duración</label><input class="inp" id="fDur" type="text" placeholder="1:30:00"></div>
       </div>
-      <div class="form-g"><label>Tags (separados por coma)</label><input class="inp" id="fTags" type="text"></div>
-      <div class="form-g"><label>URL de Portada (Opcional)</label><input class="inp" id="fPortada" type="text" placeholder="https://..."></div>
-      <div class="form-g"><label>URL del video en R2</label><input class="inp" id="fR2" type="text" placeholder="Pega el enlace si subiste por consola"></div>
+      
+      <div class="form-row">
+        <div class="form-g"><label>Tags (separados por coma)</label><input class="inp" id="fTags" type="text"></div>
+        <div class="form-g"><label>URL de Portada</label><input class="inp" id="fPortada" type="text" placeholder="https://..."></div>
+      </div>
 
-      <div id="epFields" style="display:none; border-top:1px solid rgba(245,240,232,0.08); padding-top:18px; margin-bottom:18px">
+      <div class="form-g"><label>URL del video (R2 o Drive)</label><input class="inp" id="fR2" type="text" placeholder="Pega el enlace de tu archivo aquí"></div>
+
+      <div id="epFields" style="display:none; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); padding:16px; border-radius:var(--r); margin-bottom:18px">
+        <h4 style="font-size:12px; color:var(--amber); margin-bottom:12px">Datos del Episodio</h4>
         <div class="form-row">
-          <div class="form-g"><label>ID de la serie padre</label><input class="inp" id="fSerieId" type="text" placeholder="s001"></div>
-          <div class="form-g"><label>Número de episodio</label><input class="inp" id="fEpNum" type="number" placeholder="1"></div>
+          <div class="form-g" style="margin-bottom:0"><label>ID de la Serie a la que pertenece</label><input class="inp" id="fSerieId" type="text" placeholder="s001"></div>
+          <div class="form-g" style="margin-bottom:0"><label>Número de Capítulo</label><input class="inp" id="fEpNum" type="number" placeholder="1"></div>
         </div>
       </div>
 
       <div class="form-g" id="featField">
-        <label>¿Destacado en Portada?</label>
+        <label>¿Destacar en el banner principal?</label>
         <select class="inp" id="fFeat"><option value="">No</option><option value="si">Sí</option></select>
       </div>
 
-      <button class="btn btn-amber btn-full" style="padding:15px;font-size:15px;font-weight:700;margin-top:4px" id="saveBtn" onclick="saveToSheets()">
-        💾 Guardar en Google Sheets
+      <button class="btn btn-amber btn-full" style="padding:15px;font-size:15px;font-weight:700;margin-top:10px" id="saveBtn" onclick="saveToSheets()">
+        💾 Guardar en Base de Datos
       </button>
     </div>
 
     <div class="success-card" id="successCard">
       <div class="sc-icon">✅</div>
       <h3>¡Guardado correctamente!</h3>
-      <p>El video ya está en Google Sheets.</p>
-      <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
-        <button class="btn btn-amber" onclick="resetForm()">➕ Agregar otro</button>
-      </div>
+      <p>Ya puedes verlo en tu catálogo.</p>
+      <button class="btn btn-amber" onclick="location.reload()">➕ Agregar otro</button>
     </div>
   </div>
 
@@ -226,23 +209,21 @@ function showTab(name,btn){
   if(name==='archivos')loadFiles();
 }
 
-let currentType='pelicula';
-function setType(type,btn){
-  currentType=type;
-  document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
-  document.getElementById('epFields').style.display=type==='episodio'?'block':'none';
-  document.getElementById('featField').style.display=type==='episodio'?'none':'block';
+// ── LÓGICA DEL FORMULARIO (Película / Serie / Episodio) ──
+let currentFormType='pelicula';
+function setFormType(type, btn){
+  currentFormType = type;
+  document.querySelectorAll('.ttab').forEach(b=>b.classList.remove('on')); 
+  btn.classList.add('on');
+  document.getElementById('epFields').style.display = type==='episodio' ? 'block' : 'none';
+  document.getElementById('featField').style.display = type==='episodio' ? 'none' : 'block';
 }
 
-const zone=document.getElementById('uploadZone');
-zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('drag')});
-zone.addEventListener('dragleave',()=>zone.classList.remove('drag'));
-zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('drag');const f=e.dataTransfer.files[0];if(f){document.getElementById('fileInput').files=e.dataTransfer.files;onFileSelected({files:[f]});}});
-
+// ── SUBIDA DE ARCHIVO (Separada de la IA) ──
 let selectedFile=null;
 function onFileSelected(input){
-  const f=input.files[0];if(!f)return; selectedFile=f;
-  document.getElementById('uzFile').textContent='📎 '+f.name+' ('+( f.size/1024/1024).toFixed(1)+' MB)';
+  const f=input.files[0]; if(!f) return; selectedFile=f;
+  document.getElementById('uzFile').textContent='📎 '+f.name;
   document.getElementById('uploadBtn').disabled=false;
 }
 
@@ -251,93 +232,104 @@ async function uploadFile(){
   if(!cfg.workerUrl) return showToast('Configura el Worker URL','error');
   if(!selectedFile) return;
 
-  const btn=document.getElementById('uploadBtn'), prog=document.getElementById('uploadProg'), fill=document.getElementById('uploadFill');
-  btn.disabled=true; btn.textContent='☁️ Subiendo...'; prog.style.display='block';
-  let pct=0; const pt=setInterval(()=>{pct=Math.min(pct+5,88);fill.style.width=pct+'%';},600);
+  const btn=document.getElementById('uploadBtn');
+  btn.disabled=true; btn.textContent='⏳ Subiendo...';
 
   try{
     const fd=new FormData(); fd.append('file',selectedFile);
     const res=await fetch(cfg.workerUrl+'/upload',{method:'POST',headers:{'X-Admin-Secret':cfg.secret},body:fd});
-    const data=await res.json(); clearInterval(pt); fill.style.width='100%';
+    const data=await res.json(); 
     if(!data.ok)throw new Error(data.error||'Error al subir');
 
     document.getElementById('fR2').value=data.publicUrl;
-    showToast('✅ Video subido a R2','success');
-    await analyzeWithAI(data.fileName, cfg, null);
+    showToast('✅ Video subido. Copia la URL abajo.','success');
+    btn.textContent='☁️ Subir a R2';
   }catch(e){
-    clearInterval(pt); showToast('❌ '+e.message,'error'); btn.disabled=false; btn.textContent='☁️ Subir a R2';
+    showToast('❌ '+e.message,'error'); btn.disabled=false; btn.textContent='☁️ Subir a R2';
   }
 }
 
-// NUEVA FUNCIÓN MÁGICA PARA ACTIVAR LA IA MANUALMENTE
-async function analyzeManual(){
-  const title = document.getElementById('fTitle').value.trim();
-  if(!title){ showToast('⚠️ Escribe el título de la película primero', 'error'); return; }
-  await analyzeWithAI(null, getCfg(), title);
-}
-
-async function analyzeWithAI(fileName, cfg, manualTitle = null){
+// ── BÚSQUEDA IA MANUAL ──
+async function searchWithAI(){
+  const title = document.getElementById('searchTitle').value.trim();
+  const searchType = document.getElementById('searchType').value;
+  const cfg = getCfg();
+  
+  if(!title){ showToast('⚠️ Escribe el título primero', 'error'); return; }
+  
   const status=document.getElementById('aiStatus');
   status.style.display='flex'; status.className='ai-status analyzing';
-  status.innerHTML='<div class="spin-sm"></div> Buscando datos en TMDB/IA...';
+  status.innerHTML='<div class="spin-sm"></div> Buscando en bases de datos y generando texto...';
 
   try{
     if(!cfg.workerUrl || !cfg.secret) throw new Error('Worker no configurado');
     const res = await fetch(cfg.workerUrl+'/analyze',{
       method:'POST', headers:{'Content-Type':'application/json','X-Admin-Secret':cfg.secret},
-      body:JSON.stringify({ fileName, manualTitle })
+      body:JSON.stringify({ titleToSearch: title, contentType: searchType })
     });
     const data = await res.json();
     if(!data.ok) throw new Error(data.error);
     const parsed = data.data;
 
-    if(!manualTitle) document.getElementById('fTitle').value = parsed.titulo||'';
+    // Rellenar formulario
+    document.getElementById('fTitle').value = parsed.titulo||title;
     document.getElementById('fSyn').value  = parsed.sinopsis||'';
     document.getElementById('fYear').value = parsed.año||new Date().getFullYear();
     document.getElementById('fTags').value = Array.isArray(parsed.tags)?parsed.tags.join(', '):(parsed.tags||'');
     if(parsed.portadaId) document.getElementById('fPortada').value = parsed.portadaId;
     
+    // Auto-seleccionar categoría si existe
     if(parsed.categoria) {
       const catEl = document.getElementById('fCat');
       if([...catEl.options].some(o => o.value === parsed.categoria)) catEl.value = parsed.categoria;
     }
     
-    const px=parsed.tipo==='serie'?'s':parsed.tipo==='episodio'?'ep':'p';
-    document.getElementById('fId').value=px+Date.now().toString().slice(-4);
+    // Auto-cambiar el tipo de formulario (Pelicula/Serie/Episodio)
+    const typeIdMap = { 'pelicula': 'tabTypePel', 'serie': 'tabTypeSer', 'episodio': 'tabTypeEpi' };
+    const tabBtn = document.getElementById(typeIdMap[parsed.tipo] || 'tabTypePel');
+    if(tabBtn) setFormType(parsed.tipo || 'pelicula', tabBtn);
+    
+    // ID Automático
+    const px = currentFormType==='serie'?'s':currentFormType==='episodio'?'ep':'p';
+    document.getElementById('fId').value = px+Date.now().toString().slice(-4);
 
-    const fields=document.getElementById('aiPreviewFields');
-    document.getElementById('aiPreview').style.display='block';
-    fields.innerHTML=`
-      <div class="ai-field"><div class="ai-field-lbl">Título</div><div class="ai-field-val"><strong>${parsed.titulo}</strong></div></div>
-      <div class="ai-field"><div class="ai-field-lbl">Categoría</div><div class="ai-field-val">${parsed.categoria}</div></div>
-      <div class="ai-field"><div class="ai-field-lbl">Año</div><div class="ai-field-val">${parsed.año}</div></div>
-      <div class="ai-field"><div class="ai-field-lbl">Portada</div><div class="ai-field-val">${parsed.portadaId ? '✅ Encontrada' : '❌ No encontrada'}</div></div>
-    `;
-
-    status.className='ai-status done'; status.innerHTML='✅ IA completó — revisa los datos';
+    status.className='ai-status done'; status.innerHTML='✅ ¡Datos encontrados! Revisa y guarda.';
   }catch(e){
     status.className='ai-status err'; status.innerHTML='⚠️ '+e.message;
   }
 }
 
+// ── GUARDAR EN SHEETS ──
 async function saveToSheets(){
   const cfg=getCfg();
   if(!cfg.gasUrl) return showToast('Configura el Apps Script','error');
   const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='💾 Guardando...';
 
-  const isEp=currentType==='episodio';
-  const row=isEp?{
-    serieId: document.getElementById('fSerieId').value.trim(), numero: document.getElementById('fEpNum').value.trim(),
-    titulo: document.getElementById('fTitle').value.trim(), r2Url: document.getElementById('fR2').value.trim(),
-    duracion:document.getElementById('fDur').value.trim(), sinopsis:document.getElementById('fSyn').value.trim(),
-    portadaId:document.getElementById('fPortada').value.trim()
-  }:{
-    id: document.getElementById('fId').value.trim()||'p'+Date.now().toString().slice(-4),
-    titulo: document.getElementById('fTitle').value.trim(), tipo: currentType,
-    categoria:document.getElementById('fCat').value, año: document.getElementById('fYear').value,
-    sinopsis: document.getElementById('fSyn').value.trim(), tags: document.getElementById('fTags').value.trim(),
-    r2Url: document.getElementById('fR2').value.trim(), destacado:document.getElementById('fFeat').value,
-    duracion: document.getElementById('fDur').value.trim(), portadaId:document.getElementById('fPortada').value.trim()
+  const isEp = currentFormType === 'episodio';
+  const baseId = document.getElementById('fId').value.trim() || 'p'+Date.now().toString().slice(-4);
+  
+  const row = isEp ? {
+    serieId: document.getElementById('fSerieId').value.trim(), 
+    numero: document.getElementById('fEpNum').value.trim(),
+    titulo: document.getElementById('fTitle').value.trim(), 
+    r2Url: document.getElementById('fR2').value.trim(),
+    duracion: document.getElementById('fDur').value.trim(), 
+    sinopsis: document.getElementById('fSyn').value.trim(),
+    portadaId: document.getElementById('fPortada').value.trim(),
+    driveId: ''
+  } : {
+    id: baseId,
+    titulo: document.getElementById('fTitle').value.trim(), 
+    tipo: currentFormType,
+    categoria: document.getElementById('fCat').value, 
+    año: document.getElementById('fYear').value,
+    sinopsis: document.getElementById('fSyn').value.trim(), 
+    tags: document.getElementById('fTags').value.trim(),
+    r2Url: document.getElementById('fR2').value.trim(), 
+    destacado: document.getElementById('fFeat').value,
+    duracion: document.getElementById('fDur').value.trim(), 
+    portadaId: document.getElementById('fPortada').value.trim(),
+    driveId: ''
   };
 
   if(!row.titulo){showToast('⚠️ El título es obligatorio','error');btn.disabled=false;btn.textContent='💾 Guardar';return;}
@@ -349,12 +341,10 @@ async function saveToSheets(){
       const data=await res.json(); if(!data.ok)throw new Error(data.error);
     }catch(err){ await fetch(url,{mode:'no-cors'}); }
     
-    document.getElementById('step2Card').style.display='none';
-    document.getElementById('successCard').style.display='block'; showToast('✅ Guardado','success');
+    document.getElementById('successCard').style.display='block'; 
+    showToast('✅ Guardado en Sheets','success');
   }catch(e){ showToast('❌ '+e.message,'error'); btn.disabled=false; btn.textContent='💾 Guardar'; }
 }
-
-function resetForm(){ location.reload(); }
 
 async function loadFiles(){
   const cfg=getCfg(); const list=document.getElementById('filesList');
