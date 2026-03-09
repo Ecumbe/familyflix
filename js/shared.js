@@ -11,10 +11,10 @@ const CE = {serieId:0,numero:1,titulo:2,r2Url:3,driveId:4,duracion:5,sinopsis:6,
 async function fetchContent() {
   try {
     const r = await fetch(SHEET_CONTENT + '&t=' + Date.now());
-    if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+    if (!r.ok) throw new Error('Error de red: ' + r.status);
     return parseContent(await r.text());
-  } catch (err) { 
-    console.error('Error cargando contenido de Sheets:', err);
+  } catch (e) { 
+    console.error("Fallo al cargar Contenido:", e);
     return getSampleContent(); 
   }
 }
@@ -22,15 +22,15 @@ async function fetchContent() {
 async function fetchEpisodes() {
   try {
     const r = await fetch(SHEET_EPISODES + '&t=' + Date.now());
-    if (!r.ok) throw new Error('Error HTTP: ' + r.status);
+    if (!r.ok) throw new Error('Error de red: ' + r.status);
     return parseEpisodes(await r.text());
-  } catch (err) { 
-    console.error('Error cargando episodios:', err);
+  } catch (e) { 
+    console.error("Fallo al cargar Episodios:", e);
     return []; 
   }
 }
 
-// ── FIX: Analizador inteligente que soporta comas y puntos y comas ──
+// Lector de CSV inteligente a prueba de fallos
 function csvLine(line, delimiter = ',') {
   const r=[]; let cur=''; let q=false;
   for(const ch of line){
@@ -45,42 +45,29 @@ function parseContent(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return getSampleContent();
   
-  // Detectar automáticamente si Google Sheets exportó con "," o ";"
+  // Detecta si tu Excel usó comas o punto y coma
   const delimiter = lines[0].includes(';') ? ';' : ',';
-  
   const out = [];
+  
   for (let i = 1; i < lines.length; i++) {
     const c = csvLine(lines[i], delimiter);
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
-    
     if (!cl(CC.titulo)) continue;
     
-    const rowId = cl(CC.id) || 'c'+i;
-    let rawPortada = cl(CC.portadaId);
-    let thumb = '';
-    
-    if (rawPortada.startsWith('http')) {
-      thumb = rawPortada;
-    } else if (rawPortada) {
-      thumb = driveThumb(extractId(rawPortada));
-    } else if (cl(CC.driveId)) {
-      thumb = driveThumb(extractId(cl(CC.driveId)));
-    }
-
+    const pid = extractId(cl(CC.portadaId));
+    const did = extractId(cl(CC.driveId));
     out.push({
-      id:        rowId,
+      id:        cl(CC.id)||'c'+i,
       title:     cl(CC.titulo),
-      type:      cl(CC.tipo).toLowerCase() || 'pelicula',
-      category:  cl(CC.categoria) || 'Familia',
-      year:      cl(CC.anio) ? parseInt(cl(CC.anio)) : null,
+      type:      cl(CC.tipo).toLowerCase()||'pelicula',
+      category:  cl(CC.categoria)||'Familia',
+      year:      cl(CC.anio)?parseInt(cl(CC.anio)):null,
       synopsis:  cl(CC.sinopsis),
-      tags:      cl(CC.tags) ? cl(CC.tags).split(',').map(t=>t.trim()).filter(Boolean) : [],
-      portadaId: rawPortada, 
-      r2Url:     cl(CC.r2Url), 
-      driveId:   extractId(cl(CC.driveId)),
+      tags:      cl(CC.tags)?cl(CC.tags).split(',').map(t=>t.trim()).filter(Boolean):[],
+      portadaId: pid, r2Url:cl(CC.r2Url), driveId:did,
       duration:  cl(CC.duracion),
-      featured:  cl(CC.destacado).toLowerCase() === 'si',
-      thumbnail: thumb,
+      featured:  cl(CC.destacado).toLowerCase()==='si',
+      thumbnail: pid?pid:(did?driveThumb(did):''),
     });
   }
   return out.length ? out : getSampleContent();
@@ -89,7 +76,6 @@ function parseContent(csv) {
 function parseEpisodes(csv) {
   const lines = csv.trim().split('\n');
   if (lines.length < 2) return [];
-  
   const delimiter = lines[0].includes(';') ? ';' : ',';
   const out = [];
   
@@ -98,40 +84,29 @@ function parseEpisodes(csv) {
     const cl = v => (c[v]||'').replace(/"/g,'').trim();
     if (!cl(CE.serieId)) continue;
     
-    let rawPortada = cl(CE.portadaId);
-    let thumb = '';
-    if (rawPortada.startsWith('http')) {
-      thumb = rawPortada;
-    } else if (rawPortada) {
-      thumb = driveThumb(extractId(rawPortada));
-    } else if (cl(CE.driveId)) {
-      thumb = driveThumb(extractId(cl(CE.driveId)));
-    }
-
+    const pid = extractId(cl(CE.portadaId));
+    const did = extractId(cl(CE.driveId));
     out.push({
       id:        `ep_${cl(CE.serieId)}_${i}`,
       serieId:   cl(CE.serieId),
-      number:    parseInt(cl(CE.numero)) || i,
-      title:     cl(CE.titulo) || `Episodio ${i}`,
-      r2Url:     cl(CE.r2Url), 
-      driveId:   extractId(cl(CE.driveId)),
-      duration:  cl(CE.duracion), 
-      synopsis:  cl(CE.sinopsis),
-      thumbnail: thumb,
+      number:    parseInt(cl(CE.numero))||i,
+      title:     cl(CE.titulo)||`Episodio ${i}`,
+      r2Url:     cl(CE.r2Url), driveId:did,
+      duration:  cl(CE.duracion), synopsis:cl(CE.sinopsis),
+      thumbnail: pid?pid:(did?driveThumb(did):''),
     });
   }
   return out;
 }
 
 function getSampleContent() {
-  return [
-    {id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'Si ves esto, hay un error al leer la hoja.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''},
-  ];
+  return [{id:'p1',title:'Video de Prueba',type:'pelicula',category:'General',year:2024,synopsis:'Si ves esto, hay un error al leer la hoja. Revisa la consola.',tags:['Demo'],portadaId:'',r2Url:'',driveId:'',duration:'0:00',featured:true,thumbnail:''}];
 }
 
 function extractId(raw) {
   if(!raw)return'';
   raw=raw.trim().replace(/"/g,'');
+  if(raw.startsWith('http')) return raw; // Si es URL directa
   const m=raw.match(/\/d\/([a-zA-Z0-9_-]{10,})/);
   if(m)return m[1];
   if(!raw.includes('/')&&raw.length>10)return raw;
@@ -146,11 +121,6 @@ function savePct(id,pct){const p=getProg();p[id]=Math.round(pct);localStorage.se
 function saveTime(id,s){const p=getTime();p[id]=s;localStorage.setItem('ff_t',JSON.stringify(p))}
 function getPct(id){return getProg()[id]||0}
 function getTimeSec(id){return getTime()[id]||0}
-
-function savePcts(id,pct){savePct(id,pct)}
-function saveTimeSecs(id,s){saveTime(id,s)}
-function getPcts(id){return getPct(id)}
-function getTimeSecs(id){return getTimeSec(id)}
 
 function initTheme(){
   const s=localStorage.getItem('ff_th');
