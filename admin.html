@@ -6,10 +6,10 @@
   <title>FamilyFlix — Admin</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
-    body{background:var(--ink)}
-    .page{max-width:1180px;margin:0 auto;padding:calc(var(--nav-h) + 24px) 20px 80px;position:relative;z-index:1}
+    body{background:var(--ink);color:var(--text)}
+    .page{max-width:1260px;margin:0 auto;padding:calc(var(--nav-h) + 24px) 20px 80px;position:relative;z-index:1}
     .head{display:flex;justify-content:space-between;gap:18px;align-items:flex-end;margin-bottom:24px;flex-wrap:wrap}
-    .title{font-family:var(--ff);font-size:42px;line-height:1}
+    .title{font-family:var(--ff);font-size:42px;line-height:1;letter-spacing:-.04em}
     .title span{color:var(--amber);font-style:italic}
     .subtitle{color:var(--cream3);font-size:14px;margin-top:8px}
     .tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
@@ -17,7 +17,7 @@
     .tab.on{background:var(--amber);border-color:var(--amber);color:#120c00;font-weight:700}
     .panel{display:none}
     .panel.on{display:block}
-    .cardx{background:var(--ink2);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:24px;margin-bottom:18px}
+    .cardx{background:var(--ink2);border:1px solid rgba(255,255,255,.06);border-radius:24px;padding:24px;margin-bottom:18px;box-shadow:0 24px 70px rgba(0,0,0,.22)}
     .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
     .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
     .grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
@@ -42,9 +42,9 @@
     .file-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:14px;align-items:end;margin:18px 0}
     .file-summary{text-align:right;font-size:12px;color:var(--cream3)}
     .preview-frame{background:#000;border-radius:20px;overflow:hidden;aspect-ratio:16/9;margin-bottom:18px}
-    .preview-frame video,.preview-frame iframe{width:100%;height:100%;border:none;display:block;background:#000}
-    @media(max-width:980px){.grid2,.grid3,.grid4,.stats{grid-template-columns:1fr 1fr}}
-    @media(max-width:640px){.grid2,.grid3,.grid4,.stats,.file-toolbar{grid-template-columns:1fr}}
+    .preview-frame video,.preview-frame iframe,.preview-frame img{width:100%;height:100%;border:none;display:block;background:#000;object-fit:contain}
+    @media(max-width:980px){.page{padding:calc(var(--nav-h) + 18px) 18px 64px}.head{align-items:flex-start}.grid2,.grid3,.grid4,.stats{grid-template-columns:1fr 1fr}}
+    @media(max-width:640px){.page{padding:calc(var(--nav-h) + 14px) 14px 56px}.title{font-size:34px}.grid2,.grid3,.grid4,.stats,.file-toolbar{grid-template-columns:1fr}.cardx{padding:18px}.rowx{align-items:flex-start}.rowx>div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:10px}}
   </style>
 </head>
 <body>
@@ -1140,7 +1140,7 @@
       }
     }
 
-    async function renderFiles() {
+    async function renderFilesLegacy() {
       const list = document.getElementById('filesList');
       const summary = document.getElementById('filesSummary');
       if (!getAdminSecret()) {
@@ -1173,7 +1173,20 @@
       showToast('URL copiada.');
     }
 
+    function isImageFile(fileOrUrl) {
+      const value = typeof fileOrUrl === 'string' ? fileOrUrl : (fileOrUrl?.name || '');
+      return /\.(png|jpe?g|webp|gif|avif)$/i.test(value || '');
+    }
+
     function useFileInCurrentForm(url) {
+      if (isImageFile(url)) {
+        if (state.subpanel === 'movie') document.getElementById('movie_portadaUrl').value = url;
+        if (state.subpanel === 'series') document.getElementById('series_portadaUrl').value = url;
+        if (state.subpanel === 'episode') document.getElementById('episode_portadaUrl').value = url;
+        showToast('Imagen insertada como portada del formulario actual.');
+        return;
+      }
+
       if (state.subpanel === 'movie') {
         document.getElementById('movie_videoMode').value = 'r2manual';
         updateVideoMode('movie');
@@ -1268,7 +1281,7 @@
     }
 
     function isPreviewableFile(file) {
-      return /\.(mp4|webm|mov|m4v|ogg)$/i.test(file?.name || '');
+      return /\.(mp4|webm|mov|m4v|ogg|png|jpe?g|webp|gif|avif)$/i.test(file?.name || '');
     }
 
     function previewFileByName(encodedName) {
@@ -1284,7 +1297,9 @@
         `<span>${isPreviewableFile(file) ? 'Vista previa disponible' : 'Sin vista previa integrada'}</span>`
       ].filter(Boolean).join('');
       document.getElementById('filePreviewMedia').innerHTML = isPreviewableFile(file)
-        ? `<video controls preload="metadata" src="${escapeHtml(file.url)}"></video>`
+        ? (isImageFile(file)
+          ? `<img src="${escapeHtml(file.url)}" alt="${escapeHtml(file.name)}">`
+          : `<video controls preload="metadata" src="${escapeHtml(file.url)}"></video>`)
         : `<div class="helper">Este archivo no tiene vista previa integrada. Puedes abrir la URL o usarlo directamente en el formulario.</div>`;
       document.getElementById('filePreviewUseBtn').onclick = () => {
         useFileInCurrentForm(file.url);
