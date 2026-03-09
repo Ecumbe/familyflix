@@ -1,87 +1,83 @@
 <!DOCTYPE html>
 <html lang="es" data-theme="dark">
 <head>
-  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FamilyFlix</title>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    .mt-nav{margin-top:var(--nav-h)}
-    /* Hero scroll fade */
-    .navbar.scrolled{background:rgba(7,7,15,.96)}
-
-    /* Sección principal */
-    .home-content{padding-bottom:60px}
-
-    /* Fila "Continuar viendo" especial */
-    .continue-section{padding:28px 0 8px;background:linear-gradient(90deg,rgba(179,136,255,.04) 0%,transparent 100%);margin-bottom:8px}
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FamilyFlix</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .mt{margin-top:var(--nav-h)}
+  .empty{text-align:center;padding:80px 20px;color:var(--cream3)}
+  .empty big{font-size:52px;display:block;margin-bottom:14px}
+  .empty h3{font-family:var(--ff);font-size:22px;color:var(--cream2);margin-bottom:6px}
+</style>
 </head>
 <body>
-<div class="bg-orbs"><div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div></div>
+<div class="bg-atm"></div>
 
 <!-- NAV -->
-<nav class="navbar" id="navbar">
-  <a href="home.html" class="nav-logo">Family<em>Flix</em></a>
-  <div class="nav-links">
-    <button class="nav-link active" onclick="filterType('',this)">Inicio</button>
-    <button class="nav-link" onclick="filterType('pelicula',this)">🎬 Películas</button>
-    <button class="nav-link" onclick="filterType('serie',this)">📺 Series</button>
-  </div>
-  <div class="nav-spacer"></div>
-  <div class="nav-actions">
-    <span class="nav-profile" id="navProfile"></span>
-    <a href="admin.html" class="btn btn-glass" id="adminBtn" style="display:none;font-size:13px">＋ Agregar</a>
-    <button class="theme-toggle" onclick="toggleTheme()"></button>
-    <button class="btn btn-glass" onclick="logout()" style="font-size:13px">Salir</button>
+<nav class="nav" id="nav">
+  <div class="nav-inner">
+    <a href="home.html" class="logo">Family<span>Flix</span></a>
+    <div class="nav-tabs">
+      <button class="nav-tab active" onclick="filterType('',this)">Inicio</button>
+      <button class="nav-tab" onclick="filterType('pelicula',this)">🎬 Películas</button>
+      <button class="nav-tab" onclick="filterType('serie',this)">📺 Series</button>
+    </div>
+    <div class="nav-r">
+      <span id="navProfile" style="font-size:12px;color:var(--cream3)"></span>
+      <a href="admin.html" class="btn btn-outline" id="adminBtn" style="display:none;padding:8px 16px;font-size:13px">＋ Agregar</a>
+      <button class="tt" onclick="toggleTheme()"></button>
+      <button class="btn btn-ghost" onclick="logout()" style="padding:8px 14px;font-size:13px">Salir</button>
+    </div>
   </div>
 </nav>
 
-<div class="mt-nav">
+<div class="mt">
   <!-- HERO -->
-  <div class="hero-banner" id="heroBanner">
-    <div class="hero-bg" id="heroBg"><div class="hero-bg-placeholder">🎬</div></div>
-    <div class="hero-gradient"></div>
+  <section class="hero" id="heroBanner">
+    <div class="hero-bg" id="heroBg"><div class="hero-bg-ph">🎬</div></div>
+    <div class="hero-vignette"></div>
     <div class="hero-content" id="heroContent">
-      <div class="loading-state" style="padding:20px 0"><div class="spinner"></div></div>
+      <div class="load-state"><div class="spin"></div></div>
     </div>
-  </div>
+  </section>
 
   <!-- STATS -->
-  <div class="stats-strip" id="statsStrip"></div>
+  <div class="stats-bar" id="statsStrip"></div>
 
-  <!-- BÚSQUEDA -->
-  <div class="search-bar" style="padding-top:20px">
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input class="input" id="searchInput" type="text" placeholder="Buscar..." oninput="applySearch()">
+  <!-- BÚSQUEDA + CHIPS -->
+  <div class="search-zone">
+    <div class="search-box">
+      <span class="si">🔍</span>
+      <input class="inp" id="searchInput" type="text" placeholder="Buscar película, serie, evento..." oninput="applySearch()">
     </div>
-    <div class="chips" id="catChips"><button class="chip active" onclick="filterCat('',this)">Todos</button></div>
+    <div class="filter-chips" id="catChips">
+      <button class="chip on" onclick="filterCat('',this)">Todos</button>
+    </div>
   </div>
 
   <!-- CONTENIDO -->
-  <div class="home-content" id="homeContent">
-    <div class="loading-state"><div class="spinner"></div><span style="color:var(--text-3)">Cargando colección...</span></div>
+  <div id="homeContent" style="padding-bottom:60px;position:relative;z-index:1">
+    <div class="load-state"><div class="spin"></div><span>Cargando colección...</span></div>
   </div>
 </div>
 
 <!-- MODAL -->
-<div class="modal-bd" id="modalBd" onclick="closeModalOutside(event)">
-  <div class="modal glass-s" id="modalEl">
-    <button class="modal-close" onclick="closeModal()">✕</button>
-    <div class="modal-thumb" id="mThumb"></div>
+<div class="modal-bd" id="modalBd" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalEl">
+    <div class="modal-img" id="mThumb"></div>
     <div class="modal-body">
-      <div class="modal-type" id="mType"></div>
+      <div class="modal-eyebrow" id="mType"></div>
       <h2 class="modal-title" id="mTitle"></h2>
       <div class="modal-meta" id="mMeta"></div>
-      <div class="modal-progress" id="mProgress" style="display:none">
+      <div class="modal-prog" id="mProgress" style="display:none">
         <div class="modal-prog-bar"><div class="modal-prog-fill" id="mProgFill"></div></div>
-        <div class="modal-prog-label" id="mProgLabel"></div>
+        <div class="modal-prog-lbl" id="mProgLabel"></div>
       </div>
       <p class="modal-synopsis" id="mSynopsis"></p>
       <div class="modal-tags" id="mTags"></div>
-      <!-- Episodios de serie -->
-      <div class="episodes-list" id="mEpisodes" style="display:none">
-        <div class="episodes-title">Episodios</div>
+      <div class="ep-list" id="mEpisodes" style="display:none">
+        <div class="ep-list-title">Episodios</div>
         <div id="mEpList"></div>
       </div>
       <div class="modal-actions" id="mActions"></div>
@@ -91,267 +87,238 @@
 
 <script src="js/shared.js"></script>
 <script>
-  checkAuth();
-  document.getElementById('navProfile').textContent = sessionStorage.getItem('ff_profile') || '';
-  if (sessionStorage.getItem('ff_role') === 'admin') document.getElementById('adminBtn').style.display = 'inline-flex';
+checkAuth();
+document.getElementById('navProfile').textContent = sessionStorage.getItem('ff_profile')||'';
+if(sessionStorage.getItem('ff_role')==='admin') document.getElementById('adminBtn').style.display='inline-flex';
 
-  // Navbar scroll effect
-  window.addEventListener('scroll', () => {
-    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 80);
+// Navbar scroll
+let lastY=0;
+window.addEventListener('scroll',()=>{
+  const nav=document.getElementById('nav');
+  nav.classList.toggle('solid',window.scrollY>80);
+  nav.classList.toggle('hidden',window.scrollY>200&&window.scrollY>lastY);
+  lastY=window.scrollY;
+},{passive:true});
+
+let allContent=[], allEpisodes=[], activeType='', activeCat='', activeSearch='';
+
+async function init(){
+  [allContent,allEpisodes]=await Promise.all([fetchContent(),fetchEpisodes()]);
+  renderHero();
+  renderStats();
+  renderCatChips();
+  renderHome();
+}
+
+// ── HERO ──────────────────────────────────────────────────
+function renderHero(){
+  const v=allContent.find(x=>x.featured)||allContent[0];
+  if(!v){document.getElementById('heroContent').innerHTML='';return;}
+  const pct=getPct(v.id);
+  if(v.thumbnail){
+    document.getElementById('heroBg').innerHTML=`<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'hero-bg-ph\\'>${catEmoji(v.category)}</div>'">`;
+  }
+  document.getElementById('heroContent').innerHTML=`
+    <div class="hero-eyebrow">${v.type==='serie'?'📺 Serie':'🎬 Película'} · ${v.category}</div>
+    <h1 class="hero-title">${v.title}</h1>
+    <div class="hero-meta">
+      ${v.year?`<span>${v.year}</span><span class="sep"></span>`:''}
+      ${v.duration?`<span>${v.duration}</span><span class="sep"></span>`:''}
+      ${v.tags.slice(0,2).map(t=>`<span>#${t}</span>`).join('<span class="sep"></span>')}
+    </div>
+    <p class="hero-desc">${v.synopsis}</p>
+    ${pct>0&&pct<100?`<div class="hero-progress"><div class="hero-prog-bar"><div class="hero-prog-fill" style="width:${pct}%"></div></div><div class="hero-prog-label">Continuar — ${pct}% visto</div></div>`:''}
+    <div class="hero-actions">
+      <button class="btn btn-amber btn-lg" onclick="playOrOpen('${v.id}')">▶ ${pct>0&&pct<100?'Continuar':'Reproducir'}</button>
+      <button class="btn btn-ghost btn-lg" onclick="openModal('${v.id}')">ℹ Más info</button>
+    </div>`;
+}
+
+// ── STATS ──────────────────────────────────────────────────
+function renderStats(){
+  const prog=getProg();
+  const movies=allContent.filter(v=>v.type==='pelicula').length;
+  const series=allContent.filter(v=>v.type==='serie').length;
+  const inProg=allContent.filter(v=>{const p=prog[v.id]||0;return p>0&&p<100}).length;
+  document.getElementById('statsStrip').innerHTML=`
+    <div class="stat"><span class="stat-n">${movies}</span><div class="stat-l">Películas</div></div>
+    <div class="stat"><span class="stat-n">${series}</span><div class="stat-l">Series</div></div>
+    <div class="stat"><span class="stat-n">${allEpisodes.length}</span><div class="stat-l">Episodios</div></div>
+    <div class="stat"><span class="stat-n">${inProg}</span><div class="stat-l">En progreso</div></div>`;
+}
+
+// ── CHIPS ──────────────────────────────────────────────────
+function renderCatChips(){
+  const cats=[...new Set(allContent.map(v=>v.category))];
+  const el=document.getElementById('catChips');
+  cats.forEach(cat=>{
+    const b=document.createElement('button');
+    b.className='chip';
+    b.innerHTML=`${catEmoji(cat)} ${cat}`;
+    b.onclick=()=>filterCat(cat,b);
+    el.appendChild(b);
   });
+}
 
-  let allContent  = [];
-  let allEpisodes = [];
-  let activeType  = '';
-  let activeCat   = '';
-  let activeSearch= '';
-  let modalItem   = null;
+// ── RENDER HOME ────────────────────────────────────────────
+function renderHome(){
+  const home=document.getElementById('homeContent');
+  let filtered=allContent;
+  if(activeType)   filtered=filtered.filter(v=>v.type===activeType);
+  if(activeCat)    filtered=filtered.filter(v=>v.category===activeCat);
+  if(activeSearch) filtered=filtered.filter(v=>
+    v.title.toLowerCase().includes(activeSearch)||
+    v.synopsis.toLowerCase().includes(activeSearch)||
+    v.tags.some(t=>t.toLowerCase().includes(activeSearch))
+  );
 
-  async function init() {
-    [allContent, allEpisodes] = await Promise.all([fetchContent(), fetchEpisodes()]);
-    renderHero();
-    renderStats();
-    renderCatChips();
-    renderHome();
+  if(!filtered.length){
+    home.innerHTML=`<div class="empty"><big>🔍</big><h3>Sin resultados</h3><p>Prueba con otro término</p></div>`;
+    return;
   }
 
-  // ── HERO ─────────────────────────────────────────────────
-  function renderHero() {
-    const featured = allContent.find(v => v.featured) || allContent[0];
-    if (!featured) return;
-    const pct = getPct(featured.id);
-    const bg  = document.getElementById('heroBg');
-    if (featured.thumbnail) {
-      bg.innerHTML = `<img src="${featured.thumbnail}" alt="${featured.title}" onerror="this.parentElement.innerHTML='<div class=\\'hero-bg-placeholder\\'>${catEmoji(featured.category)}</div>'">`;
-    }
-    const typeLabel = featured.type === 'serie' ? '📺 Serie' : '🎬 Película';
-    document.getElementById('heroContent').innerHTML = `
-      <div class="hero-badge"><span class="hero-type-icon">${featured.type==='serie'?'📺':'🎬'}</span>${typeLabel} · ${featured.category}</div>
-      <h1 class="hero-title">${featured.title}</h1>
-      <div class="hero-meta">
-        ${featured.year ? `<span>${featured.year}</span><span class="dot"></span>` : ''}
-        ${featured.tags.slice(0,3).map(t=>`<span>#${t}</span>`).join('<span class="dot"></span>')}
-      </div>
-      <p class="hero-synopsis">${featured.synopsis}</p>
-      <div class="hero-actions">
-        <button class="btn btn-accent btn-lg" onclick="playOrOpen('${featured.id}')">
-          ${pct > 0 && pct < 100 ? '▶ Continuar' : '▶ Reproducir'}
-        </button>
-        <button class="btn btn-glass btn-lg" onclick="openModal('${featured.id}')">ℹ Más info</button>
-      </div>`;
-  }
+  let html='';
 
-  // ── STATS ─────────────────────────────────────────────────
-  function renderStats() {
-    const prog = getProgress();
-    const movies = allContent.filter(v=>v.type==='pelicula').length;
-    const series = allContent.filter(v=>v.type==='serie').length;
-    const inProg = allContent.filter(v=>{ const p=prog[v.id]||0; return p>0&&p<100; }).length;
-    document.getElementById('statsStrip').innerHTML = `
-      <div class="stat-item"><span class="stat-num">${movies}</span><div class="stat-label">Películas</div></div>
-      <div class="stat-item"><span class="stat-num">${series}</span><div class="stat-label">Series</div></div>
-      <div class="stat-item"><span class="stat-num">${allEpisodes.length}</span><div class="stat-label">Episodios</div></div>
-      <div class="stat-item"><span class="stat-num">${inProg}</span><div class="stat-label">En progreso</div></div>`;
-  }
+  // Continuar viendo
+  const prog=getProg();
+  const cont=filtered.filter(v=>{const p=prog[v.id]||0;return p>0&&p<100});
+  if(cont.length&&!activeSearch) html+=rowHTML('▸ Continuar viendo',cont);
 
-  // ── CHIPS ──────────────────────────────────────────────────
-  function renderCatChips() {
-    const cats = [...new Set(allContent.map(v=>v.category))];
-    const el = document.getElementById('catChips');
-    cats.forEach(cat => {
-      const btn = document.createElement('button');
-      btn.className = 'chip';
-      btn.innerHTML = `${catEmoji(cat)} ${cat}`;
-      btn.onclick = () => filterCat(cat, btn);
-      el.appendChild(btn);
+  if(activeSearch||activeType||activeCat){
+    html+=rowHTML(activeSearch?`"${activeSearch}"`:activeType==='pelicula'?'🎬 Películas':'📺 Series',filtered);
+  } else {
+    const series=filtered.filter(v=>v.type==='serie');
+    const movies=filtered.filter(v=>v.type==='pelicula');
+    if(series.length) html+=rowHTML('📺 Series',series);
+    if(movies.length) html+=rowHTML('🎬 Películas',movies);
+    const cats=[...new Set(filtered.map(v=>v.category))];
+    cats.forEach(cat=>{
+      const items=filtered.filter(v=>v.category===cat);
+      if(items.length>=2) html+=rowHTML(`${catEmoji(cat)} ${cat}`,items);
     });
   }
 
-  // ── RENDER HOME ───────────────────────────────────────────
-  function renderHome() {
-    const home = document.getElementById('homeContent');
-    let filtered = allContent;
-    if (activeType)   filtered = filtered.filter(v => v.type === activeType);
-    if (activeCat)    filtered = filtered.filter(v => v.category === activeCat);
-    if (activeSearch) filtered = filtered.filter(v =>
-      v.title.toLowerCase().includes(activeSearch) ||
-      v.synopsis.toLowerCase().includes(activeSearch) ||
-      v.tags.some(t => t.toLowerCase().includes(activeSearch))
-    );
+  home.innerHTML=html;
+}
 
-    if (!filtered.length) {
-      home.innerHTML = `<div class="loading-state"><div style="font-size:48px">🔍</div><span style="color:var(--text-3)">Sin resultados</span></div>`;
-      return;
-    }
+function rowHTML(title,items){
+  return`<div class="section">
+    <div class="section-head"><div class="section-title"><span>▸</span> ${title}</div><div class="section-line"></div></div>
+    <div class="scroll-row sg">${items.map(v=>cardHTML(v)).join('')}</div>
+  </div>`;
+}
 
-    let html = '';
+function cardHTML(v){
+  const pct=getPct(v.id);
+  const b=getBadge(v.id);
+  const img=v.thumbnail
+    ?`<img src="${v.thumbnail}" alt="${v.title}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'card-ph\\'>${catEmoji(v.category)}</div>'">`
+    :`<div class="card-ph">${catEmoji(v.category)}</div>`;
+  return`<div class="card card-w" onclick="openModal('${v.id}')">
+    <div class="card-img">
+      ${img}
+      <div class="card-shine"></div>
+      <div class="card-overlay"><div class="play-btn">▶</div></div>
+      <div class="badge ${b.cls}">${b.txt}</div>
+      ${v.type==='serie'?`<div class="badge badge-serie">📺 SERIE</div>`:''}
+      ${pct>0&&pct<100?`<div class="prog-strip"><div class="prog-fill" style="width:${pct}%"></div></div>`:''}
+    </div>
+    <div class="card-body">
+      <div class="card-title">${v.title}</div>
+      <div class="card-sub"><span>${v.year||''}</span>${v.category?`<span>${v.category}</span>`:''}</div>
+    </div>
+  </div>`;
+}
 
-    // Fila: Continuar viendo
-    const prog = getProgress();
-    const continueItems = filtered.filter(v => { const p=prog[v.id]||0; return p>0&&p<100; });
-    if (continueItems.length && !activeSearch) {
-      html += rowHTML('▶ Continuar viendo', continueItems, 'card-sm', true);
-    }
+// ── FILTROS ────────────────────────────────────────────────
+function filterType(type,btn){
+  activeType=type;
+  document.querySelectorAll('.nav-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderHome();
+}
+function filterCat(cat,btn){
+  activeCat=cat;
+  document.querySelectorAll('.chip').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  renderHome();
+}
+function applySearch(){
+  activeSearch=document.getElementById('searchInput').value.toLowerCase();
+  renderHome();
+}
 
-    if (activeSearch || activeType || activeCat) {
-      // Vista de búsqueda/filtro: una sola grilla
-      html += `<div style="padding:0 48px 0">
-        <div class="row-header"><div class="row-title">${activeSearch ? `🔍 "${activeSearch}"` : (activeType==='pelicula'?'🎬 Películas':'📺 Series')}</div></div>
-        <div class="row-scroll stagger">${filtered.map(v=>cardHTML(v)).join('')}</div></div>`;
+// ── MODAL ──────────────────────────────────────────────────
+function openModal(id){
+  const v=allContent.find(x=>x.id===id);if(!v)return;
+  const pct=getPct(id);
+
+  document.getElementById('mThumb').innerHTML=`
+    ${v.thumbnail?`<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'modal-img-ph\\'>${catEmoji(v.category)}</div>'">`:`<div class="modal-img-ph">${catEmoji(v.category)}</div>`}
+    <div class="modal-img-grad"></div>
+    <button class="modal-x" onclick="closeModal()">✕</button>`;
+
+  document.getElementById('mType').innerHTML=`${v.type==='serie'?'📺 Serie':'🎬 Película'} &nbsp;·&nbsp; ${v.category}`;
+  document.getElementById('mTitle').textContent=v.title;
+  document.getElementById('mSynopsis').textContent=v.synopsis||'Sin sinopsis.';
+  document.getElementById('mMeta').innerHTML=`
+    ${v.year?`<span>📅 ${v.year}</span>`:''}
+    ${v.duration?`<span>⏱ ${v.duration}</span>`:''}`;
+  document.getElementById('mTags').innerHTML=(v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
+
+  if(pct>0){
+    document.getElementById('mProgress').style.display='block';
+    document.getElementById('mProgFill').style.width=pct+'%';
+    document.getElementById('mProgLabel').textContent=fmtPct(pct);
+  } else {
+    document.getElementById('mProgress').style.display='none';
+  }
+
+  const actions=document.getElementById('mActions');
+  if(v.type==='serie'){
+    const eps=allEpisodes.filter(e=>e.serieId===v.id).sort((a,b)=>a.number-b.number);
+    if(eps.length){
+      document.getElementById('mEpisodes').style.display='block';
+      document.getElementById('mEpList').innerHTML=eps.map(ep=>{
+        const epPct=getPct(ep.id);
+        return`<div class="ep-row" onclick="playEpisode('${ep.id}','${v.id}')">
+          <div class="ep-num">${ep.number}</div>
+          <div class="ep-thumb-sm">${ep.thumbnail?`<img src="${ep.thumbnail}" alt="">`:''}</div>
+          <div class="ep-info"><div class="ep-title">${ep.title}</div><div class="ep-dur">${ep.duration||''}</div></div>
+          ${epPct>0?`<div class="ep-bar"><div class="ep-bar-fill" style="width:${epPct}%"></div></div>`:''}
+        </div>`;
+      }).join('');
     } else {
-      // Vista inicio: filas por tipo y categoría
-      const movies = filtered.filter(v=>v.type==='pelicula');
-      const series = filtered.filter(v=>v.type==='serie');
-      if (series.length)  html += rowHTML('📺 Series', series, 'card-wide');
-      if (movies.length)  html += rowHTML('🎬 Películas', movies, 'card-wide');
-
-      // Filas por categoría
-      const cats = [...new Set(filtered.map(v=>v.category))];
-      cats.forEach(cat => {
-        const items = filtered.filter(v=>v.category===cat);
-        if (items.length >= 2) html += rowHTML(`${catEmoji(cat)} ${cat}`, items, 'card-wide');
-      });
+      document.getElementById('mEpisodes').style.display='none';
     }
-
-    home.innerHTML = html;
+    actions.innerHTML=`<button class="btn btn-ghost btn-lg" style="flex:1" onclick="closeModal()">✕ Cerrar</button>`;
+  } else {
+    document.getElementById('mEpisodes').style.display='none';
+    actions.innerHTML=`
+      <button class="btn btn-amber btn-lg" style="flex:1" onclick="playOrOpen('${v.id}')">▶ ${pct>0&&pct<100?'Continuar':'Reproducir'}</button>
+      <button class="btn btn-ghost btn-lg" onclick="closeModal()">✕</button>`;
   }
 
-  function rowHTML(title, items, cardClass='card-wide', small=false) {
-    return `<div class="content-section">
-      <div class="row-header">
-        <div class="row-title">${title}</div>
-      </div>
-      <div class="row-scroll stagger">${items.map(v=>cardHTML(v,cardClass)).join('')}</div>
-    </div>`;
-  }
+  document.getElementById('modalBd').classList.add('open');
+  document.body.style.overflow='hidden';
+}
 
-  function cardHTML(v, cls='card-wide') {
-    const pct    = getPct(v.id);
-    const isNew  = !pct;
-    const badge  = getBadge(v.id, isNew);
-    const isSerie= v.type==='serie';
-    const thumb  = v.thumbnail
-      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'thumb-ph\\'>${catEmoji(v.category)}</div>'">`
-      : `<div class="thumb-ph">${catEmoji(v.category)}</div>`;
-    return `<div class="card ${cls}" onclick="openModal('${v.id}')">
-      <div class="card-thumb">
-        ${thumb}
-        <div class="card-overlay"><div class="play-circle">▶</div></div>
-        ${badge ? `<div class="card-badge ${badge.cls}">${badge.label}</div>` : ''}
-        ${isSerie ? `<div class="card-badge badge-series" style="top:auto;bottom:8px;left:8px">📺 SERIE</div>` : ''}
-        ${pct>0&&pct<100 ? `<div class="progress-strip"><div class="progress-strip-fill" style="width:${pct}%"></div></div>` : ''}
-      </div>
-      <div class="card-body">
-        <div class="card-title">${v.title}</div>
-        <div class="card-meta"><span>${v.year||''}</span>${v.category?`<span>${v.category}</span>`:''}</div>
-      </div>
-    </div>`;
-  }
+function playOrOpen(id){
+  const v=allContent.find(x=>x.id===id);if(!v)return;
+  if(v.type==='serie'){openModal(id);return;}
+  closeModal();
+  location.href=`player.html?id=${id}`;
+}
+function playEpisode(epId,serieId){
+  closeModal();
+  location.href=`player.html?id=${epId}&serie=${serieId}`;
+}
+function closeModal(){
+  document.getElementById('modalBd').classList.remove('open');
+  document.body.style.overflow='';
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 
-  // ── FILTROS ───────────────────────────────────────────────
-  function filterType(type, btn) {
-    activeType = type;
-    document.querySelectorAll('.nav-link').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    renderHome();
-  }
-  function filterCat(cat, btn) {
-    activeCat = cat;
-    document.querySelectorAll('.chip').forEach(b=>b.classList.remove('active'));
-    btn.classList.add('active');
-    renderHome();
-  }
-  function applySearch() {
-    activeSearch = document.getElementById('searchInput').value.toLowerCase();
-    renderHome();
-  }
-
-  // ── MODAL ─────────────────────────────────────────────────
-  function openModal(id) {
-    const v = allContent.find(x=>x.id===id);
-    if (!v) return;
-    modalItem = v;
-    const pct = getPct(id);
-
-    // Thumb
-    document.getElementById('mThumb').innerHTML = v.thumbnail
-      ? `<img src="${v.thumbnail}" alt="${v.title}" onerror="this.parentElement.innerHTML='<div class=\\'modal-thumb-ph\\'>${catEmoji(v.category)}</div>'">`
-      : `<div class="modal-thumb-ph">${catEmoji(v.category)}</div>`;
-
-    document.getElementById('mType').textContent     = v.type==='serie' ? '📺 Serie' : '🎬 Película';
-    document.getElementById('mTitle').textContent    = v.title;
-    document.getElementById('mSynopsis').textContent = v.synopsis || 'Sin sinopsis disponible.';
-    document.getElementById('mMeta').innerHTML = `
-      ${v.year?`<span>📅 ${v.year}</span>`:''}
-      <span>🗂 ${v.category}</span>`;
-    document.getElementById('mTags').innerHTML = (v.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join('');
-
-    // Progreso
-    if (pct > 0) {
-      document.getElementById('mProgress').style.display = 'block';
-      document.getElementById('mProgFill').style.width   = pct+'%';
-      document.getElementById('mProgLabel').textContent  = fmtPct(pct);
-    } else {
-      document.getElementById('mProgress').style.display = 'none';
-    }
-
-    // Acciones
-    const actions = document.getElementById('mActions');
-    if (v.type === 'serie') {
-      actions.innerHTML = `<button class="btn btn-glass btn-lg" style="flex:1" onclick="closeModal()">✕ Cerrar</button>`;
-      // Episodios
-      const eps = allEpisodes.filter(e=>e.serieId===v.id).sort((a,b)=>a.number-b.number);
-      if (eps.length) {
-        document.getElementById('mEpisodes').style.display = 'block';
-        document.getElementById('mEpList').innerHTML = eps.map(ep => {
-          const epPct = getPct(ep.id);
-          return `<div class="ep-item" onclick="playEpisode('${ep.id}','${v.id}')">
-            <div class="ep-num">${ep.number}</div>
-            <div class="ep-thumb">${ep.thumbnail?`<img src="${ep.thumbnail}" alt="">`:'<div style="height:100%;display:flex;align-items:center;justify-content:center;font-size:18px">🎬</div>'}</div>
-            <div class="ep-info">
-              <div class="ep-title">${ep.title}</div>
-              <div class="ep-dur">${ep.duration||''}</div>
-            </div>
-            ${epPct>0?`<div class="ep-prog"><div class="ep-prog-fill" style="width:${epPct}%"></div></div>`:''}
-          </div>`;
-        }).join('');
-      } else {
-        document.getElementById('mEpisodes').style.display = 'none';
-      }
-    } else {
-      document.getElementById('mEpisodes').style.display = 'none';
-      actions.innerHTML = `
-        <button class="btn btn-accent btn-lg" style="flex:1" onclick="playOrOpen('${v.id}')">
-          ${pct>0&&pct<100?'▶ Continuar':'▶ Reproducir'}
-        </button>
-        <button class="btn btn-glass btn-lg" onclick="closeModal()">✕</button>`;
-    }
-
-    document.getElementById('modalBd').classList.add('open');
-    document.body.style.overflow = 'hidden';
-  }
-
-  function playOrOpen(id) {
-    const v = allContent.find(x=>x.id===id);
-    if (!v) return;
-    if (v.type === 'serie') { openModal(id); return; }
-    closeModal();
-    window.location.href = `player.html?id=${id}`;
-  }
-
-  function playEpisode(epId, serieId) {
-    closeModal();
-    window.location.href = `player.html?id=${epId}&serie=${serieId}`;
-  }
-
-  function closeModal() {
-    document.getElementById('modalBd').classList.remove('open');
-    document.body.style.overflow = '';
-    modalItem = null;
-  }
-  function closeModalOutside(e) { if(e.target===document.getElementById('modalBd')) closeModal(); }
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeModal(); });
-
-  init();
+init();
 </script>
 </body></html>
