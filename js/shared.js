@@ -144,7 +144,7 @@ function applyTheme(t) { document.documentElement.setAttribute('data-theme',t); 
 function toggleTheme() { applyTheme(document.documentElement.getAttribute('data-theme')==='dark' ? 'light' : 'dark'); }
 
 // ─── AUTH ────────────────────────────────────────────────────
-const PASSWORDS = { admin:'familia2024admin', viewer:'familia2024', guest:'invitado123' };
+const PASSWORDS = { admin:'12345', viewer:'12345', guest:'12345' };
 function checkAuth()  { if(!sessionStorage.getItem('ff_auth')){ window.location.href='index.html'; return false; } return true; }
 function logout()     { sessionStorage.clear(); window.location.href='index.html'; }
 
