@@ -30,8 +30,8 @@
     .next-action-card.show{display:grid;gap:10px}
     .next-action-title{font-family:var(--ff);font-size:18px;color:var(--cream)}
     .episode-link-body{flex:1;min-width:0}
-    .episode-mini-progress{margin-top:8px;height:4px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
-    .episode-mini-progress > div{height:100%;background:linear-gradient(90deg,var(--amber),var(--amber3))}
+    .episode-mini-progress{margin-top:8px;height:5px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
+    .episode-mini-progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--amber),var(--amber3));box-shadow:0 0 12px rgba(232,160,32,.28)}
     .next-ep-fab{position:absolute;top:18px;right:18px;z-index:4;display:none}
     .next-ep-fab.show{display:inline-flex}
     @media(max-width:980px){.player-grid{grid-template-columns:1fr}.player-wrap{padding:18px}.main-card,.side-card{padding:20px}}
@@ -119,6 +119,7 @@
     let nextEpisodeSeconds = 6;
     let nextEpisodeInfo = null;
     let nextEpisodeDismissed = false;
+    let lastEpisodeUiSecond = -1;
 
     async function init() {
       await Promise.all([fetchContent(), fetchEpisodes(), loadUserState(), ensureVideoBaseUrlLoaded()]);
@@ -277,7 +278,7 @@
 
       list.innerHTML = episodes.map((ep) => {
         const active = ep.id === currentEpisode.id ? 'active' : '';
-        const progress = getEpisodeProgressState(currentContent.id, ep.id, ep.duracion);
+        const progress = getEpisodeListProgress(ep);
         const progressLabel = progress.hasProgress
           ? (progress.durationSeconds
             ? `${progress.percent}% | ${fmtDurationSeconds(progress.viewedSeconds)} / ${fmtDurationSeconds(progress.durationSeconds)}`
@@ -289,10 +290,35 @@
             <div class="episode-link-body">
               <div><strong>T${ep.temporada}E${ep.numeroEpisodio}</strong> · ${escapeHtml(ep.titulo)}</div>
               <div class="small-note">${escapeHtml(progressLabel)}</div>
-              ${progress.hasProgress ? `<div class="episode-mini-progress"><div style="width:${progress.percent}%"></div></div>` : ''}
+              ${progress.hasProgress ? `<div class="episode-mini-progress"><div class="episode-mini-progress-fill" style="width:${progress.percent}%;min-width:${progress.percent > 0 ? 8 : 0}px"></div></div>` : ''}
             </div>
           </div>`;
       }).join('');
+    }
+
+    function getEpisodeListProgress(ep) {
+      const progress = getEpisodeProgressState(currentContent.id, ep.id, ep.duracion);
+      if (!currentEpisode || !currentVideo || currentEpisode.id !== ep.id) {
+        return progress;
+      }
+
+      const viewedSeconds = Math.max(progress.viewedSeconds, Math.floor(Number(currentVideo.currentTime || 0)));
+      const durationSeconds = Math.max(
+        progress.durationSeconds,
+        Math.floor(Number(currentVideo.duration || 0)),
+        parseDurationToSeconds(ep.duracion)
+      );
+      const percent = durationSeconds
+        ? Math.min(100, Math.round((viewedSeconds / durationSeconds) * 100))
+        : Number(progress.record?.porcentaje || progress.percent || 0);
+
+      return {
+        ...progress,
+        viewedSeconds,
+        durationSeconds,
+        percent,
+        hasProgress: viewedSeconds > 0 || percent > 0
+      };
     }
 
     function renderNextEpisodeCard() {
@@ -389,16 +415,16 @@
     function updateProgressUi() {
       if (!currentContent) return;
 
-      const record = currentEpisode
-        ? getProgressRecord('episodio', currentContent.id, currentEpisode.id)
-        : getProgressRecord('pelicula', currentContent.id, '');
+      if (!currentEpisode || !currentVideo) return;
 
-      const pct = currentVideo?.duration
-        ? Math.round((currentVideo.currentTime / currentVideo.duration) * 100)
-        : Number(record?.porcentaje || 0);
+      const second = Math.floor(Number(currentVideo.currentTime || 0));
+      if (second === lastEpisodeUiSecond) return;
+      lastEpisodeUiSecond = second;
+      renderEpisodeListEnhanced();
     }
 
     function goToEpisode(epId) {
+      lastEpisodeUiSecond = -1;
       nextEpisodeDismissed = false;
       hideNextEpisodeOverlay();
       window.location.href = `player.html?id=${encodeURIComponent(epId)}&serie=${encodeURIComponent(currentContent.id)}&kind=episodio`;
