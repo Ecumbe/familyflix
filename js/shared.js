@@ -16,8 +16,11 @@ const FF_CONFIG = {
     THEME: 'ff_theme',
     SESSION: 'ff_session',
     ADMIN_SECRET: 'ff_admin_secret',
-    VIDEO_BASE_URL: 'ff_video_base_url'
-  }
+    VIDEO_BASE_URL: 'ff_video_base_url',
+    CONTENT_CACHE: 'ff_content_cache_v1',
+    EPISODES_CACHE: 'ff_episodes_cache_v1'
+  },
+  CATALOG_CACHE_TTL_MS: 5 * 60 * 1000
 };
 
 const FF_STATE = {
@@ -26,6 +29,9 @@ const FF_STATE = {
   videoBaseUrl: '',
   videoBaseLoaded: false,
   videoBaseLoadingPromise: null,
+  contentLoadingPromise: null,
+  episodesLoadingPromise: null,
+  userStateLoadingPromise: null,
   userState: {
     progress: [],
     favorites: [],
@@ -304,6 +310,14 @@ async function createUser(payload) {
 
 async function listUsers() {
   return apiCall('listUsers', {});
+}
+
+async function updateUser(payload) {
+  return apiCall('updateUser', payload);
+}
+
+async function deleteUserRemote(id) {
+  return apiCall('deleteUser', { id });
 }
 
 async function addContent(payload) {
@@ -593,9 +607,9 @@ function parseTsv(text = '') {
 }
 
 function normalizeContentRow(row = {}) {
-  const audience = normalizeAudienceTokens(
-    row.usuariosPermitidos || row.visibleToUsers || row.audiencia || row.visibleTo || ''
-  );
+  const rawAudience = row.usuariosPermitidos || row.visibleToUsers || row.audiencia || row.visibleTo || '';
+  const hasLegacyShift = !String(row.creadoPor || '').trim() && /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2})?$/.test(String(rawAudience || '').trim());
+  const audience = normalizeAudienceTokens(hasLegacyShift ? 'todos' : rawAudience);
   const yearValue = Number(row.anio || row['año'] || row['aÃ±o']) || null;
   return {
     id: row.id || '',
@@ -621,8 +635,8 @@ function normalizeContentRow(row = {}) {
     usuariosPermitidosRaw: audience.all ? 'todos' : audience.list.join(', '),
     usuariosPermitidos: audience.list,
     visibleToAll: audience.all,
-    fechaRegistro: row.fechaRegistro || '',
-    creadoPor: row.creadoPor || ''
+    fechaRegistro: hasLegacyShift ? (row.usuariosPermitidos || '') : (row.fechaRegistro || ''),
+    creadoPor: hasLegacyShift ? (row.fechaRegistro || '') : (row.creadoPor || '')
   };
 }
 
@@ -653,6 +667,44 @@ function pickApiList(res, keys = []) {
   return [];
 }
 
+function readCatalogCache(storageKey) {
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [];
+
+    const payload = JSON.parse(raw);
+    const ts = Number(payload?.ts || 0);
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    if (!ts || !items.length) return [];
+    if (Date.now() - ts > Number(FF_CONFIG.CATALOG_CACHE_TTL_MS || 0)) return [];
+    return items;
+  } catch (error) {
+    console.warn('No se pudo leer cache local.', error);
+    return [];
+  }
+}
+
+function writeCatalogCache(storageKey, items = []) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({
+      ts: Date.now(),
+      items: Array.isArray(items) ? items : []
+    }));
+  } catch (error) {
+    console.warn('No se pudo guardar cache local.', error);
+  }
+}
+
+function setContentState(items = []) {
+  FF_STATE.content = items.filter(item => item.id && item.estado !== 'oculto' && canUserAccessContent(item));
+  return FF_STATE.content;
+}
+
+function setEpisodesState(items = []) {
+  FF_STATE.episodes = items.filter(item => item.id && item.estado !== 'oculto');
+  return FF_STATE.episodes;
+}
+
 function canUserAccessContent(item, user = getCurrentUser()) {
   if (!item?.id) return false;
   if (!user?.id) return true;
@@ -672,66 +724,148 @@ function canUserAccessContent(item, user = getCurrentUser()) {
   return audience.list.some(entry => userKeys.has(String(entry || '').trim().toLowerCase()));
 }
 
-async function fetchContent() {
-  await ensureVideoBaseUrlLoaded();
+async function fetchContent(options = {}) {
+  const force = Boolean(options?.force);
+  const preferApi = Boolean(options?.preferApi);
 
-  try {
-    const tsv = await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV);
-    const items = parseTsv(tsv)
+  if (!force && FF_STATE.content.length) return FF_STATE.content;
+  if (!force && FF_STATE.contentLoadingPromise) return FF_STATE.contentLoadingPromise;
+
+  if (!force) {
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE)
       .map(normalizeContentRow)
       .filter(item => item.id && item.estado !== 'oculto');
-    if (items.length) {
-      FF_STATE.content = items.filter(item => canUserAccessContent(item));
-      return FF_STATE.content;
+    if (cachedItems.length && !FF_STATE.content.length) {
+      setContentState(cachedItems);
     }
-  } catch (error) {
-    console.error(error);
   }
 
-  try {
-    const res = await listCatalogFromApi();
-    FF_STATE.content = pickApiList(res, ['content', 'catalog', 'items'])
-      .map(normalizeContentRow)
-      .filter(item => item.id && item.estado !== 'oculto' && canUserAccessContent(item));
-    return FF_STATE.content;
-  } catch (error) {
-    console.error(error);
-    FF_STATE.content = [];
-    return [];
-  }
+  FF_STATE.contentLoadingPromise = (async () => {
+    await ensureVideoBaseUrlLoaded();
+    const previousItems = [...FF_STATE.content];
+
+    const sources = preferApi
+      ? [
+          async () => {
+            const res = await listCatalogFromApi();
+            return pickApiList(res, ['content', 'catalog', 'items']);
+          },
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV))
+        ]
+      : [
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV)),
+          async () => {
+            const res = await listCatalogFromApi();
+            return pickApiList(res, ['content', 'catalog', 'items']);
+          }
+        ];
+
+    let gotEmptyResponse = false;
+    let successfulLoads = 0;
+
+    try {
+      for (const loadItems of sources) {
+        try {
+          const items = (await loadItems())
+            .map(normalizeContentRow)
+            .filter(item => item.id && item.estado !== 'oculto');
+          successfulLoads++;
+          if (items.length) {
+            writeCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, items);
+            return setContentState(items);
+          }
+          gotEmptyResponse = true;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (gotEmptyResponse && successfulLoads > 0) {
+        writeCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, []);
+        return setContentState([]);
+      }
+
+      return previousItems.length ? setContentState(previousItems) : FF_STATE.content;
+    } finally {
+      FF_STATE.contentLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.contentLoadingPromise;
 }
 
-async function fetchEpisodes() {
-  await ensureVideoBaseUrlLoaded();
+async function fetchEpisodes(options = {}) {
+  const force = Boolean(options?.force);
+  const preferApi = Boolean(options?.preferApi);
 
-  try {
-    const tsv = await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV);
-    const items = parseTsv(tsv)
+  if (!force && FF_STATE.episodes.length) return FF_STATE.episodes;
+  if (!force && FF_STATE.episodesLoadingPromise) return FF_STATE.episodesLoadingPromise;
+
+  if (!force) {
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE)
       .map(normalizeEpisodeRow)
       .filter(item => item.id && item.estado !== 'oculto');
-    if (items.length) {
-      FF_STATE.episodes = items;
-      return FF_STATE.episodes;
+    if (cachedItems.length && !FF_STATE.episodes.length) {
+      setEpisodesState(cachedItems);
     }
-  } catch (error) {
-    console.error(error);
   }
 
-  try {
-    const res = await listEpisodesFromApi();
-    FF_STATE.episodes = pickApiList(res, ['episodes', 'items'])
-      .map(normalizeEpisodeRow)
-      .filter(item => item.id && item.estado !== 'oculto');
-    return FF_STATE.episodes;
-  } catch (error) {
-    console.error(error);
-    FF_STATE.episodes = [];
-    return [];
-  }
+  FF_STATE.episodesLoadingPromise = (async () => {
+    await ensureVideoBaseUrlLoaded();
+    const previousItems = [...FF_STATE.episodes];
+
+    const sources = preferApi
+      ? [
+          async () => {
+            const res = await listEpisodesFromApi();
+            return pickApiList(res, ['episodes', 'items']);
+          },
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV))
+        ]
+      : [
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV)),
+          async () => {
+            const res = await listEpisodesFromApi();
+            return pickApiList(res, ['episodes', 'items']);
+          }
+        ];
+
+    let gotEmptyResponse = false;
+    let successfulLoads = 0;
+
+    try {
+      for (const loadItems of sources) {
+        try {
+          const items = (await loadItems())
+            .map(normalizeEpisodeRow)
+            .filter(item => item.id && item.estado !== 'oculto');
+          successfulLoads++;
+          if (items.length) {
+            writeCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, items);
+            return setEpisodesState(items);
+          }
+          gotEmptyResponse = true;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (gotEmptyResponse && successfulLoads > 0) {
+        writeCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, []);
+        return setEpisodesState([]);
+      }
+
+      return previousItems.length ? setEpisodesState(previousItems) : FF_STATE.episodes;
+    } finally {
+      FF_STATE.episodesLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.episodesLoadingPromise;
 }
 
-async function loadCatalog() {
-  await Promise.all([fetchContent(), fetchEpisodes()]);
+async function loadCatalog(options = {}) {
+  await Promise.all([fetchContent(options), fetchEpisodes(options)]);
   return {
     content: FF_STATE.content,
     episodes: FF_STATE.episodes
@@ -748,19 +882,27 @@ async function loadUserState() {
     return FF_STATE.userState;
   }
 
-  try {
-    const res = await getUserStateRemote(user.id);
-    FF_STATE.userState = {
-      progress: res.progress || [],
-      favorites: res.favorites || [],
-      continueWatching: res.continueWatching || []
-    };
-    return FF_STATE.userState;
-  } catch (error) {
-    console.error(error);
-    FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
-    return FF_STATE.userState;
-  }
+  if (FF_STATE.userStateLoadingPromise) return FF_STATE.userStateLoadingPromise;
+
+  FF_STATE.userStateLoadingPromise = (async () => {
+    try {
+      const res = await getUserStateRemote(user.id);
+      FF_STATE.userState = {
+        progress: res.progress || [],
+        favorites: res.favorites || [],
+        continueWatching: res.continueWatching || []
+      };
+      return FF_STATE.userState;
+    } catch (error) {
+      console.error(error);
+      FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
+      return FF_STATE.userState;
+    } finally {
+      FF_STATE.userStateLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.userStateLoadingPromise;
 }
 
 function favoriteKeyFor(itemType, contenidoId, episodioId = '') {
@@ -1232,6 +1374,8 @@ function bootstrapShared() {
   window.loginUser = loginUser;
   window.createUser = createUser;
   window.listUsers = listUsers;
+  window.updateUser = updateUser;
+  window.deleteUserRemote = deleteUserRemote;
   window.addContent = addContent;
   window.deleteContentRemote = deleteContentRemote;
   window.addEpisode = addEpisode;
