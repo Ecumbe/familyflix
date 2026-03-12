@@ -123,7 +123,7 @@
     let nextEpisodeDismissed = false;
 
     async function init() {
-      await Promise.all([fetchContent(), fetchEpisodes(), loadUserState()]);
+      await Promise.all([fetchContent(), fetchEpisodes(), loadUserState(), ensureVideoBaseUrlLoaded()]);
       allEpisodes = FF_STATE.episodes;
       resolveCurrentMedia();
       renderPlayer();
