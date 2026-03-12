@@ -32,8 +32,35 @@
     .episode-link-body{flex:1;min-width:0}
     .episode-mini-progress{margin-top:8px;height:5px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}
     .episode-mini-progress-fill{height:100%;border-radius:inherit;background:linear-gradient(90deg,var(--amber),var(--amber3));box-shadow:0 0 12px rgba(232,160,32,.28)}
-    .next-ep-fab{position:absolute;top:18px;right:18px;z-index:4;display:none}
+    .next-ep-fab{
+      position:absolute;top:18px;right:18px;z-index:4;display:none;
+      width:46px;height:46px;padding:0;border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(10,14,22,.2);color:rgba(255,255,255,.82);
+      backdrop-filter:blur(12px);
+      box-shadow:0 12px 30px rgba(0,0,0,.18);
+      opacity:.22;
+      overflow:hidden;
+      transition:width .24s ease, min-width .24s ease, padding .24s ease, opacity .24s ease, background .24s ease, border-color .24s ease, box-shadow .24s ease, transform .24s ease;
+    }
     .next-ep-fab.show{display:inline-flex}
+    .next-ep-fab.is-fullscreen{display:inline-flex}
+    .next-ep-fab.is-fullscreen:hover{opacity:.34}
+    .next-ep-fab.is-fullscreen.is-expanded{
+      width:auto;min-width:190px;padding:0 16px 0 12px;
+      opacity:.92;background:rgba(10,14,22,.82);border-color:rgba(245,193,72,.28);
+      box-shadow:0 16px 34px rgba(0,0,0,.3);
+    }
+    .next-ep-fab__icon{
+      width:46px;height:46px;display:grid;place-items:center;flex:0 0 46px;
+      font-size:18px;font-weight:900;color:var(--amber);
+    }
+    .next-ep-fab__label{
+      max-width:0;opacity:0;white-space:nowrap;overflow:hidden;
+      font-size:12px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;
+      transition:max-width .22s ease, opacity .18s ease;
+    }
+    .next-ep-fab.is-fullscreen.is-expanded .next-ep-fab__label{max-width:150px;opacity:1}
     @media(max-width:980px){.player-grid{grid-template-columns:1fr}.player-wrap{padding:18px}.main-card,.side-card{padding:20px}}
     @media(max-width:640px){.player-nav{padding:12px 14px}.player-wrap{padding:14px}.video-box,.main-card,.side-card{border-radius:18px}.main-card,.side-card{padding:16px}.next-ep-fab{top:auto;right:12px;bottom:12px}#title{font-size:28px!important}}
   </style>
@@ -49,7 +76,10 @@
   <div class="player-wrap">
     <div class="video-box" id="videoBox">
       <div class="video-loader" id="videoLoader"><div class="spin"></div><span>Cargando video...</span></div>
-      <button class="btn btn-outline next-ep-fab" id="nextEpFab" type="button">Siguiente episodio</button>
+      <button class="next-ep-fab" id="nextEpFab" type="button" aria-label="Siguiente capitulo">
+        <span class="next-ep-fab__icon" aria-hidden="true">&#8250;</span>
+        <span class="next-ep-fab__label">Siguiente capitulo</span>
+      </button>
       <div class="next-ep-overlay" id="nextEpOverlay">
         <div class="next-ep-label">Siguiente episodio</div>
         <div class="next-ep-title" id="nextEpTitle"></div>
@@ -108,6 +138,7 @@
     const nextEpisodeBtn = document.getElementById('nextEpisodeBtn');
 
     const NEXT_EPISODE_PROMPT_SECONDS = 30;
+    const NEXT_EPISODE_FAB_SECONDS = 180;
 
     let currentVideo = null;
     let currentContent = null;
@@ -120,6 +151,8 @@
     let nextEpisodeInfo = null;
     let nextEpisodeDismissed = false;
     let lastEpisodeUiSecond = -1;
+    let nextEpFabExpanded = false;
+    let nextEpFabCollapseTimer = null;
 
     async function init() {
       await Promise.all([fetchContent(), fetchEpisodes(), loadUserState(), ensureVideoBaseUrlLoaded()]);
@@ -128,10 +161,12 @@
       renderPlayer();
       renderInfo();
       saveProgressDebounced = debounce(saveRemoteProgress, 1800);
-      nextEpFab.addEventListener('click', playNextEpisodeFromCard);
+      nextEpFab.addEventListener('click', onNextEpFabClick);
       nextEpNowBtn.addEventListener('click', playQueuedNextEpisode);
       nextEpCancelBtn.addEventListener('click', cancelNextEpisodePrompt);
       nextEpisodeBtn.addEventListener('click', playNextEpisodeFromCard);
+      document.addEventListener('fullscreenchange', handleFullscreenChange);
+      document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     }
 
     function setSidePanelState(visible) {
@@ -183,6 +218,8 @@
         video.addEventListener('timeupdate', onTimeUpdate);
         video.addEventListener('pause', saveRemoteProgress);
         video.addEventListener('ended', onEnded);
+        video.addEventListener('webkitbeginfullscreen', handleFullscreenChange);
+        video.addEventListener('webkitendfullscreen', handleFullscreenChange);
         videoBox.appendChild(video);
         currentVideo = video;
       } else if (media.driveUrl) {
@@ -326,23 +363,20 @@
       if (!nextEpisodeInfo) {
         nextEpisodeCard.classList.remove('show');
         nextEpisodeCardTitle.textContent = '';
-        nextEpFab.classList.remove('show');
-        nextEpFab.textContent = 'Siguiente episodio';
-        nextEpFab.title = '';
+        resetNextEpFab();
         return;
       }
 
       nextEpisodeCardTitle.textContent = `T${nextEpisodeInfo.temporada}E${nextEpisodeInfo.numeroEpisodio} · ${nextEpisodeInfo.titulo}`;
       nextEpisodeCard.classList.add('show');
-      nextEpFab.classList.add('show');
-      nextEpFab.textContent = 'Siguiente episodio';
-      nextEpFab.title = `Ver T${nextEpisodeInfo.temporada}E${nextEpisodeInfo.numeroEpisodio} · ${nextEpisodeInfo.titulo}`;
+      syncNextEpFab();
     }
 
     function maybePromptNextEpisode() {
       if (!currentEpisode || !currentVideo || !nextEpisodeInfo) return;
 
       const remaining = Math.max(0, Number(currentVideo.duration || 0) - Number(currentVideo.currentTime || 0));
+      syncNextEpFab(remaining);
       if (remaining > NEXT_EPISODE_PROMPT_SECONDS) {
         if (queuedNextEpisode) hideNextEpisodeOverlay();
         if (remaining > NEXT_EPISODE_PROMPT_SECONDS + 8) {
@@ -359,6 +393,88 @@
     function cancelNextEpisodePrompt() {
       nextEpisodeDismissed = true;
       hideNextEpisodeOverlay();
+    }
+
+    function onNextEpFabClick() {
+      if (!nextEpisodeInfo) return;
+      if (isPlayerFullscreenActive() && !nextEpFabExpanded) {
+        expandNextEpFab();
+        return;
+      }
+      playNextEpisodeFromCard();
+    }
+
+    function expandNextEpFab() {
+      clearTimeout(nextEpFabCollapseTimer);
+      nextEpFabExpanded = true;
+      nextEpFab.classList.add('is-expanded');
+      nextEpFabCollapseTimer = setTimeout(() => {
+        nextEpFabExpanded = false;
+        nextEpFab.classList.remove('is-expanded');
+      }, 2600);
+    }
+
+    function resetNextEpFab() {
+      clearTimeout(nextEpFabCollapseTimer);
+      nextEpFabCollapseTimer = null;
+      nextEpFabExpanded = false;
+      nextEpFab.classList.remove('show', 'is-expanded', 'is-fullscreen');
+      nextEpFab.title = '';
+    }
+
+    function getFullscreenElement() {
+      return document.fullscreenElement || document.webkitFullscreenElement || null;
+    }
+
+    function isPlayerFullscreenActive() {
+      const fullscreenEl = getFullscreenElement();
+      if (fullscreenEl) {
+        return fullscreenEl === videoBox
+          || fullscreenEl === currentVideo
+          || videoBox.contains(fullscreenEl)
+          || (fullscreenEl.contains && fullscreenEl.contains(videoBox));
+      }
+      return Boolean(currentVideo?.webkitDisplayingFullscreen);
+    }
+
+    async function promoteVideoBoxToFullscreen() {
+      const fullscreenEl = getFullscreenElement();
+      if (!fullscreenEl || fullscreenEl !== currentVideo || !videoBox.requestFullscreen) return;
+      try {
+        await videoBox.requestFullscreen();
+      } catch {
+      }
+    }
+
+    async function handleFullscreenChange() {
+      await promoteVideoBoxToFullscreen();
+      syncNextEpFab();
+    }
+
+    function syncNextEpFab(remainingSeconds = null) {
+      if (!nextEpisodeInfo) {
+        resetNextEpFab();
+        return;
+      }
+
+      const remaining = remainingSeconds === null
+        ? Math.max(0, Number(currentVideo?.duration || 0) - Number(currentVideo?.currentTime || 0))
+        : remainingSeconds;
+      const shouldShow = currentEpisode
+        && isPlayerFullscreenActive()
+        && remaining > 0
+        && remaining <= NEXT_EPISODE_FAB_SECONDS
+        && !queuedNextEpisode;
+
+      if (!shouldShow) {
+        resetNextEpFab();
+        return;
+      }
+
+      nextEpFab.classList.add('show', 'is-fullscreen');
+      nextEpFab.title = nextEpFabExpanded
+        ? ''
+        : `Ver T${nextEpisodeInfo.temporada}E${nextEpisodeInfo.numeroEpisodio} · ${nextEpisodeInfo.titulo}`;
     }
 
     function playNextEpisodeFromCard() {
@@ -415,12 +531,19 @@
     function updateProgressUi() {
       if (!currentContent) return;
 
-      if (!currentEpisode || !currentVideo) return;
+      if (!currentEpisode || !currentVideo) {
+        syncNextEpFab();
+        return;
+      }
 
       const second = Math.floor(Number(currentVideo.currentTime || 0));
-      if (second === lastEpisodeUiSecond) return;
+      if (second === lastEpisodeUiSecond) {
+        syncNextEpFab();
+        return;
+      }
       lastEpisodeUiSecond = second;
       renderEpisodeListEnhanced();
+      syncNextEpFab();
     }
 
     function goToEpisode(epId) {
@@ -446,6 +569,7 @@
       nextEpTitle.textContent = `T${nextEp.temporada}E${nextEp.numeroEpisodio} · ${nextEp.titulo}`;
       nextEpTimer.textContent = String(nextEpisodeSeconds);
       nextEpOverlay.classList.add('show');
+      resetNextEpFab();
       nextEpisodeCountdown = setInterval(() => {
         nextEpisodeSeconds -= 1;
         if (nextEpisodeSeconds <= 0) {
@@ -465,6 +589,7 @@
       nextEpOverlay.classList.remove('show');
       nextEpTitle.textContent = '';
       nextEpTimer.textContent = '6';
+      syncNextEpFab();
     }
 
     function playQueuedNextEpisode() {
