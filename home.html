@@ -224,6 +224,9 @@
     let showcaseTimers = {};
     let showcaseState = {};
     let mobileViewport = false;
+    let contentReady = false;
+    let episodesReady = false;
+    let userStateReady = false;
 
     document.querySelectorAll('.nav-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -244,10 +247,29 @@
 
     async function init() {
       showWelcomeIfPending();
-      await Promise.all([fetchContent(), fetchEpisodes(), loadUserState()]);
       mobileViewport = isMobileViewport();
+      const contentPromise = fetchContent();
+      const episodesPromise = fetchEpisodes();
+      const userStatePromise = loadUserState();
+
       renderHero();
       renderChips();
+      renderHome();
+
+      await contentPromise;
+      contentReady = true;
+      renderHero();
+      renderChips();
+      renderHome();
+
+      await episodesPromise;
+      episodesReady = true;
+      renderHero();
+      renderHome();
+
+      await userStatePromise;
+      userStateReady = true;
+      renderHero();
       renderHome();
     }
 
@@ -634,7 +656,9 @@
       if (!featured) {
         stopHeroRotation();
         swapHeroBackground(heroBg, '<div class="hero-bg-ph">FILM</div>');
-        heroContent.innerHTML = '<h1 class="hero-title">Sin contenido</h1>';
+        heroContent.innerHTML = !contentReady
+          ? '<h1 class="hero-title">Cargando contenido</h1><p class="hero-desc">Estamos preparando peliculas y series para ti.</p>'
+          : '<h1 class="hero-title">Sin contenido</h1>';
         return;
       }
 
@@ -759,6 +783,18 @@
 
     function renderHome() {
       const wrap = document.getElementById('homeContent');
+      const catalogStillLoading = !contentReady && !FF_STATE.content.length;
+      if (catalogStillLoading) {
+        wrap.innerHTML = `
+          <div class="load-state">
+            <div class="spin" aria-hidden="true"></div>
+            <h3>Cargando catalogo...</h3>
+            <p>Espera un momento mientras preparamos peliculas y series.</p>
+          </div>`;
+        stopShowcaseRotators();
+        return;
+      }
+
       const items = filteredContent();
       const rows = [];
       const continueWatchingAll = getContinueWatchingItems().filter((entry) => {
