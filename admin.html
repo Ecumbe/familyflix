@@ -49,8 +49,15 @@
     .audience-option.is-on{background:rgba(232,160,32,.12);border-color:rgba(232,160,32,.34);color:var(--text);box-shadow:0 14px 32px rgba(0,0,0,.16)}
     .audience-option small{display:block;font-size:11px;color:var(--cream3)}
     .audience-summary{margin-top:10px;font-size:12px;color:var(--cream3)}
+    .sheet-group{background:var(--ink3);border:1px solid rgba(255,255,255,.06);border-radius:20px;overflow:hidden}
+    .sheet-group-head{display:flex;gap:14px;align-items:flex-start;justify-content:space-between;padding:16px 18px;background:rgba(255,255,255,.02)}
+    .sheet-group-head .meta{font-size:12px;color:var(--cream3);margin-top:4px}
+    .sheet-group-episodes{display:grid;gap:10px;padding:12px}
+    .sheet-group-episodes .rowx{background:rgba(255,255,255,.02);border-color:rgba(255,255,255,.05)}
+    .sheet-chip{display:inline-flex;align-items:center;padding:6px 10px;border-radius:999px;background:rgba(232,160,32,.12);color:var(--amber);font-size:11px;font-weight:700;letter-spacing:.02em;margin-bottom:8px}
+    .sheet-note{font-size:12px;color:var(--cream3);margin-top:6px}
     @media(max-width:980px){.page{padding:calc(var(--nav-h) + 18px) 18px 64px}.head{align-items:flex-start}.grid2,.grid3,.grid4,.stats{grid-template-columns:1fr 1fr}}
-    @media(max-width:640px){.page{padding:calc(var(--nav-h) + 14px) 14px 56px}.title{font-size:34px}.grid2,.grid3,.grid4,.stats,.file-toolbar{grid-template-columns:1fr}.cardx{padding:18px}.rowx{align-items:flex-start}.rowx>div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:10px}}
+    @media(max-width:640px){.page{padding:calc(var(--nav-h) + 14px) 14px 56px}.title{font-size:34px}.grid2,.grid3,.grid4,.stats,.file-toolbar{grid-template-columns:1fr}.cardx{padding:18px}.rowx,.sheet-group-head{align-items:flex-start;flex-direction:column}.rowx>div:last-child,.sheet-group-head>div:last-child{width:100%;display:flex;flex-wrap:wrap;gap:10px}}
   </style>
 </head>
 <body>
@@ -253,6 +260,7 @@
           <div class="form-g"><label>Nombre mostrado</label><input class="inp" id="user_nombreMostrado"></div>
           <div class="form-g"><label>Rol</label><select class="inp" id="user_rol"><option value="familiar">familiar</option><option value="admin">admin</option></select></div>
           <div class="form-g"><label>Estado</label><select class="inp" id="user_estado"><option value="activo">activo</option><option value="inactivo">inactivo</option></select></div>
+          <div class="form-g"><label>Avatar URL</label><input class="inp" id="user_avatarUrl"></div>
         </div>
         <button class="btn btn-amber" id="saveUserBtn">Crear usuario</button>
       </div>
@@ -349,9 +357,40 @@
           <label>Sinopsis</label>
           <textarea class="inp" id="sheetEditorSynopsis"></textarea>
         </div>
+        <div class="form-g" id="sheetEditorAudienceBlock">
+          <label>Quien puede ver este contenido</label>
+          <div class="audience-picker" id="sheetEditor_audiencePicker"></div>
+          <div class="audience-summary" id="sheetEditor_audienceSummary">Visible para todos los usuarios.</div>
+          <div class="muted" style="margin-top:6px">Este ajuste aplica a la pelicula o a la serie completa.</div>
+        </div>
+        <div class="helper hidden" id="sheetEditorEpisodeVisibilityNote" style="margin-bottom:18px"></div>
         <div class="modal-actions">
           <button class="btn btn-amber" id="sheetEditorSaveBtn" type="button">Guardar ficha</button>
           <button class="btn btn-ghost" type="button" onclick="closeSheetEditor()">Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-bd" id="userEditorBd" onclick="if(event.target===this)closeUserEditor()">
+    <div class="modal" style="grid-template-columns:1fr;width:min(760px,100%)">
+      <div class="modal-body">
+        <div class="modal-eyebrow">Usuario</div>
+        <h2 class="modal-title" id="userEditorTitle">Editar usuario</h2>
+        <div class="modal-meta" id="userEditorMeta"></div>
+        <div class="grid2" style="margin-top:18px">
+          <div class="form-g"><label>Usuario</label><input class="inp" id="userEditor_usuario"></div>
+          <div class="form-g"><label>Nueva contraseÃ±a</label><input class="inp" id="userEditor_password" type="password" placeholder="Dejala vacia para conservar la actual"></div>
+          <div class="form-g"><label>Nombre mostrado</label><input class="inp" id="userEditor_nombreMostrado"></div>
+          <div class="form-g"><label>Rol</label><select class="inp" id="userEditor_rol"><option value="familiar">familiar</option><option value="admin">admin</option></select></div>
+          <div class="form-g"><label>Estado</label><select class="inp" id="userEditor_estado"><option value="activo">activo</option><option value="inactivo">inactivo</option></select></div>
+          <div class="form-g"><label>Avatar URL</label><input class="inp" id="userEditor_avatarUrl"></div>
+        </div>
+        <div class="muted" id="userEditorNote">Puedes cambiar datos basicos, rol, estado o contraseÃ±a.</div>
+        <div class="modal-actions">
+          <button class="btn btn-amber" id="userEditorSaveBtn" type="button">Guardar cambios</button>
+          <button class="btn btn-outline" id="userEditorDeleteBtn" type="button">Eliminar usuario</button>
+          <button class="btn btn-ghost" type="button" onclick="closeUserEditor()">Cerrar</button>
         </div>
       </div>
     </div>
@@ -370,12 +409,14 @@
       users: [],
       audienceSelection: {
         movie: ['todos'],
-        series: ['todos']
+        series: ['todos'],
+        sheetEditor: ['todos']
       }
     };
     state.sheetsSearch = '';
     state.sheetsUpdatingKey = '';
     state.sheetEditor = null;
+    state.userEditor = null;
 
     document.getElementById('adminSecretInput').value = getAdminSecret();
     document.getElementById('saveSecretBtn').addEventListener('click', () => {
@@ -428,6 +469,8 @@
     });
     document.getElementById('sheetEditorVideoPath').addEventListener('input', syncSheetEditorResolvedUrl);
     document.getElementById('sheetEditorSaveBtn').addEventListener('click', saveSheetEditor);
+    document.getElementById('userEditorSaveBtn').addEventListener('click', saveUserEditor);
+    document.getElementById('userEditorDeleteBtn').addEventListener('click', deleteUserFromEditor);
     document.getElementById('filesSearchInput').addEventListener('input', (e) => {
       state.filesSearch = e.target.value.trim().toLowerCase();
       renderFilesList();
@@ -450,7 +493,10 @@
     }
 
     async function refreshLocalData() {
-      await Promise.all([fetchContent(), fetchEpisodes()]);
+      await Promise.all([
+        fetchContent({ force: true, preferApi: true }),
+        fetchEpisodes({ force: true, preferApi: true })
+      ]);
       updateStats();
       renderSeriesOptions();
       renderAudiencePickers();
@@ -622,7 +668,7 @@
     }
 
     function renderAudiencePickers() {
-      ['movie', 'series'].forEach((prefix) => {
+      ['movie', 'series', 'sheetEditor'].forEach((prefix) => {
         const picker = document.getElementById(`${prefix}_audiencePicker`);
         if (!picker) return;
         const current = picker.children.length ? getSelectedAudience(prefix) : (state.audienceSelection[prefix] || 'todos');
@@ -635,6 +681,15 @@
       if (!picker) return ['todos'];
       const selectedIds = [...picker.querySelectorAll('input[data-audience-user]:checked')].map(box => box.value);
       return selectedIds.length ? selectedIds : ['todos'];
+    }
+
+    function getRecordAudienceValue(record) {
+      return record?.visibleToAll ? 'todos' : (record?.usuariosPermitidosRaw || record?.usuariosPermitidos || 'todos');
+    }
+
+    function getRecordAudienceSummary(record) {
+      const selectedIds = normalizeAudienceSelection(getRecordAudienceValue(record));
+      return getAudienceSummaryText(selectedIds);
     }
 
     function populateVideoFields(prefix, row = {}) {
@@ -1413,15 +1468,106 @@
           nombreMostrado: document.getElementById('user_nombreMostrado').value.trim(),
           rol: document.getElementById('user_rol').value,
           estado: document.getElementById('user_estado').value,
+          avatarUrl: document.getElementById('user_avatarUrl').value.trim(),
           creadoPor: getCurrentUser().usuario
         };
         if (!payload.usuario || !payload.password) return showToast('Usuario y contraseña son obligatorios.', 'error');
         await createUser(payload);
         showToast('Usuario creado.');
+        document.getElementById('user_usuario').value = '';
+        document.getElementById('user_password').value = '';
+        document.getElementById('user_nombreMostrado').value = '';
+        document.getElementById('user_rol').value = 'familiar';
+        document.getElementById('user_estado').value = 'activo';
+        document.getElementById('user_avatarUrl').value = '';
         await renderUsers();
       } catch (error) {
         showToast(error.message || 'No se pudo crear el usuario.', 'error');
       }
+    }
+
+    function openUserEditor(id) {
+      const user = state.users.find(entry => String(entry.id) === String(id));
+      if (!user) return showToast('Usuario no encontrado.', 'error');
+
+      const currentUser = getCurrentUser();
+      const isCurrentUser = String(currentUser?.id || '') === String(user.id);
+
+      state.userEditor = { id: user.id };
+      document.getElementById('userEditorTitle').textContent = user.nombreMostrado || user.usuario || user.id;
+      document.getElementById('userEditorMeta').innerHTML = `<span>${escapeHtml(user.id)}</span><span>@${escapeHtml(user.usuario || '')}</span><span>${escapeHtml(user.rol || '')}</span>`;
+      document.getElementById('userEditor_usuario').value = user.usuario || '';
+      document.getElementById('userEditor_password').value = '';
+      document.getElementById('userEditor_nombreMostrado').value = user.nombreMostrado || '';
+      document.getElementById('userEditor_rol').value = user.rol || 'familiar';
+      document.getElementById('userEditor_estado').value = user.estado || 'activo';
+      document.getElementById('userEditor_avatarUrl').value = user.avatarUrl || '';
+      document.getElementById('userEditorNote').textContent = isCurrentUser
+        ? 'Estas editando tu propio usuario. El borrado queda bloqueado para evitar cerrar tu acceso.'
+        : 'Puedes cambiar datos basicos, rol, estado o contraseÃ±a.';
+      document.getElementById('userEditorDeleteBtn').disabled = isCurrentUser;
+      document.getElementById('userEditorBd').classList.add('show');
+    }
+
+    function closeUserEditor() {
+      document.getElementById('userEditorBd').classList.remove('show');
+      document.getElementById('userEditorDeleteBtn').disabled = false;
+      document.getElementById('userEditor_password').value = '';
+      state.userEditor = null;
+    }
+
+    async function saveUserEditor() {
+      if (!state.userEditor?.id) return;
+
+      try {
+        const payload = {
+          id: state.userEditor.id,
+          usuario: document.getElementById('userEditor_usuario').value.trim(),
+          password: document.getElementById('userEditor_password').value.trim(),
+          nombreMostrado: document.getElementById('userEditor_nombreMostrado').value.trim(),
+          rol: document.getElementById('userEditor_rol').value,
+          estado: document.getElementById('userEditor_estado').value,
+          avatarUrl: document.getElementById('userEditor_avatarUrl').value.trim()
+        };
+        if (!payload.usuario || !payload.nombreMostrado) {
+          return showToast('Usuario y nombre mostrado son obligatorios.', 'error');
+        }
+
+        await updateUser(payload);
+        showToast('Usuario actualizado.');
+        closeUserEditor();
+        await renderUsers();
+      } catch (error) {
+        showToast(error.message || 'No se pudo actualizar el usuario.', 'error');
+      }
+    }
+
+    async function deleteUserRecord(id) {
+      const user = state.users.find(entry => String(entry.id) === String(id));
+      if (!user) return showToast('Usuario no encontrado.', 'error');
+
+      const currentUser = getCurrentUser();
+      if (String(currentUser?.id || '') === String(user.id)) {
+        return showToast('No puedes eliminar tu propio usuario desde aqui.', 'error');
+      }
+
+      if (!confirm(`Eliminar al usuario "${user.nombreMostrado || user.usuario}"? Tambien se borrara su progreso y favoritos.`)) {
+        return;
+      }
+
+      try {
+        await deleteUserRemote(user.id);
+        if (state.userEditor?.id === user.id) closeUserEditor();
+        showToast('Usuario eliminado.');
+        await renderUsers();
+      } catch (error) {
+        showToast(error.message || 'No se pudo eliminar el usuario.', 'error');
+      }
+    }
+
+    async function deleteUserFromEditor() {
+      if (!state.userEditor?.id) return;
+      await deleteUserRecord(state.userEditor.id);
     }
 
     async function renderUsers() {
@@ -1430,23 +1576,30 @@
         const res = await listUsers();
         state.users = res.users || [];
         renderAudiencePickers();
+        renderSheetsRecords();
+        const currentUser = getCurrentUser();
         list.innerHTML = state.users.map(u => `
           <div class="rowx">
             <div>
               <div><strong>${escapeHtml(u.nombreMostrado || u.usuario)}</strong> <span class="muted">@${escapeHtml(u.usuario)}</span></div>
               <div class="meta">${escapeHtml(u.rol)} · ${escapeHtml(u.estado)} · ${escapeHtml(u.fechaCreacion || '')}</div>
             </div>
-            <div class="status ${u.estado === 'activo' ? 'ok' : 'soft'}">${escapeHtml(u.estado)}</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+              <div class="status ${u.estado === 'activo' ? 'ok' : 'soft'}">${escapeHtml(u.estado)}</div>
+              <button class="btn btn-ghost" type="button" onclick="openUserEditor('${escapeHtml(String(u.id || ''))}')">Editar</button>
+              <button class="btn btn-outline" type="button" ${String(currentUser?.id || '') === String(u.id || '') ? 'disabled' : ''} onclick="deleteUserRecord('${escapeHtml(String(u.id || ''))}')">Eliminar</button>
+            </div>
           </div>`).join('') || '<div class="muted">No hay usuarios registrados.</div>';
       } catch (error) {
         state.users = [];
         renderAudiencePickers();
+        renderSheetsRecords();
         list.innerHTML = `<div class="muted">${escapeHtml(error.message || 'No se pudieron cargar los usuarios.')}</div>`;
       }
     }
 
-    function getSheetsRecords() {
-      const contentRows = FF_STATE.content.map(item => ({
+    function buildSheetsContentRecord(item) {
+      return {
         kind: 'content',
         type: item.tipo,
         id: item.id,
@@ -1464,32 +1617,155 @@
           ...(item.tags || [])
         ].join(' ').toLowerCase(),
         data: item
-      }));
+      };
+    }
 
-      const episodeRows = FF_STATE.episodes.map(item => {
-        const series = FF_STATE.content.find(content => content.id === item.serieId);
-        const seriesTitle = series?.titulo || item.serieId || 'Serie sin nombre';
-        return {
-          kind: 'episode',
-          type: 'episodio',
-          id: item.id,
-          title: item.titulo || item.id,
-          subtitle: `${seriesTitle} | T${item.temporada}E${item.numeroEpisodio}${item.airDate ? ` | ${item.airDate}` : ''}`,
-          searchText: [
-            item.id,
-            item.titulo,
-            item.tituloOriginal,
-            item.serieId,
-            seriesTitle,
-            item.temporada,
-            item.numeroEpisodio,
-            item.airDate
-          ].join(' ').toLowerCase(),
-          data: item
-        };
+    function buildSheetsEpisodeRecord(item) {
+      const series = FF_STATE.content.find(content => content.id === item.serieId);
+      const seriesTitle = series?.titulo || item.serieId || 'Serie sin nombre';
+      return {
+        kind: 'episode',
+        type: 'episodio',
+        id: item.id,
+        title: item.titulo || item.id,
+        subtitle: `${seriesTitle} | T${item.temporada}E${item.numeroEpisodio}${item.airDate ? ` | ${item.airDate}` : ''}`,
+        searchText: [
+          item.id,
+          item.titulo,
+          item.tituloOriginal,
+          item.serieId,
+          seriesTitle,
+          item.temporada,
+          item.numeroEpisodio,
+          item.airDate
+        ].join(' ').toLowerCase(),
+        data: item
+      };
+    }
+
+    function matchesSheetsSearch(record, search) {
+      if (!search) return true;
+      return `${record.searchText} ${record.subtitle}`.toLowerCase().includes(search);
+    }
+
+    function sortSheetsEpisodeRecords(records = []) {
+      return [...records].sort((a, b) => {
+        const seasonDiff = Number(a.data?.temporada || 0) - Number(b.data?.temporada || 0);
+        if (seasonDiff) return seasonDiff;
+        const episodeDiff = Number(a.data?.numeroEpisodio || 0) - Number(b.data?.numeroEpisodio || 0);
+        if (episodeDiff) return episodeDiff;
+        return a.title.localeCompare(b.title, 'es');
+      });
+    }
+
+    function getSheetsViewModel(search = '') {
+      const contentRecords = FF_STATE.content.map(buildSheetsContentRecord);
+      const episodeRecords = FF_STATE.episodes.map(buildSheetsEpisodeRecord);
+      const totalRecords = contentRecords.length + episodeRecords.length;
+
+      const movieRecords = contentRecords
+        .filter(record => record.data.tipo !== 'serie' && matchesSheetsSearch(record, search))
+        .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+
+      const seriesRecords = contentRecords
+        .filter(record => record.data.tipo === 'serie')
+        .sort((a, b) => a.title.localeCompare(b.title, 'es'));
+
+      const episodesBySeries = new Map();
+      episodeRecords.forEach((record) => {
+        const key = String(record.data.serieId || '');
+        if (!episodesBySeries.has(key)) episodesBySeries.set(key, []);
+        episodesBySeries.get(key).push(record);
       });
 
-      return [...contentRows, ...episodeRows].sort((a, b) => a.title.localeCompare(b.title, 'es'));
+      const seriesGroups = seriesRecords
+        .map((seriesRecord) => {
+          const allEpisodes = sortSheetsEpisodeRecords(episodesBySeries.get(String(seriesRecord.id)) || []);
+          const seriesMatches = matchesSheetsSearch(seriesRecord, search);
+          const visibleEpisodes = !search
+            ? allEpisodes
+            : (seriesMatches ? allEpisodes : allEpisodes.filter(record => matchesSheetsSearch(record, search)));
+
+          if (search && !seriesMatches && !visibleEpisodes.length) return null;
+
+          return {
+            series: seriesRecord,
+            episodes: visibleEpisodes,
+            totalEpisodes: allEpisodes.length
+          };
+        })
+        .filter(Boolean);
+
+      const linkedSeriesIds = new Set(seriesRecords.map(record => String(record.id)));
+      const orphanEpisodes = sortSheetsEpisodeRecords(
+        episodeRecords.filter((record) => {
+          if (linkedSeriesIds.has(String(record.data.serieId || ''))) return false;
+          return matchesSheetsSearch(record, search);
+        })
+      );
+
+      const visibleCount = movieRecords.length
+        + orphanEpisodes.length
+        + seriesGroups.reduce((sum, group) => sum + 1 + group.episodes.length, 0);
+
+      return {
+        totalRecords,
+        visibleCount,
+        movieRecords,
+        seriesGroups,
+        orphanEpisodes
+      };
+    }
+
+    function buildSheetActionButtons(record) {
+      const encodedKind = encodeURIComponent(record.kind);
+      const encodedId = encodeURIComponent(record.id);
+      const updating = state.sheetsUpdatingKey === `${record.kind}:${record.id}`;
+      return `
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+          <button class="btn btn-ghost" ${updating ? 'disabled' : ''} onclick="updateSheetRecordWithAI(decodeURIComponent('${encodedKind}'), decodeURIComponent('${encodedId}'))">${updating ? 'Actualizando...' : 'Actualizar con IA'}</button>
+          <button class="btn btn-outline" onclick="openSheetEditor(decodeURIComponent('${encodedKind}'), decodeURIComponent('${encodedId}'))">Editar ficha</button>
+        </div>`;
+    }
+
+    function renderSheetFlatRow(record) {
+      const hasVideo = !!(record.data.r2Url || record.data.driveUrl);
+      const extraMeta = record.kind === 'content'
+        ? ` | ${getRecordAudienceSummary(record.data)}`
+        : '';
+
+      return `
+        <div class="rowx">
+          <div>
+            <div><strong>${escapeHtml(record.title)}</strong> <span class="muted">(${escapeHtml(record.id)})</span></div>
+            <div class="meta">${escapeHtml(record.subtitle)}</div>
+            <div class="meta">${hasVideo ? 'Con video vinculado' : 'Sin video vinculado'}${record.data.portadaUrl ? ' | Con portada' : ' | Sin portada'}${escapeHtml(extraMeta)}</div>
+          </div>
+          ${buildSheetActionButtons(record)}
+        </div>`;
+    }
+
+    function renderSheetSeriesGroup(group) {
+      const record = group.series;
+      const hasVideo = !!(record.data.r2Url || record.data.driveUrl);
+      return `
+        <div class="sheet-group">
+          <div class="sheet-group-head">
+            <div>
+              <div class="sheet-chip">Serie recopilada</div>
+              <div><strong>${escapeHtml(record.title)}</strong> <span class="muted">(${escapeHtml(record.id)})</span></div>
+              <div class="meta">${escapeHtml(record.subtitle)}</div>
+              <div class="meta">${group.totalEpisodes} capitulo(s) registrados${hasVideo ? ' | Con video base' : ' | Sin video base'}${record.data.portadaUrl ? ' | Con portada' : ' | Sin portada'}</div>
+              <div class="sheet-note">${escapeHtml(getRecordAudienceSummary(record.data))}</div>
+            </div>
+            ${buildSheetActionButtons(record)}
+          </div>
+          <div class="sheet-group-episodes">
+            ${group.episodes.length
+              ? group.episodes.map(renderSheetFlatRow).join('')
+              : '<div class="muted">Esta serie aun no tiene capitulos registrados.</div>'}
+          </div>
+        </div>`;
     }
 
     async function renderSheetsRecords() {
@@ -1498,30 +1774,30 @@
       if (!list || !summary) return;
 
       const search = state.sheetsSearch;
-      const records = getSheetsRecords();
-      const filtered = search
-        ? records.filter(record => `${record.searchText} ${record.subtitle}`.toLowerCase().includes(search))
-        : records;
+      const view = getSheetsViewModel(search);
+      const pieces = [
+        ...view.movieRecords.map(renderSheetFlatRow),
+        ...view.seriesGroups.map(renderSheetSeriesGroup)
+      ];
 
-      summary.textContent = `${filtered.length} de ${records.length} fichas`;
-      list.innerHTML = filtered.map(record => {
-        const encodedKind = encodeURIComponent(record.kind);
-        const encodedId = encodeURIComponent(record.id);
-        const updating = state.sheetsUpdatingKey === `${record.kind}:${record.id}`;
-        const hasVideo = !!(record.data.r2Url || record.data.driveUrl);
-        return `
-          <div class="rowx">
-            <div>
-              <div><strong>${escapeHtml(record.title)}</strong> <span class="muted">(${escapeHtml(record.id)})</span></div>
-              <div class="meta">${escapeHtml(record.subtitle)}</div>
-              <div class="meta">${hasVideo ? 'Con video vinculado' : 'Sin video vinculado'}${record.data.portadaUrl ? ' | Con portada' : ' | Sin portada'}</div>
+      if (view.orphanEpisodes.length) {
+        pieces.push(`
+          <div class="sheet-group">
+            <div class="sheet-group-head">
+              <div>
+                <div class="sheet-chip">Capitulos sin serie enlazada</div>
+                <div><strong>Revisar relacion de episodios</strong></div>
+                <div class="meta">Estos episodios existen en Sheets, pero no encontramos la serie principal en el catalogo.</div>
+              </div>
             </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
-              <button class="btn btn-ghost" ${updating ? 'disabled' : ''} onclick="updateSheetRecordWithAI(decodeURIComponent('${encodedKind}'), decodeURIComponent('${encodedId}'))">${updating ? 'Actualizando...' : 'Actualizar con IA'}</button>
-              <button class="btn btn-outline" onclick="openSheetEditor(decodeURIComponent('${encodedKind}'), decodeURIComponent('${encodedId}'))">Editar ficha</button>
+            <div class="sheet-group-episodes">
+              ${view.orphanEpisodes.map(renderSheetFlatRow).join('')}
             </div>
-          </div>`;
-      }).join('') || '<div class="muted">No hay fichas en Sheets para mostrar.</div>';
+          </div>`);
+      }
+
+      summary.textContent = `${view.visibleCount} de ${view.totalRecords} fichas visibles`;
+      list.innerHTML = pieces.join('') || '<div class="muted">No hay fichas en Sheets para mostrar.</div>';
     }
 
     function kindEditorOpen(kind, id) {
@@ -1544,6 +1820,12 @@
       const record = getSheetRecordByKind(kind, id);
       if (!record) return showToast('Ficha no encontrada.', 'error');
 
+      const audienceBlock = document.getElementById('sheetEditorAudienceBlock');
+      const episodeVisibilityNote = document.getElementById('sheetEditorEpisodeVisibilityNote');
+      const parentSeries = kind === 'episode'
+        ? FF_STATE.content.find(item => String(item.id) === String(record.serieId || ''))
+        : null;
+
       state.sheetEditor = { kind, id };
       document.getElementById('sheetEditorEyebrow').textContent = kind === 'episode' ? 'Episodio en Sheets' : 'Contenido en Sheets';
       document.getElementById('sheetEditorTitle').textContent = record.titulo || record.id;
@@ -1554,12 +1836,27 @@
       document.getElementById('sheetEditorDriveUrl').value = record.driveUrl || '';
       document.getElementById('sheetEditorPosterUrl').value = record.portadaUrl || '';
       document.getElementById('sheetEditorSynopsis').value = record.sinopsis || '';
+      if (kind === 'episode') {
+        audienceBlock.classList.add('hidden');
+        episodeVisibilityNote.classList.remove('hidden');
+        episodeVisibilityNote.innerHTML = parentSeries
+          ? `Este capitulo hereda la visibilidad de la serie <strong>${escapeHtml(parentSeries.titulo || parentSeries.id)}</strong>. Si quieres cambiar quien puede verlo, edita la ficha de la serie en este mismo listado.`
+          : 'Este capitulo hereda la visibilidad de su serie. Si quieres cambiar quien puede verlo, edita la ficha de la serie.';
+      } else {
+        audienceBlock.classList.remove('hidden');
+        episodeVisibilityNote.classList.add('hidden');
+        episodeVisibilityNote.innerHTML = '';
+        renderAudiencePicker('sheetEditor', getRecordAudienceValue(record));
+      }
       syncSheetEditorResolvedUrl();
       document.getElementById('sheetEditorBd').classList.add('show');
     }
 
     function closeSheetEditor() {
       document.getElementById('sheetEditorBd').classList.remove('show');
+      document.getElementById('sheetEditorAudienceBlock').classList.remove('hidden');
+      document.getElementById('sheetEditorEpisodeVisibilityNote').classList.add('hidden');
+      document.getElementById('sheetEditorEpisodeVisibilityNote').innerHTML = '';
       state.sheetEditor = null;
     }
 
@@ -1614,7 +1911,7 @@
             clasificacion: record.clasificacion || '',
             idioma: record.idioma || '',
             estado: record.estado || 'activo',
-            usuariosPermitidos: record.visibleToAll ? 'todos' : (record.usuariosPermitidosRaw || record.usuariosPermitidos || 'todos'),
+            usuariosPermitidos: getSelectedAudience('sheetEditor'),
             fechaRegistro: record.fechaRegistro || fmtDateTime(),
             creadoPor: record.creadoPor || getCurrentUser().usuario
           });
