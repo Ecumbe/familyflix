@@ -667,7 +667,8 @@ function pickApiList(res, keys = []) {
   return [];
 }
 
-function readCatalogCache(storageKey) {
+function readCatalogCache(storageKey, options = {}) {
+  const allowExpired = Boolean(options.allowExpired);
   try {
     const raw = localStorage.getItem(storageKey);
     if (!raw) return [];
@@ -676,7 +677,7 @@ function readCatalogCache(storageKey) {
     const ts = Number(payload?.ts || 0);
     const items = Array.isArray(payload?.items) ? payload.items : [];
     if (!ts || !items.length) return [];
-    if (Date.now() - ts > Number(FF_CONFIG.CATALOG_CACHE_TTL_MS || 0)) return [];
+    if (!allowExpired && Date.now() - ts > Number(FF_CONFIG.CATALOG_CACHE_TTL_MS || 0)) return [];
     return items;
   } catch (error) {
     console.warn('No se pudo leer cache local.', error);
@@ -732,7 +733,7 @@ async function fetchContent(options = {}) {
   if (!force && FF_STATE.contentLoadingPromise) return FF_STATE.contentLoadingPromise;
 
   if (!force) {
-    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE)
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, { allowExpired: true })
       .map(normalizeContentRow)
       .filter(item => item.id && item.estado !== 'oculto');
     if (cachedItems.length && !FF_STATE.content.length) {
@@ -741,7 +742,7 @@ async function fetchContent(options = {}) {
   }
 
   FF_STATE.contentLoadingPromise = (async () => {
-    await ensureVideoBaseUrlLoaded();
+    ensureVideoBaseUrlLoaded();
     const previousItems = [...FF_STATE.content];
 
     const sources = preferApi
@@ -802,7 +803,7 @@ async function fetchEpisodes(options = {}) {
   if (!force && FF_STATE.episodesLoadingPromise) return FF_STATE.episodesLoadingPromise;
 
   if (!force) {
-    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE)
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, { allowExpired: true })
       .map(normalizeEpisodeRow)
       .filter(item => item.id && item.estado !== 'oculto');
     if (cachedItems.length && !FF_STATE.episodes.length) {
@@ -811,7 +812,7 @@ async function fetchEpisodes(options = {}) {
   }
 
   FF_STATE.episodesLoadingPromise = (async () => {
-    await ensureVideoBaseUrlLoaded();
+    ensureVideoBaseUrlLoaded();
     const previousItems = [...FF_STATE.episodes];
 
     const sources = preferApi
