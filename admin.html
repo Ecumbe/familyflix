@@ -153,6 +153,9 @@
             <div class="form-g"><label>Duración</label><input class="inp" id="movie_duracion" placeholder="1:32:00"></div>
             <div class="form-g"><label>Clasificación</label><input class="inp" id="movie_clasificacion" placeholder="Familiar"></div>
             <div class="form-g"><label>Idioma</label><input class="inp" id="movie_idioma" placeholder="Español"></div>
+            <div class="form-g"><label>Rating /10</label><input class="inp" id="movie_rating" type="number" min="0" max="10" step="0.1" placeholder="7.8"></div>
+            <div class="form-g"><label>Votos rating</label><input class="inp" id="movie_ratingCount" type="number" min="0" step="1" placeholder="1543"></div>
+            <div class="form-g"><label>Fuente rating</label><input class="inp" id="movie_ratingSource" placeholder="TMDB"></div>
             <div class="form-g"><label>Tags</label><input class="inp" id="movie_tags" placeholder="ogro, animación"></div>
             <div class="form-g"><label>Portada URL</label><input class="inp" id="movie_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="movie_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
@@ -196,6 +199,9 @@
             <div class="form-g"><label>Año</label><input class="inp" id="series_año" type="number"></div>
             <div class="form-g"><label>Clasificación</label><input class="inp" id="series_clasificacion"></div>
             <div class="form-g"><label>Idioma</label><input class="inp" id="series_idioma"></div>
+            <div class="form-g"><label>Rating /10</label><input class="inp" id="series_rating" type="number" min="0" max="10" step="0.1" placeholder="8.4"></div>
+            <div class="form-g"><label>Votos rating</label><input class="inp" id="series_ratingCount" type="number" min="0" step="1" placeholder="2790"></div>
+            <div class="form-g"><label>Fuente rating</label><input class="inp" id="series_ratingSource" placeholder="TMDB"></div>
             <div class="form-g"><label>Tags</label><input class="inp" id="series_tags"></div>
             <div class="form-g"><label>Portada URL</label><input class="inp" id="series_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="series_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
@@ -739,6 +745,9 @@
       setFormValue(`${target}_backdropUrl`, item.backdropUrl || '');
       setFormValue(`${target}_clasificacion`, item.clasificacion || '');
       setFormValue(`${target}_idioma`, item.idioma || '');
+      setFormValue(`${target}_rating`, item.rating || '');
+      setFormValue(`${target}_ratingCount`, item.ratingCount || '');
+      setFormValue(`${target}_ratingSource`, item.ratingSource || '');
       renderAudiencePicker(target, item.visibleToAll ? 'todos' : item.usuariosPermitidos);
 
       if (target === 'movie') {
@@ -1336,6 +1345,9 @@
       set('backdropUrl', backdropUrl);
       set('clasificacion', data.clasificacion || 'Familiar');
       set('idioma', data.idioma || 'Espanol');
+      set('rating', data.rating || '');
+      set('ratingCount', data.ratingCount || '');
+      set('ratingSource', data.ratingSource || '');
       if (prefix === 'movie') {
         set('duracion', data.duracion || '');
       }
@@ -1387,7 +1399,10 @@
         'movie_backdropUrl',
         'movie_duracion',
         'movie_clasificacion',
-        'movie_idioma'
+        'movie_idioma',
+        'movie_rating',
+        'movie_ratingCount',
+        'movie_ratingSource'
       ].forEach((id) => setFormValue(id, ''));
       setFormYear('movie', '');
       setFormValue('movie_destacado', '');
@@ -1407,7 +1422,10 @@
         'series_portadaUrl',
         'series_backdropUrl',
         'series_clasificacion',
-        'series_idioma'
+        'series_idioma',
+        'series_rating',
+        'series_ratingCount',
+        'series_ratingSource'
       ].forEach((id) => setFormValue(id, ''));
       setFormYear('series', '');
       setFormValue('series_destacado', '');
@@ -1457,6 +1475,9 @@
           duracion: document.getElementById('movie_duracion').value.trim(),
           clasificacion: document.getElementById('movie_clasificacion').value.trim(),
           idioma: document.getElementById('movie_idioma').value.trim(),
+          rating: document.getElementById('movie_rating').value.trim(),
+          ratingCount: document.getElementById('movie_ratingCount').value.trim(),
+          ratingSource: document.getElementById('movie_ratingSource').value.trim(),
           estado: 'activo',
           usuariosPermitidos: getSelectedAudience('movie'),
           fechaRegistro: fmtDateTime(),
@@ -1495,6 +1516,9 @@
           duracion: '',
           clasificacion: document.getElementById('series_clasificacion').value.trim(),
           idioma: document.getElementById('series_idioma').value.trim(),
+          rating: document.getElementById('series_rating').value.trim(),
+          ratingCount: document.getElementById('series_ratingCount').value.trim(),
+          ratingSource: document.getElementById('series_ratingSource').value.trim(),
           estado: 'activo',
           usuariosPermitidos: getSelectedAudience('series'),
           fechaRegistro: fmtDateTime(),
@@ -1999,6 +2023,9 @@
             duracion: record.duracion || '',
             clasificacion: record.clasificacion || '',
             idioma: record.idioma || '',
+            rating: record.rating || '',
+            ratingCount: record.ratingCount || '',
+            ratingSource: record.ratingSource || '',
             estado: record.estado || 'activo',
             usuariosPermitidos: getSelectedAudience('sheetEditor'),
             fechaRegistro: record.fechaRegistro || fmtDateTime(),
@@ -2065,6 +2092,9 @@
         duracion: aiData.duracion || record.duracion || '',
         clasificacion: aiData.clasificacion || record.clasificacion || '',
         idioma: aiData.idioma || record.idioma || '',
+        rating: aiData.rating || record.rating || '',
+        ratingCount: aiData.ratingCount || record.ratingCount || '',
+        ratingSource: aiData.ratingSource || record.ratingSource || '',
         estado: record.estado || 'activo',
         usuariosPermitidos: record.visibleToAll ? 'todos' : (record.usuariosPermitidosRaw || record.usuariosPermitidos || 'todos'),
         fechaRegistro: record.fechaRegistro || fmtDateTime(),
