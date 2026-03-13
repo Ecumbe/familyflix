@@ -430,6 +430,15 @@
     let movieRecoSeconds = MOVIE_RECO_RETURN_SECONDS;
     let movieRecoDismissed = false;
     let shouldAutoplayCurrentMedia = false;
+    let useNativeVideoControls = shouldPreferNativeVideoControls();
+
+    function shouldPreferNativeVideoControls() {
+      const ua = navigator.userAgent || '';
+      const platform = navigator.platform || '';
+      const touchPoints = Number(navigator.maxTouchPoints || 0);
+      const isAppleTouchDevice = /iPhone|iPod|iPad/i.test(ua) || (platform === 'MacIntel' && touchPoints > 1);
+      return isAppleTouchDevice && touchPoints > 0;
+    }
 
     async function init() {
       await Promise.all([fetchContent(), fetchEpisodes(), loadUserState(), ensureVideoBaseUrlLoaded()]);
@@ -456,6 +465,11 @@
     }
 
     function bindCustomVideoUi() {
+      if (useNativeVideoControls) {
+        setCustomVideoUiEnabled(false);
+        return;
+      }
+
       videoCenterBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         togglePlayback();
@@ -545,14 +559,23 @@
       const directUrl = buildR2Url(media.r2Url || '');
 
       if (directUrl) {
-        setCustomVideoUiEnabled(true);
-        shouldAutoplayCurrentMedia = true;
+        useNativeVideoControls = shouldPreferNativeVideoControls();
+        videoBox.classList.toggle('native-video-mode', useNativeVideoControls);
+        setCustomVideoUiEnabled(!useNativeVideoControls);
+        shouldAutoplayCurrentMedia = !useNativeVideoControls;
         const video = document.createElement('video');
-        video.controls = false;
-        video.autoplay = true;
-        video.playsInline = true;
+        video.controls = useNativeVideoControls;
+        video.autoplay = !useNativeVideoControls;
+        video.playsInline = !useNativeVideoControls;
         video.preload = 'metadata';
         video.src = directUrl;
+        if (useNativeVideoControls) {
+          video.removeAttribute('playsinline');
+          video.removeAttribute('webkit-playsinline');
+        } else {
+          video.setAttribute('playsinline', '');
+          video.setAttribute('webkit-playsinline', '');
+        }
         video.addEventListener('loadedmetadata', onLoadedMetadata);
         video.addEventListener('timeupdate', onTimeUpdate);
         video.addEventListener('pause', saveRemoteProgress);
@@ -593,7 +616,7 @@
     }
 
     function requestVideoAutoplay() {
-      if (!shouldAutoplayCurrentMedia || !currentVideo || !currentVideo.paused) return;
+      if (useNativeVideoControls || !shouldAutoplayCurrentMedia || !currentVideo || !currentVideo.paused) return;
       currentVideo.play()
         .then(() => {
           shouldAutoplayCurrentMedia = false;
@@ -673,7 +696,7 @@
     }
 
     function shouldShowNextEpisodeCta(remainingSeconds = null) {
-      if (!nextEpisodeInfo || !currentEpisode || !currentVideo || queuedNextEpisode || nextEpOverlay.classList.contains('show')) {
+      if (useNativeVideoControls || !nextEpisodeInfo || !currentEpisode || !currentVideo || queuedNextEpisode || nextEpOverlay.classList.contains('show')) {
         return false;
       }
 
@@ -831,6 +854,11 @@
     }
 
     function maybePromptMovieRecommendations() {
+      if (useNativeVideoControls) {
+        if (videoBox.classList.contains('movie-reco-active')) hideMovieRecommendations();
+        return;
+      }
+
       if (!currentContent || currentEpisode || currentContent.tipo !== 'pelicula' || !currentVideo) {
         if (videoBox.classList.contains('movie-reco-active')) hideMovieRecommendations();
         return;
