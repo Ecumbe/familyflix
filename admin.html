@@ -1322,6 +1322,9 @@
         const el = getPanelField(prefix, id, aliases);
         if (el) el.value = Array.isArray(value) ? value.join(', ') : (value ?? '');
       };
+      const backdropUrl = Array.isArray(data.backdropUrls) && data.backdropUrls.length
+        ? data.backdropUrls.filter(Boolean).join('\n')
+        : (data.backdropUrl || '');
       set('titulo', data.titulo || '');
       set('tituloOriginal', data.tituloOriginal || '');
       set('categoria', data.categoria || '');
@@ -1330,7 +1333,7 @@
       set('sinopsis', data.sinopsis || '');
       set('tags', data.tags || '');
       set('portadaUrl', data.portadaUrl || data.portadaId || '');
-      set('backdropUrl', data.backdropUrl || '');
+      set('backdropUrl', backdropUrl);
       set('clasificacion', data.clasificacion || 'Familiar');
       set('idioma', data.idioma || 'Espanol');
       if (prefix === 'movie') {
@@ -2041,6 +2044,9 @@
 
     function buildContentPayloadFromAi(record, aiData = {}) {
       const year = aiData.anio || aiData['a\u00f1o'] || record.anio || record['a\u00f1o'] || '';
+      const backdropUrl = Array.isArray(aiData.backdropUrls) && aiData.backdropUrls.length
+        ? aiData.backdropUrls.filter(Boolean).join('\n')
+        : (aiData.backdropUrl || record.backdropUrl || '');
       return {
         id: record.id,
         titulo: aiData.titulo || record.titulo || '',
@@ -2052,7 +2058,7 @@
         sinopsis: aiData.sinopsis || record.sinopsis || '',
         tags: toDelimitedText((aiData.tags && aiData.tags.length) ? aiData.tags : record.tags),
         portadaUrl: aiData.portadaUrl || record.portadaUrl || '',
-        backdropUrl: aiData.backdropUrl || record.backdropUrl || '',
+        backdropUrl,
         r2Url: record.r2Url || '',
         driveUrl: record.driveUrl || '',
         destacado: record.destacado ? 'si' : '',
