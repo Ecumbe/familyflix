@@ -749,15 +749,17 @@
       const heroDots = heroItems.length > 1
         ? `<div class="hero-dots" aria-label="Destacados">${heroItems.map((item, index) => `<button class="hero-dot ${index === (heroRotationIndex % heroItems.length) ? 'on' : ''}" type="button" aria-label="Destacado ${index + 1}" onclick="setHeroIndex(${index})"></button>`).join('')}</div>`
         : '';
+      const heroMeta = [
+        displayYear(featured) ? `<span class="hero-meta-item">${escapeHtml(String(displayYear(featured)))}</span>` : '',
+        featured.categoria ? `<span class="hero-meta-item">${escapeHtml(featured.categoria)}</span>` : '',
+        displayDuration(featured.duracion) ? `<span class="hero-meta-item">${escapeHtml(displayDuration(featured.duracion))}</span>` : '',
+        buildRatingPill(featured, { compact: true })
+      ].filter(Boolean).join('');
       heroContent.innerHTML = `
         <div class="hero-eyebrow">${featured.tipo === 'serie' ? 'Serie destacada' : 'Pelicula destacada'}</div>
         <h1 class="hero-title">${escapeHtml(featured.titulo)}</h1>
         <p class="hero-desc">${escapeHtml(featured.sinopsis || 'Sinopsis no disponible.')}</p>
-        <div class="hero-meta">
-          ${displayYear(featured) ? `<span>${escapeHtml(String(displayYear(featured)))}</span>` : ''}
-          ${featured.categoria ? `<span class="sep"></span><span>${escapeHtml(featured.categoria)}</span>` : ''}
-          ${displayDuration(featured.duracion) ? `<span class="sep"></span><span>${escapeHtml(displayDuration(featured.duracion))}</span>` : ''}
-        </div>
+        <div class="hero-meta">${heroMeta}</div>
         <div class="hero-actions">
           <button class="btn btn-amber btn-lg hero-action-btn" type="button" aria-label="${escapeHtml(primaryLabel)}" onclick="playPrimaryAction('${featured.id}')"><span class="hero-action-icon">&#9654;</span><span class="hero-action-label">${escapeHtml(primaryLabel)}</span></button>
           <button class="btn btn-ghost btn-lg hero-action-btn hero-action-btn--info" type="button" aria-label="Mas informacion" onclick="openDetails('${featured.id}')"><span class="hero-action-icon hero-action-icon--info">i</span><span class="hero-action-label">Mas informacion</span></button>
@@ -1265,9 +1267,15 @@
       document.getElementById('mThumb').innerHTML = mediaCardImage(item.portadaUrl, item.tipo === 'serie' ? 'TV' : 'FILM', item.titulo);
       syncModalBackdropRotation(item, modalBackdropSources);
       document.getElementById('mTitle').textContent = item.titulo;
-      document.getElementById('mMeta').innerHTML = [displayYear(item), item.categoria, displayDuration(item.duracion), item.clasificacion]
+      document.getElementById('mMeta').innerHTML = [
+        displayYear(item),
+        item.categoria,
+        displayDuration(item.duracion),
+        item.clasificacion
+      ]
         .filter(Boolean)
-        .map((value) => `<span>${escapeHtml(String(value))}</span>`)
+        .map((value) => `<span class="modal-meta-item">${escapeHtml(String(value))}</span>`)
+        .concat(buildRatingPill(item, { showCount: true, showSource: true }))
         .join('');
       document.getElementById('mSynopsis').textContent = item.sinopsis || 'Sinopsis no disponible.';
       document.getElementById('mTags').innerHTML = (item.tags || []).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
