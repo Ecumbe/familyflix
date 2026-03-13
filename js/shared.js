@@ -116,6 +116,77 @@ function splitTags(value = '') {
     .filter(Boolean);
 }
 
+function normalizeRatingValue(value = '') {
+  const normalized = Number(String(value ?? '').replace(',', '.').trim());
+  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
+  return Math.max(0, Math.min(10, Math.round(normalized * 10) / 10));
+}
+
+function normalizeRatingCount(value = 0) {
+  const normalized = Number(String(value ?? '').replace(/[^\d.-]/g, '').trim());
+  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
+  return Math.round(normalized);
+}
+
+function formatRatingCount(value = 0) {
+  const count = normalizeRatingCount(value);
+  if (!count) return '';
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(count >= 10000000 ? 0 : 1).replace(/\.0$/, '')}M`;
+  }
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1).replace(/\.0$/, '')}k`;
+  }
+  return String(count);
+}
+
+function getRatingState(item = {}) {
+  const rating = normalizeRatingValue(item.rating || '');
+  const count = normalizeRatingCount(item.ratingCount || 0);
+  const source = String(item.ratingSource || '').trim();
+  return {
+    rating,
+    count,
+    source,
+    hasRating: rating > 0,
+    fillPercent: Math.max(0, Math.min(100, rating * 10)),
+    valueText: rating ? rating.toFixed(1) : ''
+  };
+}
+
+function formatRatingShortText(item = {}) {
+  const state = getRatingState(item);
+  return state.hasRating ? `\u2605 ${state.valueText}` : '';
+}
+
+function buildRatingPill(item = {}, options = {}) {
+  const state = getRatingState(item);
+  if (!state.hasRating) return '';
+
+  const showCount = Boolean(options.showCount);
+  const showSource = Boolean(options.showSource);
+  const compact = Boolean(options.compact);
+  const classes = ['ff-rating-chip'];
+  if (compact) classes.push('ff-rating-chip--compact');
+  const starText = '\u2605\u2605\u2605\u2605\u2605';
+
+  const titleParts = [`${state.valueText}/10`];
+  if (state.count) titleParts.push(`${formatRatingCount(state.count)} votos`);
+  if (state.source) titleParts.push(state.source);
+
+  return `
+    <span class="${classes.join(' ')}" title="${escapeHtml(titleParts.join(' · '))}">
+      <span class="ff-rating-stars" aria-hidden="true">
+        <span class="ff-rating-stars-base">${starText}</span>
+        <span class="ff-rating-stars-fill" style="width:${state.fillPercent}%">${starText}</span>
+      </span>
+      <span class="ff-rating-value">${escapeHtml(state.valueText)}</span>
+      ${showCount && state.count ? `<span class="ff-rating-count">${escapeHtml(formatRatingCount(state.count))}</span>` : ''}
+      ${showSource && state.source ? `<span class="ff-rating-source">${escapeHtml(state.source)}</span>` : ''}
+    </span>
+  `.trim();
+}
+
 function isAllAudienceToken(value = '') {
   const token = String(value || '').trim().toLowerCase();
   return !token || token === 'todos' || token === '*' || token === 'all';
@@ -625,6 +696,9 @@ function normalizeContentRow(row = {}) {
     tags: splitTags(row.tags),
     portadaUrl: row.portadaUrl || row.portadaId || '',
     backdropUrl: row.backdropUrl || '',
+    rating: normalizeRatingValue(row.rating || ''),
+    ratingCount: normalizeRatingCount(row.ratingCount || 0),
+    ratingSource: String(row.ratingSource || '').trim(),
     r2Url: row.r2Url || '',
     driveUrl: row.driveUrl || row.driveId || '',
     destacado: String(row.destacado || '').toLowerCase() === 'si',
@@ -1202,6 +1276,11 @@ function buildMediaCard(item) {
   const progress = getContentProgressState(item).percent;
   const img = mediaCardImage(item.portadaUrl, type === 'serie' ? '📺' : '🎬', item.titulo);
   const year = mediaYear(item);
+  const metaText = [
+    item.categoria || '',
+    year ? String(year) : '',
+    formatRatingShortText(item)
+  ].filter(Boolean).join(' • ');
   return `
     <article class="media-card" data-id="${escapeHtml(item.id)}" data-type="${escapeHtml(type)}">
       <button class="media-card__btn" type="button" onclick="openContentDetail('${escapeHtml(item.id)}')">
@@ -1209,7 +1288,7 @@ function buildMediaCard(item) {
         ${mediaBadge(type, progress)}
         <div class="media-card__body">
           <h3 class="media-card__title">${escapeHtml(item.titulo)}</h3>
-          <p class="media-card__meta">${escapeHtml(item.categoria || '')}${year ? ` • ${escapeHtml(String(year))}` : ''}</p>
+          <p class="media-card__meta">${escapeHtml(metaText)}</p>
         </div>
       </button>
     </article>
@@ -1269,9 +1348,13 @@ function openContentDetail(contenidoId) {
   const imageEl = modal.querySelector('[data-detail="image"]');
   const actionsEl = modal.querySelector('[data-detail="actions"]');
   const seasonsEl = modal.querySelector('[data-detail="seasons"]');
+  const metaValues = [item.categoria, mediaYear(item)]
+    .filter(Boolean)
+    .map((value) => `<span class="modal-meta-item">${escapeHtml(String(value))}</span>`);
+  const ratingMarkup = buildRatingPill(item, { showCount: true, showSource: true });
 
   if (titleEl) titleEl.textContent = item.titulo || '';
-  if (metaEl) metaEl.textContent = [item.categoria, mediaYear(item)].filter(Boolean).join(' • ');
+  if (metaEl) metaEl.innerHTML = [...metaValues, ratingMarkup].filter(Boolean).join('');
   if (synopsisEl) synopsisEl.textContent = item.sinopsis || 'Sin sinopsis disponible.';
   if (imageEl) imageEl.innerHTML = mediaCardImage(item.portadaUrl, item.tipo === 'serie' ? '📺' : '🎬', item.titulo);
 
@@ -1407,6 +1490,9 @@ function bootstrapShared() {
   window.parseTsv = parseTsv;
   window.normalizeContentRow = normalizeContentRow;
   window.normalizeEpisodeRow = normalizeEpisodeRow;
+  window.getRatingState = getRatingState;
+  window.formatRatingShortText = formatRatingShortText;
+  window.buildRatingPill = buildRatingPill;
   window.fetchContent = fetchContent;
   window.fetchEpisodes = fetchEpisodes;
   window.loadCatalog = loadCatalog;
