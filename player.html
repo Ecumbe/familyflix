@@ -1108,7 +1108,9 @@
         mediaYear(currentContent),
         media?.duracion,
         currentContent?.clasificacion
-      ].filter(Boolean).map(v => `<span>${escapeHtml(String(v))}</span>`).join('');
+      ].filter(Boolean).map(v => `<span>${escapeHtml(String(v))}</span>`).concat(
+        buildRatingPill(currentContent, { showCount: true, showSource: true })
+      ).join('');
       document.getElementById('synopsis').textContent = media.sinopsis || currentContent.sinopsis || 'Sinopsis no disponible.';
       document.getElementById('tags').innerHTML = (currentContent.tags || []).map(tag => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
 
