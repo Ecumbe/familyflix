@@ -56,6 +56,124 @@
     .hero-dot.on{
       opacity:.9;background:rgba(243,197,91,.74);transform:scale(1.18)
     }
+    body.home-screen .hero-bg-layer{
+      opacity:0;
+      transform:scale(1.045);
+      filter:saturate(.9) brightness(.82);
+      transition:
+        opacity 1.45s cubic-bezier(.22,.8,.22,1),
+        transform 6.8s cubic-bezier(.22,.8,.22,1),
+        filter 1.45s cubic-bezier(.22,.8,.22,1);
+    }
+    body.home-screen .hero-bg-layer.is-active{
+      opacity:1;
+      transform:scale(1.008);
+      filter:saturate(1.04) brightness(1);
+      animation:hero-layer-breathe 11s ease-in-out infinite;
+    }
+    body.home-screen .hero-bg-layer.is-leaving{
+      opacity:0;
+      transform:scale(1.08);
+      filter:saturate(1.08) brightness(1.05);
+      animation:none;
+    }
+    body.home-screen .hero-bg .media-image-shell img{
+      animation:hero-kenburns 24s ease-in-out both;
+    }
+    .saga-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:18px;
+    }
+    .saga-card{
+      position:relative;
+      isolation:isolate;
+    }
+    .saga-card .card-img{
+      background:
+        radial-gradient(circle at 20% 15%, rgba(243,197,91,.16), transparent 34%),
+        radial-gradient(circle at 82% 10%, rgba(110,168,255,.18), transparent 28%),
+        linear-gradient(160deg, rgba(10,16,26,.96), rgba(6,10,17,.98));
+    }
+    .saga-card__slides{
+      position:absolute;
+      inset:0;
+      overflow:hidden;
+    }
+    .saga-card__slide{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      transform:scale(1.08);
+      transition:opacity .95s ease, transform 1.45s ease, filter 1.15s ease;
+      filter:saturate(.84) brightness(.78);
+    }
+    .saga-card__slide.is-active{
+      opacity:1;
+      transform:scale(1);
+      filter:saturate(1.02) brightness(1);
+    }
+    .saga-card__slide .media-image-shell,
+    .saga-card__slide .media-image-shell img,
+    .saga-card__slide .media-fallback{
+      width:100%;
+      height:100%;
+    }
+    .saga-card__slide::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(4,6,11,.08) 0%, rgba(4,6,11,.2) 38%, rgba(4,6,11,.82) 100%),
+        linear-gradient(90deg, rgba(4,6,11,.46) 0%, rgba(4,6,11,.06) 42%, rgba(4,6,11,.58) 100%);
+    }
+    .saga-card__pill,
+    .saga-card__count{
+      position:absolute;
+      z-index:2;
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:9px 12px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:800;
+      letter-spacing:.05em;
+      text-transform:uppercase;
+      backdrop-filter:blur(14px);
+      border:1px solid rgba(255,255,255,.1);
+      box-shadow:0 14px 32px rgba(0,0,0,.24);
+    }
+    .saga-card__pill{
+      left:14px;
+      top:14px;
+      background:rgba(255,255,255,.08);
+      color:var(--cream);
+    }
+    .saga-card__count{
+      right:14px;
+      top:14px;
+      background:rgba(243,197,91,.16);
+      color:var(--amber);
+    }
+    .saga-card__sub{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      font-size:12px;
+      color:var(--cream3);
+      margin-top:2px;
+    }
+    .saga-card__titles{
+      margin-top:10px;
+      font-size:12px;
+      line-height:1.55;
+      color:var(--cream3);
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
     .chip-row{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
     .chip{border:none;background:var(--gb);color:var(--cream2);border:1px solid var(--gbrd);border-radius:999px;padding:10px 14px;cursor:pointer}
     .chip.on{background:var(--amber);border-color:var(--amber);color:#140d00}
@@ -84,6 +202,95 @@
     #modalEl .modal-body{
       background:linear-gradient(180deg, rgba(5,8,13,.16), rgba(5,8,13,.46));
       backdrop-filter:blur(10px)
+    }
+    #sagaModalEl{
+      position:relative;
+      width:min(1160px,100%);
+      grid-template-columns:1fr;
+      overflow:hidden;
+      background:linear-gradient(135deg, rgba(7,10,16,.82), rgba(6,10,16,.68));
+    }
+    #sagaModalEl > :not(.modal-backdrop-tone){position:relative;z-index:1}
+    #sagaBackdropTone{
+      position:absolute;
+      inset:0;
+      pointer-events:none;
+      opacity:0;
+      background-position:center;
+      background-size:cover;
+      background-repeat:no-repeat;
+      filter:blur(10px) saturate(1.08) brightness(.68);
+      transform:scale(1.05);
+      transition:opacity .5s ease, transform .85s ease;
+    }
+    #sagaBackdropTone::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(4,6,11,.16) 0%, rgba(4,6,11,.82) 100%),
+        linear-gradient(90deg, rgba(4,6,11,.7) 0%, rgba(4,6,11,.28) 38%, rgba(4,6,11,.82) 100%);
+    }
+    #sagaModalEl.has-backdrop-tone #sagaBackdropTone{
+      opacity:1;
+      transform:scale(1.01);
+    }
+    .saga-modal-body{
+      padding:28px;
+      max-height:min(92vh,920px);
+      overflow:auto;
+    }
+    .saga-modal-head{
+      display:grid;
+      gap:14px;
+      margin-bottom:22px;
+    }
+    .saga-modal-top{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:18px;
+    }
+    .saga-modal-copy{
+      display:grid;
+      gap:10px;
+      max-width:760px;
+    }
+    .saga-modal-meta{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      color:var(--cream3);
+      font-size:12px;
+      font-weight:700;
+    }
+    .saga-modal-meta span{
+      padding:8px 11px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .saga-modal-grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+      gap:16px;
+    }
+    .saga-choice-card .card-overlay .play-btn{
+      min-width:auto;
+    }
+    .saga-choice-card .card-sub{
+      gap:8px;
+      align-items:flex-start;
+    }
+    .saga-choice-card .card-extra{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--cream3);
+      line-height:1.5;
+      display:-webkit-box;
+      -webkit-line-clamp:4;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
     }
     @media(min-width:821px){
       #modalEl .modal-body{
@@ -155,6 +362,12 @@
     @media(max-width:560px){
       .hero-mini-actions{flex-direction:column}
       .hero-dots{gap:7px;padding:5px 7px}
+      .saga-grid,
+      .saga-modal-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+      .saga-card__pill,
+      .saga-card__count{padding:8px 10px;font-size:10px}
+      .saga-modal-body{padding:20px}
+      .saga-modal-top{flex-direction:column}
       .search-zone{padding:6px 16px 2px}
       body.home-screen .nav{
         background:linear-gradient(180deg, rgba(4,6,11,.82) 0%, rgba(4,6,11,.44) 56%, rgba(4,6,11,0) 100%)!important;
@@ -168,7 +381,13 @@
       }
     }
     @media(max-width:820px){
-      .modal-backdrop-tone{display:none}
+      .modal-backdrop-tone,
+      #sagaBackdropTone{display:none}
+    }
+    @keyframes hero-layer-breathe{
+      0%{filter:saturate(.96) brightness(.95)}
+      50%{filter:saturate(1.08) brightness(1.03)}
+      100%{filter:saturate(1) brightness(1)}
     }
   </style>
 </head>
@@ -241,6 +460,26 @@
     </div>
   </div>
 
+  <div class="modal-bd" id="sagaModalBd" onclick="if(event.target===this)closeSagaModal()">
+    <div class="modal" id="sagaModalEl">
+      <div class="modal-backdrop-tone" id="sagaBackdropTone" aria-hidden="true"></div>
+      <div class="saga-modal-body">
+        <div class="saga-modal-head">
+          <div class="saga-modal-top">
+            <div class="saga-modal-copy">
+              <div class="modal-eyebrow" id="sagaModalType">Saga</div>
+              <h2 class="modal-title" id="sagaModalTitle">Coleccion</h2>
+              <div class="saga-modal-meta" id="sagaModalMeta"></div>
+              <p class="modal-synopsis" id="sagaModalSynopsis"></p>
+            </div>
+            <button class="modal-icon-close" type="button" aria-label="Cerrar saga" title="Cerrar saga" onclick="closeSagaModal()">&times;</button>
+          </div>
+        </div>
+        <div class="saga-modal-grid" id="sagaModalGrid"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="modal-bd trailer-bd" id="trailerBd" onclick="if(event.target===this)closeTrailer()">
     <div class="trailer-modal">
       <div class="trailer-head">
@@ -276,6 +515,8 @@
     const heroContent = document.getElementById('heroContent');
     const modalEl = document.getElementById('modalEl');
     const mBackdropTone = document.getElementById('mBackdropTone');
+    const sagaModalEl = document.getElementById('sagaModalEl');
+    const sagaBackdropTone = document.getElementById('sagaBackdropTone');
     navProfile.textContent = `${sessionUser?.nombreMostrado || sessionUser?.usuario || ''} | ${sessionUser?.rol || ''}`;
     if (isAdmin()) adminBtn.style.display = 'inline-flex';
 
@@ -297,6 +538,9 @@
     let modalBackdropIndex = 0;
     let showcaseTimers = {};
     let showcaseState = {};
+    let sagaTimers = {};
+    let sagaState = {};
+    let activeSagaGroups = [];
     let mobileViewport = false;
     let contentReady = false;
     let episodesReady = false;
@@ -529,7 +773,7 @@
       };
     }
 
-    function getHomeRecentShowcaseEntries(items = [], limit = 3) {
+    function getHomeRecentShowcaseEntries(items = [], limit = 3, sagaGroups = []) {
       const movies = items
         .filter((item) => item.tipo === 'pelicula')
         .map(buildShowcaseEntryFromContent);
@@ -541,7 +785,10 @@
           timestamp: entry.timestamp
         }));
 
-      return sortNewest([...movies, ...seriesUpdates], (entry) => entry.timestamp).slice(0, limit);
+      return collapseSagaShowcaseEntries(
+        sortNewest([...movies, ...seriesUpdates], (entry) => entry.timestamp),
+        sagaGroups
+      ).slice(0, limit);
     }
 
     function getContinueWatchingForType(items = [], type = '') {
@@ -573,6 +820,237 @@
           ${subtitle ? `<div class="section-sub">${escapeHtml(subtitle)}</div>` : ''}
           ${body}
         </section>`;
+    }
+
+    function normalizeSagaValue(value = '') {
+      return String(value || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-z0-9]+/g, ' ')
+        .trim();
+    }
+
+    function splitSagaTokens(value = '') {
+      return String(value || '')
+        .replace(/[()[\]{}:;,.!?/\\]+/g, ' ')
+        .split(/\s+/)
+        .map((token) => String(token || '').trim())
+        .filter(Boolean);
+    }
+
+    function isSagaStopWord(token = '') {
+      return [
+        'a', 'al', 'con', 'de', 'del', 'el', 'en', 'la', 'las', 'los',
+        'mi', 'para', 'por', 'the', 'un', 'una', 'unos', 'unas', 'y'
+      ].includes(String(token || '').toLowerCase());
+    }
+
+    function buildSagaSeedFromTitle(title = '') {
+      const tokens = splitSagaTokens(title);
+      if (!tokens.length) return null;
+
+      const labelTokens = [];
+      const keyTokens = [];
+      for (const token of tokens) {
+        const normalized = normalizeSagaValue(token);
+        if (!normalized) continue;
+        labelTokens.push(token);
+        if (!isSagaStopWord(normalized) && !/^\d+$/.test(normalized) && normalized.length > 1) {
+          keyTokens.push(normalized);
+        }
+        if (keyTokens.length >= 2) break;
+      }
+
+      if (keyTokens.length < 2 || labelTokens.length < 2) return null;
+      return {
+        key: keyTokens.join('-'),
+        label: labelTokens.join(' ')
+      };
+    }
+
+    function getSagaDescriptor(item) {
+      if (!item || item.tipo !== 'pelicula') return null;
+
+      for (const rawTag of (item.tags || [])) {
+        const tag = String(rawTag || '').trim();
+        const match = tag.match(/^(saga|coleccion|colección|franquicia|collection|franchise)\s*:\s*(.+)$/i);
+        if (match?.[2]) {
+          const label = String(match[2] || '').trim();
+          const key = normalizeSagaValue(label).replace(/\s+/g, '-');
+          if (key) {
+            return { key, label, explicit: true };
+          }
+        }
+      }
+
+      const titleSeed = buildSagaSeedFromTitle(item.titulo || item.tituloOriginal || '');
+      return titleSeed ? { ...titleSeed, explicit: false } : null;
+    }
+
+    function buildSagaGroups(items = []) {
+      const groups = new Map();
+      items
+        .filter((item) => item?.tipo === 'pelicula')
+        .forEach((item) => {
+          const descriptor = getSagaDescriptor(item);
+          if (!descriptor?.key) return;
+          if (!groups.has(descriptor.key)) {
+            groups.set(descriptor.key, {
+              key: descriptor.key,
+              label: descriptor.label,
+              explicit: Boolean(descriptor.explicit),
+              items: []
+            });
+          }
+          groups.get(descriptor.key).items.push(item);
+        });
+
+      return [...groups.values()]
+        .map((group) => {
+          const sortedItems = sortNewest(
+            [...new Map(group.items.map((item) => [item.id, item])).values()],
+            (item) => getTimestampValue(item.fechaRegistro, displayYear(item))
+          ).reverse();
+          const years = sortedItems.map((item) => Number(displayYear(item) || 0)).filter(Boolean);
+          return {
+            ...group,
+            items: sortedItems,
+            leadItem: sortedItems[0] || null,
+            latestItem: sortNewest(sortedItems, (item) => getTimestampValue(item.fechaRegistro, displayYear(item)))[0] || sortedItems[0] || null,
+            yearStart: years.length ? Math.min(...years) : null,
+            yearEnd: years.length ? Math.max(...years) : null
+          };
+        })
+        .filter((group) => group.items.length > 1)
+        .sort((a, b) => {
+          const diff = getTimestampValue(b.latestItem?.fechaRegistro, displayYear(b.latestItem))
+            - getTimestampValue(a.latestItem?.fechaRegistro, displayYear(a.latestItem));
+          if (diff) return diff;
+          return String(a.label || '').localeCompare(String(b.label || ''), 'es');
+        });
+    }
+
+    function getSagaLookup(groups = []) {
+      const lookup = new Map();
+      groups.forEach((group) => {
+        group.items.forEach((item) => {
+          lookup.set(item.id, group);
+        });
+      });
+      return lookup;
+    }
+
+    function buildSagaYearLabel(group) {
+      if (!group?.yearStart && !group?.yearEnd) return 'Coleccion';
+      if (group.yearStart && group.yearEnd && group.yearStart !== group.yearEnd) {
+        return `${group.yearStart} - ${group.yearEnd}`;
+      }
+      return String(group.yearStart || group.yearEnd || 'Coleccion');
+    }
+
+    function buildSagaTitlesPreview(group) {
+      if (!group?.items?.length) return 'Elige una pelicula de la saga.';
+      const sample = group.items.slice(0, 3).map((item) => item.titulo).filter(Boolean);
+      const remainder = group.items.length - sample.length;
+      return `${sample.join(' • ')}${remainder > 0 ? ` +${remainder} mas` : ''}`;
+    }
+
+    function buildSagaSummary(group) {
+      if (!group?.items?.length) return 'Coleccion disponible';
+      return `${group.items.length} peliculas en una sola capsula.`;
+    }
+
+    function buildSagaEntry(group) {
+      return {
+        kind: 'saga',
+        saga: group,
+        timestamp: getTimestampValue(group.latestItem?.fechaRegistro, displayYear(group.latestItem))
+      };
+    }
+
+    function collapseSagaShowcaseEntries(entries = [], groups = []) {
+      const lookup = getSagaLookup(groups);
+      const seenGroups = new Set();
+      const collapsed = [];
+
+      entries.forEach((entry) => {
+        if (entry.kind === 'content' && entry.content?.tipo === 'pelicula') {
+          const group = lookup.get(entry.content.id);
+          if (group) {
+            if (!seenGroups.has(group.key)) {
+              seenGroups.add(group.key);
+              collapsed.push(buildSagaEntry(group));
+            }
+            return;
+          }
+        }
+        collapsed.push(entry);
+      });
+
+      return collapsed;
+    }
+
+    function renderSagaSlidesMarkup(group) {
+      const items = group?.items?.length ? group.items : [group?.leadItem].filter(Boolean);
+      return items.map((item, index) => `
+        <div class="saga-card__slide ${index === 0 ? 'is-active' : ''}" data-saga-slide="${index}">
+          ${mediaCardImage(item.portadaUrl || item.backdropUrl, 'FILM', item.titulo || group.label)}
+        </div>
+      `).join('');
+    }
+
+    function renderSagaCard(group, options = {}) {
+      if (!group?.items?.length) return '';
+      return `
+        <article class="card card-w saga-card ${options.compact ? 'card--compact' : ''}" onclick="openSagaModal('${escapeHtml(group.key)}')">
+          <div class="card-img" data-saga-id="${escapeHtml(group.key)}">
+            <div class="saga-card__slides">${renderSagaSlidesMarkup(group)}</div>
+            <div class="saga-card__pill">Saga</div>
+            <div class="saga-card__count">${group.items.length} peliculas</div>
+            <div class="card-overlay"><div class="play-btn">Abrir coleccion</div></div>
+            <div class="card-shine"></div>
+          </div>
+          <div class="card-body">
+            <div class="card-title">${escapeHtml(group.label)}</div>
+            <div class="saga-card__sub"><span>${escapeHtml(buildSagaYearLabel(group))}</span><span>${escapeHtml(buildSagaSummary(group))}</span></div>
+            <div class="saga-card__titles">${escapeHtml(buildSagaTitlesPreview(group))}</div>
+          </div>
+        </article>`;
+    }
+
+    function renderSagaChoiceCard(item) {
+      const progressState = getContentResumeState(item);
+      const extraMeta = [
+        item.categoria || '',
+        displayYear(item) ? String(displayYear(item)) : '',
+        displayDuration(item.duracion) || ''
+      ].filter(Boolean).join(' • ');
+
+      return `
+        <article class="card card-w saga-choice-card" onclick="openDetailsFromSaga('${escapeHtml(item.id)}')">
+          <div class="card-img">
+            ${mediaCardImage(item.portadaUrl, 'FILM', item.titulo)}
+            ${mediaBadge(item.tipo, progressState.percent)}
+            <div class="card-overlay"><div class="play-btn">Abrir ficha</div></div>
+            <div class="card-shine"></div>
+            ${progressState.percent > 0 ? `<div class="prog-strip"><div class="prog-fill" style="width:${progressState.percent}%"></div></div>` : ''}
+          </div>
+          <div class="card-body">
+            <div class="card-title">${escapeHtml(item.titulo)}</div>
+            <div class="card-sub"><span>${escapeHtml(extraMeta || 'Pelicula')}</span></div>
+            <div class="card-extra">${escapeHtml(item.sinopsis || 'Abre la ficha para ver detalles y reproducir cuando quieras.')}</div>
+          </div>
+        </article>`;
+    }
+
+    function renderSagaRow(title, groups, subtitle = '') {
+      return renderSection(
+        title,
+        'Saga',
+        `<div class="saga-grid">${groups.map((group) => renderSagaCard(group)).join('')}</div>`,
+        subtitle
+      );
     }
 
     function renderEpisodeProgressMeta(serieId, episode) {
@@ -631,6 +1109,10 @@
     }
 
     function renderShowcaseCard(entry) {
+      if (entry.kind === 'saga') {
+        return renderSagaCard(entry.saga);
+      }
+
       if (entry.kind === 'content') {
         const item = entry.content;
         const progressState = getContentResumeState(item);
@@ -709,6 +1191,39 @@
             setShowcaseIndex(id, (showcaseState[id] || 0) + 1);
           }, 7600);
         }
+      });
+    }
+
+    function stopSagaRotators() {
+      Object.values(sagaTimers).forEach((timer) => clearInterval(timer));
+      sagaTimers = {};
+      sagaState = {};
+    }
+
+    function setSagaPosterIndex(instanceId, nextIndex) {
+      const root = document.querySelector(`[data-saga-instance="${instanceId}"]`);
+      if (!root) return;
+      const slides = [...root.querySelectorAll('[data-saga-slide]')];
+      if (!slides.length) return;
+
+      const normalized = (nextIndex + slides.length) % slides.length;
+      sagaState[instanceId] = normalized;
+      slides.forEach((slide, index) => slide.classList.toggle('is-active', index === normalized));
+    }
+
+    function setupSagaRotators() {
+      stopSagaRotators();
+      document.querySelectorAll('[data-saga-id]').forEach((root, index) => {
+        const instanceId = `${root.dataset.sagaId || 'saga'}::${index}`;
+        root.dataset.sagaInstance = instanceId;
+        const slides = root.querySelectorAll('[data-saga-slide]');
+        if (slides.length <= 1) return;
+
+        sagaState[instanceId] = 0;
+        setSagaPosterIndex(instanceId, 0);
+        sagaTimers[instanceId] = setInterval(() => {
+          setSagaPosterIndex(instanceId, (sagaState[instanceId] || 0) + 1);
+        }, 3600);
       });
     }
 
@@ -884,7 +1399,7 @@
       heroBackdropTimer = setInterval(() => {
         heroBackdropIndex = (heroBackdropIndex + 1) % sources.length;
         renderHeroBackground(item, sources);
-      }, 5000);
+      }, 6800);
     }
 
     function renderModalBackdropTone(sources = []) {
@@ -936,21 +1451,51 @@
       const next = document.createElement('div');
       next.className = 'hero-bg-layer';
       next.innerHTML = markup;
+      const nextImage = next.querySelector('img');
 
       const current = container.querySelector('.hero-bg-layer.is-active') || container.querySelector('.hero-bg-layer');
       if (!current) {
         container.innerHTML = '';
         container.appendChild(next);
-        requestAnimationFrame(() => next.classList.add('is-active'));
+        const activateFirstLayer = () => {
+          requestAnimationFrame(() => next.classList.add('is-active'));
+        };
+        if (nextImage && !nextImage.complete) {
+          let activated = false;
+          const safeActivate = () => {
+            if (activated) return;
+            activated = true;
+            activateFirstLayer();
+          };
+          nextImage.addEventListener('load', safeActivate, { once: true });
+          nextImage.addEventListener('error', safeActivate, { once: true });
+          setTimeout(safeActivate, 700);
+        } else {
+          activateFirstLayer();
+        }
         return;
       }
 
-      current.classList.add('is-leaving');
       container.appendChild(next);
-      requestAnimationFrame(() => next.classList.add('is-active'));
-      setTimeout(() => {
-        current.remove();
-      }, 900);
+      let activated = false;
+      const activateLayer = () => {
+        if (activated) return;
+        activated = true;
+        current.classList.add('is-leaving');
+        requestAnimationFrame(() => next.classList.add('is-active'));
+        setTimeout(() => {
+          current.remove();
+        }, 1500);
+      };
+
+      if (nextImage && !nextImage.complete) {
+        nextImage.addEventListener('load', activateLayer, { once: true });
+        nextImage.addEventListener('error', activateLayer, { once: true });
+        setTimeout(activateLayer, 850);
+        return;
+      }
+
+      activateLayer();
     }
 
     function onHeroPointerMove(event) {
@@ -986,6 +1531,7 @@
             <p>Espera un momento mientras preparamos peliculas y series.</p>
           </div>`;
         stopShowcaseRotators();
+        stopSagaRotators();
         return;
       }
 
@@ -1001,9 +1547,13 @@
         .filter((item) => matchesCurrentFilters(item));
       const movies = items.filter((item) => item.tipo === 'pelicula');
       const series = items.filter((item) => item.tipo === 'serie');
-      const recentMovies = getRecentContentItems(movies, 3);
+      const sagaGroups = buildSagaGroups(movies);
+      activeSagaGroups = sagaGroups;
+      const sagaLookup = getSagaLookup(sagaGroups);
+      const standaloneMovies = movies.filter((item) => !sagaLookup.has(item.id));
+      const recentMovies = getRecentContentItems(standaloneMovies, 3);
       const recentSeriesUpdates = getRecentSeriesUpdates(series, 3);
-      const recentHomeShowcase = getHomeRecentShowcaseEntries(items, 3);
+      const recentHomeShowcase = getHomeRecentShowcaseEntries(items, 3, sagaGroups);
       const homeContinue = getHomeContinueWatchingItems(continueWatchingAll);
       const movieContinue = getContinueWatchingForType(continueWatchingAll, 'pelicula');
       const seriesContinue = getContinueWatchingForType(continueWatchingAll, 'serie');
@@ -1020,13 +1570,15 @@
           rows.push(renderContinueRow(seriesContinue, { layout: 'slider', title: 'Continuar viendo series' }));
         }
         if (!activeType || activeType === 'pelicula') {
-          if (movies.length) rows.push(renderMediaRow('Todas las peliculas', movies, 'Filtra por genero arriba de esta seccion.', { showFilters: activeType === 'pelicula', compact: true, filterType: 'pelicula' }));
+          if (sagaGroups.length) rows.push(renderSagaRow('Sagas que coinciden', sagaGroups, 'Cada saga abre un modal propio para elegir pelicula.'));
+          if (standaloneMovies.length) rows.push(renderMediaRow('Todas las peliculas', standaloneMovies, 'Filtra por genero arriba de esta seccion.', { showFilters: activeType === 'pelicula', compact: true, filterType: 'pelicula' }));
         }
         if (!activeType || activeType === 'serie') {
           if (recentSeriesUpdates.length) rows.push(renderSeriesUpdateRow('Novedades en series', recentSeriesUpdates));
           else if (series.length) rows.push(renderMediaRow('Series que coinciden', series));
         }
       } else if (activeType === 'pelicula') {
+        if (sagaGroups.length) rows.push(renderSagaRow('Sagas y colecciones', sagaGroups, 'Las franquicias se agrupan en una sola capsula para que no aparezcan repetidas.'));
         if (recentMovies.length) {
           rows.push(
             useMobileShowcase
@@ -1035,7 +1587,7 @@
           );
         }
         if (movieContinue.length) rows.push(renderContinueRow(movieContinue, { layout: 'slider', title: 'Continuar viendo peliculas' }));
-        if (movies.length) rows.push(renderMediaRow('Todas las peliculas', sortNewest(movies, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'pelicula' }));
+        if (standaloneMovies.length) rows.push(renderMediaRow('Todas las peliculas', sortNewest(standaloneMovies, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'pelicula' }));
       } else if (activeType === 'serie') {
         if (recentSeriesUpdates.length) {
           rows.push(
@@ -1049,6 +1601,7 @@
       } else {
         if (homeContinue.length) rows.push(renderContinueRow(homeContinue, { layout: 'grid' }));
         if (favoriteItems.length) rows.push(renderMediaCarousel('Tus likes', favoriteItems, 'Este apartado se mantiene deslizandose hacia la derecha.'));
+        if (sagaGroups.length) rows.push(renderSagaRow('Sagas para maraton', sagaGroups, 'Abre la coleccion y elige la pelicula que quieras sin ver toda la saga repetida en la lista.'));
         if (recentHomeShowcase.length) {
           rows.push(
             useMobileShowcase
@@ -1064,6 +1617,7 @@
           <p>Prueba con otro texto o cambia el filtro.</p>
         </div>`;
       setupShowcaseRotators();
+      setupSagaRotators();
     }
 
     function showWelcomeIfPending() {
@@ -1252,6 +1806,57 @@
         `<div class="catalog-grid catalog-grid--episodes">${entries.map(renderSeriesUpdateCard).join('')}</div>`,
         subtitle
       );
+    }
+
+    function setSagaBackdrop(group) {
+      const sources = [...new Set(
+        (group?.items || []).flatMap((item) => getHeroBackdropSources(item))
+      )];
+      const selected = sources[0] || group?.leadItem?.portadaUrl || '';
+      if (selected) {
+        sagaBackdropTone.style.backgroundImage = `url("${String(selected).replace(/"/g, '\\"')}")`;
+        sagaModalEl.classList.add('has-backdrop-tone');
+      } else {
+        sagaBackdropTone.style.backgroundImage = '';
+        sagaModalEl.classList.remove('has-backdrop-tone');
+      }
+    }
+
+    function openSagaModal(sagaKey) {
+      const group = activeSagaGroups.find((entry) => entry.key === sagaKey);
+      if (!group) return;
+
+      document.getElementById('sagaModalType').textContent = group.explicit ? 'Saga curada' : 'Saga detectada';
+      document.getElementById('sagaModalTitle').textContent = group.label;
+      document.getElementById('sagaModalMeta').innerHTML = [
+        `<span>${escapeHtml(`${group.items.length} peliculas`)}</span>`,
+        `<span>${escapeHtml(buildSagaYearLabel(group))}</span>`,
+        `<span>${escapeHtml(group.explicit ? 'Agrupacion manual' : 'Agrupacion automatica') }</span>`
+      ].join('');
+      document.getElementById('sagaModalSynopsis').textContent = group.items.length
+        ? `Selecciona cualquiera de estas peliculas de ${group.label}. Al tocar una se abre su ficha para verla con calma, no se reproduce automaticamente.`
+        : 'No hay peliculas disponibles en esta saga.';
+      document.getElementById('sagaModalGrid').innerHTML = group.items.map(renderSagaChoiceCard).join('');
+      setSagaBackdrop(group);
+      sagaModalEl.scrollTop = 0;
+      const sagaBody = sagaModalEl.querySelector('.saga-modal-body');
+      if (sagaBody) sagaBody.scrollTop = 0;
+      lockModalBackground();
+      document.getElementById('sagaModalBd').classList.add('open');
+    }
+
+    function closeSagaModal() {
+      document.getElementById('sagaModalBd').classList.remove('open');
+      sagaModalEl.classList.remove('has-backdrop-tone');
+      sagaBackdropTone.style.backgroundImage = '';
+      unlockModalBackground();
+    }
+
+    function openDetailsFromSaga(contentId) {
+      closeSagaModal();
+      requestAnimationFrame(() => {
+        openDetails(contentId);
+      });
     }
 
     function openDetails(contentId) {
