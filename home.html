@@ -1799,7 +1799,6 @@
     let ambientSectionRatios = new Map();
     let activeAmbientUrl = '';
     let defaultAmbientUrl = '';
-    let preloadedImageUrls = new Set();
     let homeInteractionsBound = false;
 
     document.querySelectorAll('.nav-tab').forEach((btn) => {
@@ -1827,20 +1826,18 @@
       const contentPromise = fetchContent();
       const episodesPromise = fetchEpisodes();
       const userStatePromise = loadUserState();
+      contentReady = Boolean(FF_STATE.content.length);
+      episodesReady = Boolean(FF_STATE.episodes.length);
 
       renderHero();
       renderChips();
       renderHome();
 
-      await contentPromise;
+      await Promise.all([contentPromise, episodesPromise]);
       contentReady = true;
-      renderHero();
-      renderChips();
-      renderHome();
-
-      await episodesPromise;
       episodesReady = true;
       renderHero();
+      renderChips();
       renderHome();
 
       await userStatePromise;
@@ -3027,47 +3024,9 @@
       ].join('');
     }
 
-    function scheduleLowPriority(callback, timeout = 900) {
-      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
-        window.requestIdleCallback(() => callback(), { timeout });
-        return;
-      }
-      setTimeout(callback, 120);
-    }
-
-    function preloadImage(url = '') {
-      const src = String(url || '').trim();
-      if (!src || preloadedImageUrls.has(src)) return;
-      preloadedImageUrls.add(src);
-      const image = new Image();
-      image.decoding = 'async';
-      image.src = src;
-    }
-
-    function primeContentAssets(item) {
-      if (!item) return;
-      preloadImage(item.portadaUrl);
-      preloadImage(getHeroBackdropSources(item)[0] || '');
-    }
-
     function resolveContinueEntryContent(entry) {
       if (!entry) return null;
       return entry.kind === 'content' ? entry.item : entry.serie;
-    }
-
-    function primeEntryAssets(entry) {
-      if (!entry) return;
-      primeContentAssets(resolveContinueEntryContent(entry));
-      if (entry.kind === 'episode') {
-        preloadImage(entry.episode?.portadaUrl || entry.serie?.portadaUrl);
-      }
-    }
-
-    function primeFromElement(target) {
-      const root = target?.closest?.('[data-content-id]');
-      if (!root) return;
-      const item = FF_STATE.content.find((content) => content.id === root.dataset.contentId);
-      if (item) primeContentAssets(item);
     }
 
     function wireHomeInteractions() {
@@ -3076,16 +3035,6 @@
 
       heroBanner.addEventListener('pointermove', onHeroPointerMove);
       heroBanner.addEventListener('pointerleave', resetHeroParallax);
-
-      const wrap = document.getElementById('homeContent');
-      if (!wrap) return;
-
-      wrap.addEventListener('pointerenter', (event) => {
-        primeFromElement(event.target);
-      }, true);
-      wrap.addEventListener('focusin', (event) => {
-        primeFromElement(event.target);
-      });
     }
 
     function getItemAmbientArt(item) {
@@ -3662,14 +3611,18 @@
 
       const items = filteredContent();
       const rows = [];
-      const continueWatchingAll = getContinueWatchingItems().filter((entry) => {
-        return entry.kind === 'content'
-          ? matchesCurrentFilters(entry.item)
-          : matchesCurrentFilters(entry.serie);
-      });
-      const favoriteItems = FF_STATE.userState.favorites
-        .map((favorite) => FF_STATE.content.find((item) => item.id === favorite.contenidoId))
-        .filter((item) => matchesCurrentFilters(item));
+      const continueWatchingAll = userStateReady
+        ? getContinueWatchingItems().filter((entry) => {
+            return entry.kind === 'content'
+              ? matchesCurrentFilters(entry.item)
+              : matchesCurrentFilters(entry.serie);
+          })
+        : [];
+      const favoriteItems = userStateReady
+        ? FF_STATE.userState.favorites
+            .map((favorite) => FF_STATE.content.find((item) => item.id === favorite.contenidoId))
+            .filter((item) => matchesCurrentFilters(item))
+        : [];
       const movies = items.filter((item) => item.tipo === 'pelicula');
       const series = items.filter((item) => item.tipo === 'serie');
       const sagaGroups = buildSagaGroups(movies);
@@ -4130,7 +4083,6 @@
         ? `Selecciona cualquiera de estas peliculas de ${group.label}. Al tocar una se abre su ficha para verla con calma, no se reproduce automaticamente.`
         : 'No hay peliculas disponibles en esta saga.';
       document.getElementById('sagaModalGrid').innerHTML = group.items.map(renderSagaChoiceCard).join('');
-      primeContentAssets(group.leadItem);
       setSagaBackdrop(group);
       sagaModalEl.scrollTop = 0;
       const sagaBody = sagaModalEl.querySelector('.saga-modal-body');
@@ -4156,7 +4108,6 @@
     function openDetails(contentId) {
       const item = FF_STATE.content.find((content) => content.id === contentId);
       if (!item) return;
-      primeContentAssets(item);
       const modal = document.getElementById('modalBd');
       const trailerBtn = document.getElementById('mTrailerBtn');
       const episodes = getSeriesEpisodes(item.id);
