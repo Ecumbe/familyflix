@@ -1703,11 +1703,13 @@ body.modal-open{
   .modal{
     width:100%;
     max-width:none;
-    min-height:100dvh;
+    min-height:auto;
+    height:auto;
     max-height:none;
     border-radius:0;
     overflow:visible;
     overscroll-behavior:contain;
+    align-self:flex-start;
   }
 
   .modal-img{
@@ -1721,6 +1723,8 @@ body.modal-open{
   .modal-body{
     position:relative;
     margin-top:-18px;
+    max-height:none;
+    overflow:visible;
     padding:18px 16px 30px!important;
     border-radius:28px 28px 0 0;
     background:linear-gradient(180deg, rgba(12,18,29,.92), rgba(8,12,20,.98));
