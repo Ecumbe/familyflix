@@ -36,6 +36,14 @@ const FF_STATE = {
     progress: [],
     favorites: [],
     continueWatching: []
+  },
+  indexes: {
+    contentById: new Map(),
+    episodeById: new Map(),
+    episodesBySeries: new Map(),
+    favoriteKeys: new Set(),
+    progressByKey: new Map(),
+    latestSeriesProgressByContent: new Map()
   }
 };
 
@@ -778,13 +786,86 @@ function writeCatalogCache(storageKey, items = []) {
   }
 }
 
+function progressLookupKey(itemType, contenidoId, episodioId = '') {
+  return `${itemType || ''}::${contenidoId || ''}::${episodioId || ''}`;
+}
+
+function progressTimestamp(record = {}) {
+  return new Date(record?.ultimaVisualizacion || 0).getTime() || 0;
+}
+
+function rebuildCatalogIndexes() {
+  const contentById = new Map();
+  const episodeById = new Map();
+  const episodesBySeries = new Map();
+
+  FF_STATE.content.forEach((item) => {
+    contentById.set(String(item.id), item);
+  });
+
+  FF_STATE.episodes.forEach((episode) => {
+    episodeById.set(String(episode.id), episode);
+    if (episode.estado !== 'activo') return;
+
+    const key = String(episode.serieId || '');
+    if (!episodesBySeries.has(key)) episodesBySeries.set(key, []);
+    episodesBySeries.get(key).push(episode);
+  });
+
+  episodesBySeries.forEach((list) => {
+    list.sort((a, b) => (a.temporada - b.temporada) || (a.numeroEpisodio - b.numeroEpisodio));
+  });
+
+  FF_STATE.indexes.contentById = contentById;
+  FF_STATE.indexes.episodeById = episodeById;
+  FF_STATE.indexes.episodesBySeries = episodesBySeries;
+}
+
+function rebuildUserStateIndexes() {
+  const favoriteKeys = new Set();
+  const progressByKey = new Map();
+  const latestSeriesProgressByContent = new Map();
+
+  (FF_STATE.userState.favorites || []).forEach((favorite) => {
+    favoriteKeys.add(favoriteKeyFor(favorite.tipo, favorite.contenidoId, favorite.episodioId));
+  });
+
+  (FF_STATE.userState.progress || []).forEach((record) => {
+    const key = progressLookupKey(record.tipo, record.contenidoId, record.episodioId);
+    const current = progressByKey.get(key);
+    if (!current || progressTimestamp(record) >= progressTimestamp(current)) {
+      progressByKey.set(key, record);
+    }
+
+    if (
+      record.tipo !== 'episodio'
+      || Number(record.porcentaje || 0) <= 0
+      || String(record.completado || '').toLowerCase() === 'si'
+    ) {
+      return;
+    }
+
+    const contentKey = String(record.contenidoId || '');
+    const currentSeriesRecord = latestSeriesProgressByContent.get(contentKey);
+    if (!currentSeriesRecord || progressTimestamp(record) >= progressTimestamp(currentSeriesRecord)) {
+      latestSeriesProgressByContent.set(contentKey, record);
+    }
+  });
+
+  FF_STATE.indexes.favoriteKeys = favoriteKeys;
+  FF_STATE.indexes.progressByKey = progressByKey;
+  FF_STATE.indexes.latestSeriesProgressByContent = latestSeriesProgressByContent;
+}
+
 function setContentState(items = []) {
   FF_STATE.content = items.filter(item => item.id && item.estado !== 'oculto' && canUserAccessContent(item));
+  rebuildCatalogIndexes();
   return FF_STATE.content;
 }
 
 function setEpisodesState(items = []) {
   FF_STATE.episodes = items.filter(item => item.id && item.estado !== 'oculto');
+  rebuildCatalogIndexes();
   return FF_STATE.episodes;
 }
 
@@ -962,6 +1043,7 @@ async function loadUserState() {
   const user = getCurrentUser();
   if (!user?.id) {
     FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
+    rebuildUserStateIndexes();
     return FF_STATE.userState;
   }
 
@@ -975,10 +1057,12 @@ async function loadUserState() {
         favorites: res.favorites || [],
         continueWatching: res.continueWatching || []
       };
+      rebuildUserStateIndexes();
       return FF_STATE.userState;
     } catch (error) {
       console.error(error);
       FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
+      rebuildUserStateIndexes();
       return FF_STATE.userState;
     } finally {
       FF_STATE.userStateLoadingPromise = null;
@@ -994,17 +1078,11 @@ function favoriteKeyFor(itemType, contenidoId, episodioId = '') {
 
 function isFavorite(itemType, contenidoId, episodioId = '') {
   const key = favoriteKeyFor(itemType, contenidoId, episodioId);
-  return (FF_STATE.userState.favorites || []).some(f =>
-    favoriteKeyFor(f.tipo, f.contenidoId, f.episodioId) === key
-  );
+  return FF_STATE.indexes.favoriteKeys.has(key);
 }
 
 function getProgressRecord(itemType, contenidoId, episodioId = '') {
-  return (FF_STATE.userState.progress || []).find(p =>
-    p.tipo === itemType &&
-    String(p.contenidoId || '') === String(contenidoId || '') &&
-    String(p.episodioId || '') === String(episodioId || '')
-  ) || null;
+  return FF_STATE.indexes.progressByKey.get(progressLookupKey(itemType, contenidoId, episodioId)) || null;
 }
 
 function getProgressPercent(itemType, contenidoId, episodioId = '') {
@@ -1027,14 +1105,7 @@ function getContentProgressState(item = {}) {
     };
   }
 
-  const record = [...(FF_STATE.userState.progress || [])]
-    .filter((entry) =>
-      entry.tipo === 'episodio' &&
-      String(entry.contenidoId || '') === String(item.id) &&
-      Number(entry.porcentaje || 0) > 0 &&
-      String(entry.completado || '').toLowerCase() !== 'si'
-    )
-    .sort((a, b) => new Date(b.ultimaVisualizacion || 0) - new Date(a.ultimaVisualizacion || 0))[0] || null;
+  const record = FF_STATE.indexes.latestSeriesProgressByContent.get(String(item.id)) || null;
 
   const percent = Number(record?.porcentaje || 0);
   return {
@@ -1067,17 +1138,17 @@ function getEpisodeProgressState(contenidoId, episodioId = '', fallbackDuration 
 function getContinueWatchingItems() {
   const progress = [...(FF_STATE.userState.progress || [])]
     .filter(p => Number(p.porcentaje) > 0 && String(p.completado || '').toLowerCase() !== 'si')
-    .sort((a, b) => new Date(b.ultimaVisualizacion || 0) - new Date(a.ultimaVisualizacion || 0));
+    .sort((a, b) => progressTimestamp(b) - progressTimestamp(a));
 
   return progress.map(p => {
     if (p.tipo === 'pelicula') {
-      const item = FF_STATE.content.find(c => c.id === p.contenidoId);
+      const item = FF_STATE.indexes.contentById.get(String(p.contenidoId || ''));
       if (!item) return null;
       return { kind: 'content', item, progress: p };
     }
 
-    const ep = FF_STATE.episodes.find(e => e.id === p.episodioId);
-    const serie = FF_STATE.content.find(c => c.id === p.contenidoId);
+    const ep = FF_STATE.indexes.episodeById.get(String(p.episodioId || ''));
+    const serie = FF_STATE.indexes.contentById.get(String(p.contenidoId || ''));
     if (!ep || !serie) return null;
     return { kind: 'episode', episode: ep, serie, progress: p };
   }).filter(Boolean);
@@ -1141,9 +1212,7 @@ async function savePlaybackProgress({
 function getSeriesEpisodes(serieId) {
   const serie = getContentById(serieId);
   if (!serie || !canUserAccessContent(serie)) return [];
-  return FF_STATE.episodes
-    .filter(ep => ep.serieId === serieId && ep.estado === 'activo')
-    .sort((a, b) => (a.temporada - b.temporada) || (a.numeroEpisodio - b.numeroEpisodio));
+  return FF_STATE.indexes.episodesBySeries.get(String(serieId)) || [];
 }
 
 function buildSeasonsMap(episodes = []) {
@@ -1160,11 +1229,11 @@ function buildSeasonsMap(episodes = []) {
 }
 
 function getContentById(id) {
-  return FF_STATE.content.find(item => String(item.id) === String(id)) || null;
+  return FF_STATE.indexes.contentById.get(String(id)) || null;
 }
 
 function getEpisodeById(id) {
-  return FF_STATE.episodes.find(item => String(item.id) === String(id)) || null;
+  return FF_STATE.indexes.episodeById.get(String(id)) || null;
 }
 
 function getFeaturedContent() {
