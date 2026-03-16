@@ -17,7 +17,7 @@ const FF_CONFIG = {
     SESSION: 'ff_session',
     ADMIN_SECRET: 'ff_admin_secret',
     VIDEO_BASE_URL: 'ff_video_base_url',
-    CONTENT_CACHE: 'ff_content_cache_v2',
+    CONTENT_CACHE: 'ff_content_cache_v3',
     EPISODES_CACHE: 'ff_episodes_cache_v1'
   },
   CATALOG_CACHE_TTL_MS: 5 * 60 * 1000
@@ -697,6 +697,11 @@ function normalizeContentRow(row = {}) {
     portadaUrl: row.portadaUrl || row.portadaId || '',
     backdropUrl: row.backdropUrl || '',
     logoUrl: row.logoUrl || row.titleLogoUrl || row.tituloLogoUrl || '',
+    sagaId: row.sagaId || row.saga || row.collectionId || '',
+    sagaTitulo: row.sagaTitulo || row.sagaTitle || row.collectionTitle || row.collection || '',
+    sagaOrden: Number(row.sagaOrden || row.ordenSaga || row.collectionOrder || 0) || 0,
+    sagaBackdropUrl: row.sagaBackdropUrl || row.collectionBackdropUrl || '',
+    sagaPortadaUrl: row.sagaPortadaUrl || row.collectionPosterUrl || '',
     rating: normalizeRatingValue(row.rating || ''),
     ratingCount: normalizeRatingCount(row.ratingCount || 0),
     ratingSource: String(row.ratingSource || '').trim(),
