@@ -2882,7 +2882,7 @@
       heroBackdropTimer = setInterval(() => {
         heroBackdropIndex = (heroBackdropIndex + 1) % sources.length;
         renderHeroBackground(item, sources);
-      }, 6500);
+      }, 5200);
     }
 
     function renderModalBackdropTone(sources = []) {
@@ -2910,7 +2910,7 @@
       modalBackdropTimer = setInterval(() => {
         modalBackdropIndex = (modalBackdropIndex + 1) % sources.length;
         renderModalBackdropTone(sources);
-      }, 3600);
+      }, 3000);
     }
 
     function setHeroIndex(nextIndex = 0) {
