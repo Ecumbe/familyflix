@@ -701,6 +701,7 @@ function normalizeContentRow(row = {}) {
     ratingSource: String(row.ratingSource || '').trim(),
     r2Url: row.r2Url || '',
     driveUrl: row.driveUrl || row.driveId || '',
+    subtitulos: String(row.subtitulos || '').trim(),
     destacado: String(row.destacado || '').toLowerCase() === 'si',
     duracion: row.duracion || '',
     clasificacion: row.clasificacion || '',
@@ -728,6 +729,7 @@ function normalizeEpisodeRow(row = {}) {
     driveUrl: row.driveUrl || row.driveId || '',
     portadaUrl: row.portadaUrl || row.portadaId || '',
     airDate: row.airDate || '',
+    subtitulos: String(row.subtitulos || '').trim(),
     estado: (row.estado || 'activo').toLowerCase(),
     fechaRegistro: row.fechaRegistro || '',
     creadoPor: row.creadoPor || ''
