@@ -1421,6 +1421,235 @@ async function toggleFavoriteFromUI(tipo, contenidoId, episodioId = '') {
 }
 
 /* -------------------------------
+   Navegacion TV / teclado
+--------------------------------*/
+const FF_TV_NAV = {
+  focusClass: 'ff-tv-focusable',
+  activeClass: 'is-tv-focus',
+  nativeSelector: 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"]',
+  enrichSelector: '[onclick], .episode-link, [data-tv-focus]'
+};
+
+let ffTvNavigationBooted = false;
+
+function isNativeFocusableElement(el) {
+  return el instanceof HTMLElement && el.matches(FF_TV_NAV.nativeSelector);
+}
+
+function isManualTextEntry(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  if (el.matches('textarea, select, [contenteditable=""], [contenteditable="true"]')) return true;
+  if (!el.matches('input')) return false;
+  return !el.matches('[type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"]');
+}
+
+function hasFocusableChild(el) {
+  return el instanceof HTMLElement
+    && Boolean(el.querySelector('a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"]'));
+}
+
+function shouldPrepareCustomFocusable(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  if (isNativeFocusableElement(el)) return false;
+  if (el.matches('html, body, label, form, .modal-bd, [data-tv-ignore]')) return false;
+  if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') return false;
+  if (hasFocusableChild(el)) return false;
+  return true;
+}
+
+function markTvFocusable(el) {
+  if (!(el instanceof HTMLElement)) return;
+  el.classList.add(FF_TV_NAV.focusClass);
+}
+
+function prepareTvFocusableElements(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+
+  qsa(FF_TV_NAV.nativeSelector, scope).forEach(markTvFocusable);
+  qsa(FF_TV_NAV.enrichSelector, scope).forEach((el) => {
+    if (!shouldPrepareCustomFocusable(el)) return;
+    if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    markTvFocusable(el);
+  });
+}
+
+function isTvCandidateVisible(el) {
+  if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+  if (el.hidden || el.closest('[hidden], [inert]')) return false;
+  if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') return false;
+
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function getTvFocusCandidates() {
+  return uniqueBy(qsa(`.${FF_TV_NAV.focusClass}`), el => el).filter(isTvCandidateVisible);
+}
+
+function getTvRect(el) {
+  const rect = el.getBoundingClientRect();
+  return {
+    left: rect.left,
+    right: rect.right,
+    top: rect.top,
+    bottom: rect.bottom,
+    centerX: rect.left + (rect.width / 2),
+    centerY: rect.top + (rect.height / 2)
+  };
+}
+
+function sortTvCandidatesByReadingOrder(candidates = []) {
+  return [...candidates].sort((a, b) => {
+    const rectA = a.getBoundingClientRect();
+    const rectB = b.getBoundingClientRect();
+    const topDiff = rectA.top - rectB.top;
+    if (Math.abs(topDiff) > 10) return topDiff;
+    return rectA.left - rectB.left;
+  });
+}
+
+function focusTvElement(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  return document.activeElement === el;
+}
+
+function getDirectionalScore(currentRect, candidateRect, direction) {
+  const dx = candidateRect.centerX - currentRect.centerX;
+  const dy = candidateRect.centerY - currentRect.centerY;
+
+  let primary = 0;
+  let secondary = 0;
+  let overlap = 0;
+
+  if (direction === 'left') {
+    if (dx >= -6) return Number.POSITIVE_INFINITY;
+    primary = Math.abs(dx);
+    secondary = Math.abs(dy);
+    overlap = Math.max(0, Math.min(currentRect.bottom, candidateRect.bottom) - Math.max(currentRect.top, candidateRect.top));
+  } else if (direction === 'right') {
+    if (dx <= 6) return Number.POSITIVE_INFINITY;
+    primary = dx;
+    secondary = Math.abs(dy);
+    overlap = Math.max(0, Math.min(currentRect.bottom, candidateRect.bottom) - Math.max(currentRect.top, candidateRect.top));
+  } else if (direction === 'up') {
+    if (dy >= -6) return Number.POSITIVE_INFINITY;
+    primary = Math.abs(dy);
+    secondary = Math.abs(dx);
+    overlap = Math.max(0, Math.min(currentRect.right, candidateRect.right) - Math.max(currentRect.left, candidateRect.left));
+  } else if (direction === 'down') {
+    if (dy <= 6) return Number.POSITIVE_INFINITY;
+    primary = dy;
+    secondary = Math.abs(dx);
+    overlap = Math.max(0, Math.min(currentRect.right, candidateRect.right) - Math.max(currentRect.left, candidateRect.left));
+  } else {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return (primary * 1000) + (secondary * 20) - overlap;
+}
+
+function moveTvFocus(direction) {
+  const candidates = getTvFocusCandidates();
+  if (!candidates.length) return false;
+
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  if (!(active instanceof HTMLElement) || !active.classList.contains(FF_TV_NAV.focusClass)) {
+    return focusTvElement(sortTvCandidatesByReadingOrder(candidates)[0]);
+  }
+
+  const currentRect = getTvRect(active);
+  let best = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  candidates.forEach((candidate) => {
+    if (candidate === active) return;
+    const score = getDirectionalScore(currentRect, getTvRect(candidate), direction);
+    if (score < bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  });
+
+  return best ? focusTvElement(best) : false;
+}
+
+function updateTvActiveClass(nextFocused = null) {
+  qsa(`.${FF_TV_NAV.focusClass}.${FF_TV_NAV.activeClass}`).forEach((el) => {
+    if (el !== nextFocused) el.classList.remove(FF_TV_NAV.activeClass);
+  });
+  if (nextFocused instanceof HTMLElement) {
+    nextFocused.classList.add(FF_TV_NAV.activeClass);
+  }
+}
+
+function handleTvFocusIn(event) {
+  const target = event.target instanceof HTMLElement ? event.target.closest(`.${FF_TV_NAV.focusClass}`) : null;
+  updateTvActiveClass(target);
+}
+
+function handleTvFocusOut(event) {
+  const target = event.target instanceof HTMLElement ? event.target.closest(`.${FF_TV_NAV.focusClass}`) : null;
+  if (target && document.activeElement !== target) {
+    target.classList.remove(FF_TV_NAV.activeClass);
+  }
+}
+
+function handleTvNavigationKeydown(event) {
+  const key = event.key;
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  if (key === 'Enter' || key === ' ') {
+    if (!active || isNativeFocusableElement(active) || isManualTextEntry(active)) return;
+    if (!active.classList.contains(FF_TV_NAV.focusClass)) return;
+    event.preventDefault();
+    active.click();
+    return;
+  }
+
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) return;
+  if (active && isManualTextEntry(active)) return;
+
+  event.preventDefault();
+  moveTvFocus(key.replace('Arrow', '').toLowerCase());
+}
+
+function initTvNavigation() {
+  return;
+  if (ffTvNavigationBooted) return;
+  ffTvNavigationBooted = true;
+
+  const start = () => {
+    prepareTvFocusableElements(document);
+
+    document.addEventListener('keydown', handleTvNavigationKeydown, true);
+    document.addEventListener('focusin', handleTvFocusIn, true);
+    document.addEventListener('focusout', handleTvFocusOut, true);
+
+    const rescan = debounce(() => prepareTvFocusableElements(document), 80);
+    const observer = new MutationObserver(rescan);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'disabled', 'tabindex', 'role']
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+    return;
+  }
+
+  start();
+}
+
+/* -------------------------------
    Inicialización global
 --------------------------------*/
 function bootstrapShared() {
