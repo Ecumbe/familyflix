@@ -103,6 +103,7 @@
       <button class="tab on" data-panel="summary">Resumen</button>
       <button class="tab" data-panel="content">Registrar contenido</button>
       <button class="tab" data-panel="users">Usuarios</button>
+      <button class="tab" data-panel="activity">Actividad</button>
       <button class="tab" data-panel="sheets">Fichas Sheets</button>
       <button class="tab" data-panel="files">Archivos R2</button>
     </div>
@@ -159,6 +160,7 @@
             <div class="form-g"><label>Tags</label><input class="inp" id="movie_tags" placeholder="ogro, animación"></div>
             <div class="form-g"><label>Portada URL</label><input class="inp" id="movie_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="movie_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
+            <div class="form-g"><label>Logo titulo URL</label><input class="inp" id="movie_logoUrl" placeholder="https://.../logo-titulo.png"></div>
           </div>
           <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="movie_sinopsis"></textarea></div>
           <div class="form-g">
@@ -213,6 +215,7 @@
             <div class="form-g"><label>Tags</label><input class="inp" id="series_tags"></div>
             <div class="form-g"><label>Portada URL</label><input class="inp" id="series_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="series_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
+            <div class="form-g"><label>Logo titulo URL</label><input class="inp" id="series_logoUrl" placeholder="https://.../logo-serie.png"></div>
             <div class="form-g"><label>Destacado</label><select class="inp" id="series_destacado"><option value="">No</option><option value="si">Sí</option></select></div>
           </div>
           <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="series_sinopsis"></textarea></div>
@@ -289,6 +292,20 @@
       <div class="cardx">
         <h3 class="modal-title" style="font-size:26px">Usuarios existentes</h3>
         <div class="list" id="usersList"></div>
+      </div>
+    </section>
+
+    <section class="panel" id="panel-activity">
+      <section class="stats" id="activityStats"></section>
+      <div class="cardx">
+        <div class="grid2">
+          <div>
+            <h3 class="modal-title" style="font-size:26px">Actividad familiar</h3>
+            <p class="muted">Resume la ultima actividad detectada con progreso y continuar viendo. No es presencia en tiempo real.</p>
+          </div>
+          <div style="display:flex;justify-content:flex-end;align-items:end"><button class="btn btn-amber" id="reloadActivityBtn">Actualizar actividad</button></div>
+        </div>
+        <div class="list" id="activityList"></div>
       </div>
     </section>
 
@@ -374,6 +391,10 @@
             <label>Portada URL</label>
             <input class="inp" id="sheetEditorPosterUrl" type="text">
           </div>
+          <div class="form-g">
+            <label>Logo titulo URL</label>
+            <input class="inp" id="sheetEditorLogoUrl" type="text" placeholder="https://.../logo-titulo.png">
+          </div>
         </div>
         <div class="form-g">
           <label>Sinopsis</label>
@@ -444,6 +465,7 @@
     state.sheetsUpdatingKey = '';
     state.sheetEditor = null;
     state.userEditor = null;
+    state.activityRows = [];
 
     document.getElementById('adminSecretInput').value = getAdminSecret();
     document.getElementById('saveSecretBtn').addEventListener('click', () => {
@@ -459,6 +481,9 @@
       state.tab = btn.dataset.panel;
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('on'));
       document.getElementById(`panel-${state.tab}`).classList.add('on');
+      if (state.tab === 'activity') {
+        renderActivity();
+      }
     }));
 
     document.querySelectorAll('.subtab').forEach(btn => btn.addEventListener('click', () => {
@@ -489,6 +514,7 @@
       renderSheetsRecords();
     });
     document.getElementById('reloadFilesBtn').addEventListener('click', renderFiles);
+    document.getElementById('reloadActivityBtn').addEventListener('click', () => renderActivity());
     document.getElementById('aiAnalyzeBtn').addEventListener('click', runAI);
     document.getElementById('sheetsSearchInput').addEventListener('input', (e) => {
       state.sheetsSearch = e.target.value.trim().toLowerCase();
@@ -507,7 +533,8 @@
       await ensureVideoBaseUrlLoaded(true);
       refreshVideoHelpersUi();
       await refreshLocalData();
-      await Promise.all([renderSummary(), renderUsers(), renderSheetsRecords(), renderFiles()]);
+      await renderUsers();
+      await Promise.all([renderSummary(), renderSheetsRecords(), renderFiles(), renderActivity()]);
     }
 
     function refreshVideoHelpersUi() {
@@ -764,6 +791,7 @@
       setFormValue(`${target}_tags`, item.tags || '');
       setFormValue(`${target}_portadaUrl`, item.portadaUrl || '');
       setFormValue(`${target}_backdropUrl`, item.backdropUrl || '');
+      setFormValue(`${target}_logoUrl`, item.logoUrl || '');
       setFormValue(`${target}_clasificacion`, item.clasificacion || '');
       setFormValue(`${target}_idioma`, item.idioma || '');
       setFormValue(`${target}_rating`, item.rating || '');
@@ -1392,6 +1420,7 @@
       set('tags', data.tags || '');
       set('portadaUrl', data.portadaUrl || data.portadaId || '');
       set('backdropUrl', backdropUrl);
+      set('logoUrl', data.logoUrl || data.titleLogoUrl || data.tituloLogoUrl || '');
       set('clasificacion', data.clasificacion || 'Familiar');
       set('idioma', data.idioma || 'Espanol');
       set('rating', data.rating || '');
@@ -1446,6 +1475,7 @@
         'movie_tags',
         'movie_portadaUrl',
         'movie_backdropUrl',
+        'movie_logoUrl',
         'movie_duracion',
         'movie_clasificacion',
         'movie_idioma',
@@ -1471,6 +1501,7 @@
         'series_tags',
         'series_portadaUrl',
         'series_backdropUrl',
+        'series_logoUrl',
         'series_clasificacion',
         'series_idioma',
         'series_rating',
@@ -1521,6 +1552,7 @@
           tags: document.getElementById('movie_tags').value.trim(),
           portadaUrl: document.getElementById('movie_portadaUrl').value.trim(),
           backdropUrl: document.getElementById('movie_backdropUrl').value.trim(),
+          logoUrl: document.getElementById('movie_logoUrl').value.trim(),
           r2Url: video.r2Url,
           driveUrl: video.driveUrl,
           destacado: document.getElementById('movie_destacado').value,
@@ -1563,6 +1595,7 @@
           tags: document.getElementById('series_tags').value.trim(),
           portadaUrl: document.getElementById('series_portadaUrl').value.trim(),
           backdropUrl: document.getElementById('series_backdropUrl').value.trim(),
+          logoUrl: document.getElementById('series_logoUrl').value.trim(),
           r2Url: '',
           driveUrl: '',
           destacado: document.getElementById('series_destacado').value,
@@ -1756,6 +1789,159 @@
         renderAudiencePickers();
         renderSheetsRecords();
         list.innerHTML = `<div class="muted">${escapeHtml(error.message || 'No se pudieron cargar los usuarios.')}</div>`;
+      }
+    }
+
+    function parseActivityTimestamp(value = '') {
+      const date = value ? new Date(value) : null;
+      return date && !Number.isNaN(date.getTime()) ? date.getTime() : 0;
+    }
+
+    function formatActivityTimestamp(value = 0) {
+      return value ? new Date(value).toLocaleString('es-CO') : 'Sin actividad detectada';
+    }
+
+    function formatActivityAge(value = 0) {
+      if (!value) return 'Sin actividad';
+      const diffMinutes = Math.max(0, Math.round((Date.now() - value) / 60000));
+      if (diffMinutes < 1) return 'Hace un momento';
+      if (diffMinutes < 60) return `Hace ${diffMinutes} min`;
+      const diffHours = Math.round(diffMinutes / 60);
+      if (diffHours < 24) return `Hace ${diffHours} h`;
+      const diffDays = Math.round(diffHours / 24);
+      return `Hace ${diffDays} dia(s)`;
+    }
+
+    function getActivityRecordLabel(record = {}) {
+      if (String(record.tipo || '') === 'episodio') {
+        const episode = FF_STATE.episodes.find(item => String(item.id) === String(record.episodioId || ''));
+        const series = FF_STATE.content.find(item => String(item.id) === String(record.contenidoId || ''));
+        const episodeMeta = episode ? `T${episode.temporada || 1}E${episode.numeroEpisodio || 1}` : '';
+        const episodeTitle = episode?.titulo || record.tituloMostrado || record.episodioId || 'Episodio';
+        return [series?.titulo || '', episodeMeta, episodeTitle].filter(Boolean).join(' · ');
+      }
+
+      const content = FF_STATE.content.find(item => String(item.id) === String(record.contenidoId || ''));
+      return content?.titulo || record.tituloMostrado || record.contenidoId || 'Contenido';
+    }
+
+    function buildActivityEntries(bootstrap = {}) {
+      const progressEntries = (bootstrap.progress || []).map(record => ({
+        source: 'progress',
+        label: getActivityRecordLabel(record),
+        percent: Number(record.porcentaje || 0),
+        timestamp: parseActivityTimestamp(record.ultimaVisualizacion || ''),
+        record
+      }));
+
+      const continueEntries = (bootstrap.continueWatching || []).map(record => ({
+        source: 'continue',
+        label: getActivityRecordLabel(record),
+        percent: Number(record.porcentaje || 0),
+        timestamp: parseActivityTimestamp(record.ultimaVisualizacion || ''),
+        record
+      }));
+
+      return [...continueEntries, ...progressEntries]
+        .filter(entry => entry.label)
+        .sort((a, b) => b.timestamp - a.timestamp);
+    }
+
+    function buildUserActivitySnapshot(user, bootstrap = {}) {
+      const entries = buildActivityEntries(bootstrap);
+      const lastEntry = entries[0] || null;
+      const currentEntry = entries.find(entry => entry.percent > 0 && entry.percent < 100) || null;
+      const recentTitles = [];
+
+      entries.forEach((entry) => {
+        if (!entry.label || recentTitles.includes(entry.label)) return;
+        recentTitles.push(entry.label);
+      });
+
+      return {
+        user,
+        lastSeenAt: lastEntry?.timestamp || 0,
+        currentEntry,
+        recentTitles: recentTitles.slice(0, 3),
+        progressCount: (bootstrap.progress || []).length,
+        continueCount: (bootstrap.continueWatching || []).length
+      };
+    }
+
+    function renderActivityStats(rows = []) {
+      const stats = document.getElementById('activityStats');
+      if (!stats) return;
+
+      const activeToday = rows.filter(row => row.lastSeenAt && (Date.now() - row.lastSeenAt) < (24 * 60 * 60 * 1000)).length;
+      const resumingNow = rows.filter(row => row.currentEntry).length;
+      const inactive = rows.filter(row => !row.lastSeenAt).length;
+
+      stats.innerHTML = `
+        <div class="stat"><div class="n">${rows.length}</div><div class="l">Familiares revisados</div></div>
+        <div class="stat"><div class="n">${activeToday}</div><div class="l">Activos hoy</div></div>
+        <div class="stat"><div class="n">${resumingNow}</div><div class="l">Con algo en progreso</div></div>
+        <div class="stat"><div class="n">${inactive}</div><div class="l">Sin actividad</div></div>`;
+    }
+
+    async function renderActivity() {
+      const list = document.getElementById('activityList');
+      const stats = document.getElementById('activityStats');
+      if (!list || !stats) return;
+
+      const familyUsers = state.users.filter(user => user.id && String(user.rol || '').toLowerCase() !== 'admin');
+      if (!familyUsers.length) {
+        state.activityRows = [];
+        renderActivityStats([]);
+        list.innerHTML = '<div class="muted">No hay familiares para revisar actividad.</div>';
+        return;
+      }
+
+      list.innerHTML = '<div class="muted">Cargando actividad familiar...</div>';
+      renderActivityStats([]);
+
+      try {
+        const snapshots = await Promise.all(familyUsers.map(async (user) => {
+          const bootstrap = await getUserStateRemote(user.id);
+          return buildUserActivitySnapshot(user, bootstrap || {});
+        }));
+
+        state.activityRows = snapshots.sort((a, b) => {
+          if (b.lastSeenAt !== a.lastSeenAt) return b.lastSeenAt - a.lastSeenAt;
+          if (Boolean(b.currentEntry) !== Boolean(a.currentEntry)) return Number(Boolean(b.currentEntry)) - Number(Boolean(a.currentEntry));
+          return String(a.user.nombreMostrado || a.user.usuario || '').localeCompare(String(b.user.nombreMostrado || b.user.usuario || ''), 'es');
+        });
+
+        renderActivityStats(state.activityRows);
+        list.innerHTML = state.activityRows.map((row) => {
+          const isFresh = row.lastSeenAt && (Date.now() - row.lastSeenAt) < (24 * 60 * 60 * 1000);
+          const statusLabel = row.currentEntry
+            ? 'Retomando contenido'
+            : (row.lastSeenAt ? (isFresh ? 'Activo hoy' : 'Activo antes') : 'Sin actividad');
+          const currentText = row.currentEntry
+            ? `${row.currentEntry.label}${row.currentEntry.percent ? ` | ${row.currentEntry.percent}%` : ''}`
+            : 'No hay contenido en progreso.';
+          const recentText = row.recentTitles.length
+            ? row.recentTitles.join(' | ')
+            : 'Aun no registra reproducciones.';
+
+          return `
+            <div class="rowx">
+              <div>
+                <div><strong>${escapeHtml(row.user.nombreMostrado || row.user.usuario)}</strong> <span class="muted">@${escapeHtml(row.user.usuario || '')}</span></div>
+                <div class="meta">Ultima actividad: ${escapeHtml(formatActivityTimestamp(row.lastSeenAt))} | ${escapeHtml(formatActivityAge(row.lastSeenAt))}</div>
+                <div class="meta">Retomando: ${escapeHtml(currentText)}</div>
+                <div class="meta">Vistos recientemente: ${escapeHtml(recentText)}</div>
+              </div>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end">
+                <div class="status ${row.lastSeenAt ? 'ok' : 'soft'}">${escapeHtml(statusLabel)}</div>
+                <div class="status soft">${escapeHtml(`${row.progressCount} progreso(s) | ${row.continueCount} retoma(s)`)}</div>
+              </div>
+            </div>`;
+        }).join('');
+      } catch (error) {
+        state.activityRows = [];
+        renderActivityStats([]);
+        list.innerHTML = `<div class="muted">${escapeHtml(error.message || 'No se pudo cargar la actividad familiar.')}</div>`;
       }
     }
 
@@ -2003,6 +2189,7 @@
       document.getElementById('sheetEditorVideoPath').value = record.r2Url || '';
       document.getElementById('sheetEditorDriveUrl').value = record.driveUrl || '';
       document.getElementById('sheetEditorPosterUrl').value = record.portadaUrl || '';
+      document.getElementById('sheetEditorLogoUrl').value = record.logoUrl || '';
       document.getElementById('sheetEditorSynopsis').value = record.sinopsis || '';
       document.getElementById('sheetEditorSubtitles').value = record.subtitulos || '';
       if (kind === 'episode') {
@@ -2039,6 +2226,7 @@
       const nextR2Url = document.getElementById('sheetEditorVideoPath').value.trim();
       const nextDriveUrl = document.getElementById('sheetEditorDriveUrl').value.trim();
       const nextPosterUrl = document.getElementById('sheetEditorPosterUrl').value.trim();
+      const nextLogoUrl = document.getElementById('sheetEditorLogoUrl').value.trim();
       const nextSynopsis = document.getElementById('sheetEditorSynopsis').value.trim();
       const nextSubtitles = document.getElementById('sheetEditorSubtitles').value.trim();
 
@@ -2074,6 +2262,7 @@
             sinopsis: nextSynopsis,
             tags: toDelimitedText(record.tags),
             portadaUrl: nextPosterUrl,
+            logoUrl: nextLogoUrl,
             backdropUrl: record.backdropUrl || '',
             r2Url: nextR2Url,
             driveUrl: nextDriveUrl,
@@ -2143,6 +2332,7 @@
         ['a\u00f1o']: year,
         sinopsis: aiData.sinopsis || record.sinopsis || '',
         tags: toDelimitedText((aiData.tags && aiData.tags.length) ? aiData.tags : record.tags),
+        logoUrl: aiData.logoUrl || aiData.titleLogoUrl || record.logoUrl || '',
         portadaUrl: aiData.portadaUrl || record.portadaUrl || '',
         backdropUrl,
         r2Url: record.r2Url || '',
