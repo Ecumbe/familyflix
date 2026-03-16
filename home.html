@@ -58,6 +58,22 @@
     @media(min-width:721px){
       body.home-screen.home-filtered .search-zone{padding-top:calc(var(--nav-h) + 18px)}
     }
+    @media(min-width:1024px){
+      body.home-screen:not(.home-filtered) .hero{
+        min-height:100vh;
+      }
+      body.home-screen:not(.home-filtered) .hero-content{
+        min-height:100vh;
+        padding-bottom:18px;
+      }
+      body.home-screen:not(.home-filtered) .search-zone{
+        margin-top:0;
+        padding-top:28px;
+      }
+      body.home-screen:not(.home-filtered) .search-zone::before{
+        top:0;
+      }
+    }
     .search-box{position:relative;max-width:520px}
     .search-box .inp{padding-left:72px}
     .si{position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.68;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
@@ -176,6 +192,7 @@
       transform:scale(1.015);
       filter:none;
       transition:opacity .26s ease, transform 1.08s ease;
+      will-change:opacity, transform;
     }
     body.home-screen .hero-bg-layer.is-active{
       opacity:1;
@@ -196,6 +213,7 @@
       display:grid;
       grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
       gap:18px;
+      contain:layout paint;
     }
     .saga-card{
       position:relative;
@@ -334,8 +352,9 @@
       background-position:center;
       background-repeat:no-repeat;
       background-size:cover;
-      filter:blur(42px) saturate(1.08) brightness(.42);
+      filter:blur(26px) saturate(1.04) brightness(.46);
       transition:opacity .9s ease, transform 1.2s ease;
+      will-change:opacity, transform;
     }
     .home-ambient__layer::after{
       content:"";
@@ -359,6 +378,8 @@
       position:relative;
       z-index:1;
       padding:0 24px;
+      content-visibility:auto;
+      contain-intrinsic-size:620px;
     }
     body.home-screen .section-title{
       font-size:clamp(22px,2.3vw,32px);
@@ -376,6 +397,7 @@
       scroll-snap-type:x proximity;
       scroll-padding-left:4px;
       overscroll-behavior-x:contain;
+      contain:layout paint;
     }
     body.home-screen .scroll-row > *{scroll-snap-align:start}
     body.home-screen .catalog-grid,
@@ -1791,6 +1813,7 @@
     let sagaRotationIds = [];
     let sagaState = {};
     let activeSagaGroups = [];
+    let homeDeferredWorkToken = 0;
     let mobileViewport = false;
     let contentReady = false;
     let episodesReady = false;
@@ -1800,9 +1823,14 @@
     let activeAmbientUrl = '';
     let defaultAmbientUrl = '';
     let homeInteractionsBound = false;
+    let heroRenderKey = '';
+    let deferInitialDesktopHome = false;
+    let initialDesktopHomeRenderToken = 0;
+    let homeRowsRenderToken = 0;
 
     document.querySelectorAll('.nav-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
+        disableInitialDesktopHomeDefer();
         document.querySelectorAll('.nav-tab').forEach((item) => item.classList.remove('active'));
         btn.classList.add('active');
         activeType = btn.dataset.type || '';
@@ -1813,15 +1841,21 @@
       });
     });
 
-    document.getElementById('searchInput').addEventListener('input', (event) => {
-      searchText = event.target.value.trim().toLowerCase();
+    const handleHomeSearchInput = debounce((value) => {
+      disableInitialDesktopHomeDefer();
+      searchText = String(value || '').trim().toLowerCase();
       renderChips();
       renderHome();
+    }, 120);
+
+    document.getElementById('searchInput').addEventListener('input', (event) => {
+      handleHomeSearchInput(event.target.value);
     });
 
     async function init() {
       showWelcomeIfPending();
       mobileViewport = isMobileViewport();
+      deferInitialDesktopHome = !mobileViewport;
       wireHomeInteractions();
       const contentPromise = fetchContent();
       const episodesPromise = fetchEpisodes();
@@ -1830,20 +1864,29 @@
       episodesReady = Boolean(FF_STATE.episodes.length);
 
       renderHero();
-      renderChips();
-      renderHome();
+      if (!deferInitialDesktopHome) {
+        renderChips();
+        renderHome();
+      }
 
       await Promise.all([contentPromise, episodesPromise]);
       contentReady = true;
       episodesReady = true;
       renderHero();
-      renderChips();
-      renderHome();
+      if (deferInitialDesktopHome) {
+        queueInitialDesktopHomeRender();
+      } else {
+        renderChips();
+        renderHome();
+      }
 
       await userStatePromise;
       userStateReady = true;
-      renderHero();
-      renderHome();
+      if (deferInitialDesktopHome) {
+        queueInitialDesktopHomeRender();
+      } else {
+        renderHome();
+      }
     }
 
     function baseItemsForHome() {
@@ -2652,8 +2695,7 @@
       }
 
       renderHero();
-      setupShowcaseRotators();
-      setupSagaRotators();
+      queueHomeDeferredWork();
     }
 
     function getHeroTitleLogoUrl(item = {}) {
@@ -2719,6 +2761,7 @@
         stopHeroRotation();
         stopHeroBackdropRotation();
         resetHeroParallax();
+        heroRenderKey = '';
         document.body.classList.add('home-filtered');
         heroBanner.style.display = 'none';
         return;
@@ -2731,11 +2774,13 @@
 
       if (!featured) {
         if (!contentReady) {
+          heroRenderKey = '';
           renderHeroSkeleton();
           return;
         }
         stopHeroRotation();
         stopHeroBackdropRotation();
+        heroRenderKey = 'empty';
         swapHeroBackground(heroBg, '<div class="hero-bg-ph">FILM</div>');
         heroContent.innerHTML = '<h1 class="hero-title">Sin contenido</h1>';
         setDefaultAmbientBackground('');
@@ -2745,8 +2790,22 @@
       syncHeroRotation(heroItems);
       const backdropSources = getHeroBackdropSources(featured);
       syncHeroBackdropRotation(featured, backdropSources);
-      renderHeroBackground(featured, backdropSources);
       setDefaultAmbientBackground(backdropSources[0] || featured.portadaUrl || '');
+      const nextHeroKey = [
+        featured.id,
+        featured.titulo || '',
+        featured.logoUrl || '',
+        featured.sinopsis || '',
+        backdropSources[0] || '',
+        heroRotationIndex % heroItems.length
+      ].join('::');
+
+      if (heroRenderKey === nextHeroKey && heroContent.childElementCount) {
+        return;
+      }
+
+      heroRenderKey = nextHeroKey;
+      renderHeroBackground(featured, backdropSources);
 
       const heroDots = heroItems.length > 1
         ? `<div class="hero-dots" aria-label="Destacados">${heroItems.map((item, index) => `<button class="hero-dot ${index === (heroRotationIndex % heroItems.length) ? 'on' : ''}" type="button" aria-label="Destacado ${index + 1}" onclick="setHeroIndex(${index})"></button>`).join('')}</div>`
@@ -2845,7 +2904,7 @@
 
     function buildHeroBackdropMarkup(item, backdropUrl) {
       if (backdropUrl) {
-        return `<div class="media-image-shell" data-media-fallback="true"><img src="${escapeHtml(backdropUrl)}" alt="" data-title="${escapeHtml(item?.titulo || '')}" data-fallback="FILM" onerror="handleMediaImageError(this)"></div>`;
+        return `<div class="media-image-shell" data-media-fallback="true"><img src="${escapeHtml(backdropUrl)}" alt="" loading="eager" decoding="async" fetchpriority="high" data-title="${escapeHtml(item?.titulo || '')}" data-fallback="FILM" onerror="handleMediaImageError(this)"></div>`;
       }
       return '<div class="hero-bg-ph">FILM</div>';
     }
@@ -2914,6 +2973,7 @@
       const items = getHeroItems();
       if (!items.length) return;
       heroRotationIndex = (Number(nextIndex || 0) + items.length) % items.length;
+      heroRenderKey = '';
       stopHeroBackdropRotation();
       renderHero();
     }
@@ -3035,6 +3095,103 @@
 
       heroBanner.addEventListener('pointermove', onHeroPointerMove);
       heroBanner.addEventListener('pointerleave', resetHeroParallax);
+    }
+
+    function scheduleLowPriority(callback, timeout = 220) {
+      if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+        window.requestIdleCallback(() => callback(), { timeout });
+        return;
+      }
+      setTimeout(callback, 60);
+    }
+
+    function cancelHomeDeferredWork() {
+      homeDeferredWorkToken += 1;
+    }
+
+    function queueHomeDeferredWork() {
+      const token = ++homeDeferredWorkToken;
+      scheduleLowPriority(() => {
+        if (token !== homeDeferredWorkToken) return;
+        requestAnimationFrame(() => {
+          if (token !== homeDeferredWorkToken) return;
+          setupShowcaseRotators();
+          setupSagaRotators();
+          syncAmbientSections();
+        });
+      });
+    }
+
+    function cancelInitialDesktopHomeRender() {
+      initialDesktopHomeRenderToken += 1;
+    }
+
+    function disableInitialDesktopHomeDefer() {
+      if (!deferInitialDesktopHome) return;
+      deferInitialDesktopHome = false;
+      cancelInitialDesktopHomeRender();
+    }
+
+    function queueInitialDesktopHomeRender() {
+      if (!deferInitialDesktopHome) return;
+      const token = ++initialDesktopHomeRenderToken;
+      scheduleLowPriority(() => {
+        if (token !== initialDesktopHomeRenderToken) return;
+        deferInitialDesktopHome = false;
+        renderChips();
+        renderHome();
+      }, 320);
+    }
+
+    function cancelPendingHomeRowsRender() {
+      homeRowsRenderToken += 1;
+    }
+
+    function renderHomeRowsProgressively(wrap, rowRenderers = [], options = {}) {
+      const token = ++homeRowsRenderToken;
+      const initialCount = Math.max(1, Number(options.initialCount || 1));
+      const batchSize = Math.max(1, Number(options.batchSize || 1));
+
+      if (!rowRenderers.length) {
+        wrap.innerHTML = `
+          <div class="empty">
+            <h3>No hay resultados</h3>
+            <p>Prueba con otro texto o cambia el filtro.</p>
+          </div>`;
+        queueHomeDeferredWork();
+        return;
+      }
+
+      const renderSlice = (start, count) => rowRenderers
+        .slice(start, start + count)
+        .map((renderRow) => renderRow())
+        .join('');
+
+      wrap.innerHTML = renderSlice(0, initialCount);
+      let offset = initialCount;
+
+      if (offset >= rowRenderers.length) {
+        queueHomeDeferredWork();
+        return;
+      }
+
+      const appendNextBatch = () => {
+        if (token !== homeRowsRenderToken) return;
+        if (offset >= rowRenderers.length) {
+          queueHomeDeferredWork();
+          return;
+        }
+
+        wrap.insertAdjacentHTML('beforeend', renderSlice(offset, batchSize));
+        offset += batchSize;
+        scheduleLowPriority(() => {
+          requestAnimationFrame(appendNextBatch);
+        }, 160);
+      };
+
+      scheduleLowPriority(() => {
+        requestAnimationFrame(appendNextBatch);
+      }, 120);
     }
 
     function getItemAmbientArt(item) {
@@ -3592,6 +3749,7 @@
     }
 
     function setCategory(category) {
+      disableInitialDesktopHomeDefer();
       activeCategory = category;
       renderHero();
       renderChips();
@@ -3600,11 +3758,13 @@
 
     function renderHome() {
       const wrap = document.getElementById('homeContent');
+      cancelPendingHomeRowsRender();
+      cancelHomeDeferredWork();
+      stopShowcaseRotators();
+      stopSagaRotators();
       const catalogStillLoading = !contentReady && !FF_STATE.content.length;
       if (catalogStillLoading) {
         wrap.innerHTML = renderHomeSkeleton();
-        stopShowcaseRotators();
-        stopSagaRotators();
         syncAmbientSections();
         return;
       }
@@ -3620,7 +3780,7 @@
         : [];
       const favoriteItems = userStateReady
         ? FF_STATE.userState.favorites
-            .map((favorite) => FF_STATE.content.find((item) => item.id === favorite.contenidoId))
+            .map((favorite) => getContentById(favorite.contenidoId))
             .filter((item) => matchesCurrentFilters(item))
         : [];
       const movies = items.filter((item) => item.tipo === 'pelicula');
@@ -3636,7 +3796,7 @@
       const movieContinue = getContinueWatchingForType(continueWatchingAll, 'pelicula');
       const seriesContinue = getContinueWatchingForType(continueWatchingAll, 'serie');
       const seriesContinueLatest = getLatestContinueEpisodePerSeries(seriesContinue);
-      const useMobileShowcase = isMobileViewport();
+      const useMobileShowcase = mobileViewport;
       const recommendationEntries = activeType === 'pelicula'
         ? movieContinue
         : (activeType === 'serie' ? seriesContinueLatest : homeContinue);
@@ -3652,25 +3812,25 @@
 
       if (searchText) {
         if (!activeType && homeContinue.length) {
-          rows.push(renderContinueRow(homeContinue, { layout: 'grid' }));
+          rows.push(() => renderContinueRow(homeContinue, { layout: 'grid' }));
         }
         if (activeType === 'pelicula' && movieContinue.length) {
-          rows.push(renderContinueRow(movieContinue, { layout: 'slider', title: 'Continuar viendo peliculas' }));
+          rows.push(() => renderContinueRow(movieContinue, { layout: 'slider', title: 'Continuar viendo peliculas' }));
         }
         if (activeType === 'serie' && seriesContinueLatest.length) {
-          rows.push(renderContinueRow(seriesContinueLatest, { layout: 'slider', title: 'Continuar viendo series' }));
+          rows.push(() => renderContinueRow(seriesContinueLatest, { layout: 'slider', title: 'Continuar viendo series' }));
         }
         if (!activeType || activeType === 'pelicula') {
-          if (sagaGroups.length) rows.push(renderSagaRow('Sagas que coinciden', sagaGroups, 'Cada saga abre un modal propio para elegir pelicula.'));
-          if (movies.length) rows.push(renderMediaRow('Todas las peliculas', movies, 'Filtra por genero arriba de esta seccion.', { showFilters: activeType === 'pelicula', compact: true, filterType: 'pelicula' }));
+          if (sagaGroups.length) rows.push(() => renderSagaRow('Sagas que coinciden', sagaGroups, 'Cada saga abre un modal propio para elegir pelicula.'));
+          if (movies.length) rows.push(() => renderMediaRow('Todas las peliculas', movies, 'Filtra por genero arriba de esta seccion.', { showFilters: activeType === 'pelicula', compact: true, filterType: 'pelicula' }));
         }
         if (!activeType || activeType === 'serie') {
-          if (recentSeriesUpdates.length) rows.push(renderSeriesUpdateRow('Novedades en series', recentSeriesUpdates));
-          else if (series.length) rows.push(renderMediaRow('Series que coinciden', series));
+          if (recentSeriesUpdates.length) rows.push(() => renderSeriesUpdateRow('Novedades en series', recentSeriesUpdates));
+          else if (series.length) rows.push(() => renderMediaRow('Series que coinciden', series));
         }
       } else if (activeType === 'pelicula') {
         if (recentMovieEntries.length) {
-          rows.push(renderFeatureShowcaseSection(
+          rows.push(() => renderFeatureShowcaseSection(
             'Recien anadidas',
             'movies-latest',
             recentMovieEntries,
@@ -3681,16 +3841,16 @@
             }
           ));
         } else if (movieContinue.length) {
-          rows.push(renderContinueSpotlight(movieContinue[0], {
+          rows.push(() => renderContinueSpotlight(movieContinue[0], {
             title: 'Sigue tu pelicula',
             subtitle: 'Retoma rapido tu ultima pelicula guardada.'
           }));
         }
-        if (sagaGroups.length) rows.push(renderSagaRow('Sagas y colecciones', sagaGroups, 'Cada saga se agrupa aparte para maraton, pero sus peliculas siguen visibles tambien en Todas las peliculas.'));
-        if (movies.length) rows.push(renderMediaRow('Todas las peliculas', sortNewest(movies, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'pelicula' }));
+        if (sagaGroups.length) rows.push(() => renderSagaRow('Sagas y colecciones', sagaGroups, 'Cada saga se agrupa aparte para maraton, pero sus peliculas siguen visibles tambien en Todas las peliculas.'));
+        if (movies.length) rows.push(() => renderMediaRow('Todas las peliculas', sortNewest(movies, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'pelicula' }));
       } else if (activeType === 'serie') {
         if (recentSeriesUpdates.length) {
-          rows.push(renderFeatureShowcaseSection(
+          rows.push(() => renderFeatureShowcaseSection(
             'Novedades en series',
             'series-latest',
             recentSeriesUpdates,
@@ -3701,41 +3861,37 @@
           ));
         }
         if (seriesContinueLatest.length) {
-          rows.push(renderEpisodeRow('Tu serie te espera', seriesContinueLatest, 'Solo se muestra el ultimo episodio pendiente de cada serie para que no se repitan.'));
+          rows.push(() => renderEpisodeRow('Tu serie te espera', seriesContinueLatest, 'Solo se muestra el ultimo episodio pendiente de cada serie para que no se repitan.'));
         }
         if (recommendationItems.length) {
-          rows.push(renderMediaCarousel(recommendationTitle, recommendationItems, recommendationCopy));
+          rows.push(() => renderMediaCarousel(recommendationTitle, recommendationItems, recommendationCopy));
         }
-        if (series.length) rows.push(renderMediaRow('Todas las series', sortNewest(series, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'serie' }));
+        if (series.length) rows.push(() => renderMediaRow('Todas las series', sortNewest(series, (item) => getTimestampValue(item.fechaRegistro, displayYear(item))), 'Filtra por genero arriba de esta seccion.', { showFilters: true, compact: true, filterType: 'serie' }));
       } else {
         if (homeContinue.length) {
-          rows.push(renderContinueSpotlight(homeContinue[0], {
+          rows.push(() => renderContinueSpotlight(homeContinue[0], {
             title: 'Seguir viendo',
             subtitle: 'Lo mas importante de tu sesion queda arriba para entrar directo.'
           }));
         }
         if (recommendationItems.length) {
-          rows.push(renderMediaCarousel(recommendationTitle, recommendationItems, recommendationCopy));
+          rows.push(() => renderMediaCarousel(recommendationTitle, recommendationItems, recommendationCopy));
         }
-        if (favoriteItems.length) rows.push(renderMediaCarousel('Tus likes', favoriteItems, 'Se mantiene horizontal, mas fluido y con snap suave en movil.'));
-        if (sagaGroups.length) rows.push(renderSagaRow('Sagas para maraton', sagaGroups, 'La saga es un acceso adicional para maraton. Sus peliculas siguen estando tambien en Todas las peliculas.'));
+        if (favoriteItems.length) rows.push(() => renderMediaCarousel('Tus likes', favoriteItems, 'Se mantiene horizontal, mas fluido y con snap suave en movil.'));
+        if (sagaGroups.length) rows.push(() => renderSagaRow('Sagas para maraton', sagaGroups, 'La saga es un acceso adicional para maraton. Sus peliculas siguen estando tambien en Todas las peliculas.'));
         if (recentHomeShowcase.length) {
-          rows.push(
+          rows.push(() => (
             useMobileShowcase
               ? renderShowcaseRow('Recien anadidas', 'home-recent', recentHomeShowcase)
               : renderMixedRow('Recien anadidas', recentHomeShowcase)
-          );
+          ));
         }
       }
 
-      wrap.innerHTML = rows.length ? rows.join('') : `
-        <div class="empty">
-          <h3>No hay resultados</h3>
-          <p>Prueba con otro texto o cambia el filtro.</p>
-        </div>`;
-      setupShowcaseRotators();
-      setupSagaRotators();
-      syncAmbientSections();
+      renderHomeRowsProgressively(wrap, rows, {
+        initialCount: activeType ? (mobileViewport ? 1 : 2) : 1,
+        batchSize: 1
+      });
 
       return;
     }
@@ -4267,7 +4423,7 @@
     }
 
     function playSeries(id) {
-      const episodes = getSeriesEpisodes(id).sort((a, b) => a.temporada - b.temporada || a.numeroEpisodio - b.numeroEpisodio);
+      const episodes = getSeriesEpisodes(id);
       if (!episodes.length) return showToast('Esta serie aun no tiene episodios.', 'error');
       const record = (FF_STATE.userState.progress || [])
         .filter((item) => item.tipo === 'episodio' && item.contenidoId === id && String(item.completado).toLowerCase() !== 'si')
@@ -4335,6 +4491,7 @@
     window.addEventListener('beforeunload', stopSagaRotators);
     document.addEventListener('visibilitychange', handleDocumentVisibilityChange);
     window.addEventListener('resize', debounce(() => {
+      disableInitialDesktopHomeDefer();
       const nextMobileViewport = isMobileViewport();
       if (nextMobileViewport === mobileViewport) return;
       mobileViewport = nextMobileViewport;
