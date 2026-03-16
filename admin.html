@@ -186,6 +186,14 @@
             <div class="form-g movie-mode movie-mode-drive hidden"><label>Drive URL</label><input class="inp" id="movie_driveUrl" placeholder="https://drive.google.com/file/.../preview"></div>
             <div class="form-g"><label>URL final de video</label><input class="inp" id="movie_r2Url" readonly></div>
           </div>
+          <div class="grid2">
+            <div class="form-g">
+              <label>Subtitulos SRT (opcional)</label>
+              <input class="inp" id="movie_subtitulos" placeholder="peliculas/shrek-2.srt o https://.../shrek-2.srt">
+              <div class="muted" style="margin-top:8px">Si la pelicula tiene subtitulos, pega aqui la ruta o URL del .srt. Solo se cargan cuando el video es directo, no en Drive.</div>
+            </div>
+            <div class="form-g"><label>Archivo SRT</label><input class="inp" id="movie_subtitleFile" type="file" accept=".srt,text/plain"></div>
+          </div>
           <button class="btn btn-amber" id="saveMovieBtn">Guardar película</button>
         </div>
 
@@ -251,6 +259,14 @@
             <div class="form-g episode-mode episode-mode-r2manual hidden"><label>Nombre del archivo en R2</label><input class="inp" id="episode_r2Manual" placeholder="el.caballero.rojo.mp4"></div>
             <div class="form-g episode-mode episode-mode-drive hidden"><label>Drive URL</label><input class="inp" id="episode_driveUrl"></div>
             <div class="form-g"><label>URL final de video</label><input class="inp" id="episode_r2Url" readonly></div>
+          </div>
+          <div class="grid2">
+            <div class="form-g">
+              <label>Subtitulos SRT (opcional)</label>
+              <input class="inp" id="episode_subtitulos" placeholder="series/serie-x/e01.srt o https://.../e01.srt">
+              <div class="muted" style="margin-top:8px">Opcional. Solo se usan cuando el episodio tiene video directo.</div>
+            </div>
+            <div class="form-g"><label>Archivo SRT</label><input class="inp" id="episode_subtitleFile" type="file" accept=".srt,text/plain"></div>
           </div>
           <button class="btn btn-amber" id="saveEpisodeBtn">Guardar episodio</button>
         </div>
@@ -362,6 +378,11 @@
         <div class="form-g">
           <label>Sinopsis</label>
           <textarea class="inp" id="sheetEditorSynopsis"></textarea>
+        </div>
+        <div class="form-g">
+          <label>Subtitulos SRT</label>
+          <input class="inp" id="sheetEditorSubtitles" type="text" placeholder="peliculas/shrek-2.srt o https://.../shrek-2.srt">
+          <div class="muted" style="margin-top:6px">Opcional. Solo se usan en el reproductor cuando el video es directo.</div>
         </div>
         <div class="form-g" id="sheetEditorAudienceBlock">
           <label>Quien puede ver este contenido</label>
@@ -753,6 +774,9 @@
       if (target === 'movie') {
         setFormValue('movie_duracion', item.duracion || '');
         setFormValue('movie_destacado', item.destacado ? 'si' : '');
+        setFormValue('movie_subtitulos', item.subtitulos || '');
+        const movieSubtitleFile = document.getElementById('movie_subtitleFile');
+        if (movieSubtitleFile) movieSubtitleFile.value = '';
         populateVideoFields('movie', item);
       } else {
         setFormValue('series_destacado', item.destacado ? 'si' : '');
@@ -779,6 +803,9 @@
       setFormValue('episode_duracion', item.duracion || '');
       setFormValue('episode_portadaUrl', item.portadaUrl || '');
       setFormValue('episode_airDate', item.airDate || '');
+      setFormValue('episode_subtitulos', item.subtitulos || '');
+      const episodeSubtitleFile = document.getElementById('episode_subtitleFile');
+      if (episodeSubtitleFile) episodeSubtitleFile.value = '';
       populateVideoFields('episode', item);
 
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -923,6 +950,28 @@
       }
 
       return { r2Url, driveUrl };
+    }
+
+    async function resolveSubtitleField(prefix) {
+      const inputEl = document.getElementById(`${prefix}_subtitulos`);
+      const fileEl = document.getElementById(`${prefix}_subtitleFile`);
+      let subtitulos = inputEl?.value.trim() || '';
+      const file = fileEl?.files?.[0];
+
+      if (file) {
+        const up = await uploadFileToR2(file);
+        subtitulos = up.publicUrl || '';
+        if (inputEl) inputEl.value = subtitulos;
+        if (fileEl) fileEl.value = '';
+      }
+
+      return subtitulos;
+    }
+
+    function resetSubtitleField(prefix) {
+      setFormValue(`${prefix}_subtitulos`, '');
+      const fileEl = document.getElementById(`${prefix}_subtitleFile`);
+      if (fileEl) fileEl.value = '';
     }
 
     function getSelectedSeriesTitle() {
@@ -1408,6 +1457,7 @@
       setFormValue('movie_destacado', '');
       renderAudiencePicker('movie', 'todos');
       resetVideoForm('movie', 'upload');
+      resetSubtitleField('movie');
     }
 
     function resetSeriesForm() {
@@ -1451,11 +1501,13 @@
       }
 
       resetVideoForm('episode', 'upload');
+      resetSubtitleField('episode');
     }
 
     async function saveMovie() {
       try {
         const video = await resolveVideoFields('movie');
+        const subtitulos = await resolveSubtitleField('movie');
         const movieYear = getPanelField('movie', 'anio', ['a\u00c3\u00b1o', 'a\u00f1o'])?.value.trim() || '';
         const row = {
           id: document.getElementById('movie_id').value.trim(),
@@ -1478,6 +1530,7 @@
           rating: document.getElementById('movie_rating').value.trim(),
           ratingCount: document.getElementById('movie_ratingCount').value.trim(),
           ratingSource: document.getElementById('movie_ratingSource').value.trim(),
+          subtitulos,
           estado: 'activo',
           usuariosPermitidos: getSelectedAudience('movie'),
           fechaRegistro: fmtDateTime(),
@@ -1538,6 +1591,7 @@
     async function saveEpisode() {
       try {
         const video = await resolveVideoFields('episode');
+        const subtitulos = await resolveSubtitleField('episode');
         const row = {
           id: document.getElementById('episode_id').value.trim(),
           serieId: document.getElementById('episode_serieId').value.trim(),
@@ -1551,6 +1605,7 @@
           driveUrl: video.driveUrl,
           portadaUrl: document.getElementById('episode_portadaUrl').value.trim(),
           airDate: document.getElementById('episode_airDate').value.trim(),
+          subtitulos,
           estado: 'activo',
           fechaRegistro: fmtDateTime(),
           creadoPor: getCurrentUser().usuario
@@ -1949,6 +2004,7 @@
       document.getElementById('sheetEditorDriveUrl').value = record.driveUrl || '';
       document.getElementById('sheetEditorPosterUrl').value = record.portadaUrl || '';
       document.getElementById('sheetEditorSynopsis').value = record.sinopsis || '';
+      document.getElementById('sheetEditorSubtitles').value = record.subtitulos || '';
       if (kind === 'episode') {
         audienceBlock.classList.add('hidden');
         episodeVisibilityNote.classList.remove('hidden');
@@ -1984,6 +2040,7 @@
       const nextDriveUrl = document.getElementById('sheetEditorDriveUrl').value.trim();
       const nextPosterUrl = document.getElementById('sheetEditorPosterUrl').value.trim();
       const nextSynopsis = document.getElementById('sheetEditorSynopsis').value.trim();
+      const nextSubtitles = document.getElementById('sheetEditorSubtitles').value.trim();
 
       try {
         if (kind === 'episode') {
@@ -2000,6 +2057,7 @@
             driveUrl: nextDriveUrl,
             portadaUrl: nextPosterUrl,
             airDate: record.airDate || '',
+            subtitulos: nextSubtitles,
             estado: record.estado || 'activo',
             fechaRegistro: record.fechaRegistro || fmtDateTime(),
             creadoPor: record.creadoPor || getCurrentUser().usuario
@@ -2026,6 +2084,7 @@
             rating: record.rating || '',
             ratingCount: record.ratingCount || '',
             ratingSource: record.ratingSource || '',
+            subtitulos: nextSubtitles,
             estado: record.estado || 'activo',
             usuariosPermitidos: getSelectedAudience('sheetEditor'),
             fechaRegistro: record.fechaRegistro || fmtDateTime(),
@@ -2095,6 +2154,7 @@
         rating: aiData.rating || record.rating || '',
         ratingCount: aiData.ratingCount || record.ratingCount || '',
         ratingSource: aiData.ratingSource || record.ratingSource || '',
+        subtitulos: record.subtitulos || '',
         estado: record.estado || 'activo',
         usuariosPermitidos: record.visibleToAll ? 'todos' : (record.usuariosPermitidosRaw || record.usuariosPermitidos || 'todos'),
         fechaRegistro: record.fechaRegistro || fmtDateTime(),
@@ -2116,6 +2176,7 @@
         driveUrl: record.driveUrl || '',
         portadaUrl: aiData.portadaUrl || record.portadaUrl || '',
         airDate: aiData.airDate || record.airDate || '',
+        subtitulos: record.subtitulos || '',
         estado: record.estado || 'activo',
         fechaRegistro: record.fechaRegistro || fmtDateTime(),
         creadoPor: record.creadoPor || getCurrentUser().usuario
