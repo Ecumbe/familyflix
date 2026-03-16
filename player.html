@@ -132,6 +132,7 @@
       box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 10px 24px rgba(0,0,0,.14);
       display:inline-flex;align-items:center;justify-content:center
     }
+    .video-control-btn:disabled{opacity:.42;cursor:not-allowed}
     .video-time{
       display:inline-flex;align-items:center;gap:8px;padding:10px 14px;color:var(--cream2);
       font-size:12px;font-weight:700;letter-spacing:.02em
@@ -308,6 +309,7 @@
             <div class="video-control-group">
               <button class="video-control-btn" id="videoMuteBtn" type="button" aria-label="Silenciar">Vol</button>
               <input class="video-volume" id="videoVolume" type="range" min="0" max="1" step="0.05" value="1" aria-label="Volumen">
+              <button class="video-control-btn" id="videoSubtitleBtn" type="button" aria-label="Cambiar subtitulos">Sub</button>
               <button class="video-control-btn" id="videoFullscreenBtn" type="button" aria-label="Pantalla completa">Full</button>
             </div>
           </div>
@@ -387,6 +389,7 @@
     const videoDuration = document.getElementById('videoDuration');
     const videoMuteBtn = document.getElementById('videoMuteBtn');
     const videoVolume = document.getElementById('videoVolume');
+    const videoSubtitleBtn = document.getElementById('videoSubtitleBtn');
     const videoFullscreenBtn = document.getElementById('videoFullscreenBtn');
     const nextEpFab = document.getElementById('nextEpFab');
     const nextEpOverlay = document.getElementById('nextEpOverlay');
@@ -431,6 +434,10 @@
     let movieRecoDismissed = false;
     let shouldAutoplayCurrentMedia = false;
     let useNativeVideoControls = shouldPreferNativeVideoControls();
+    let subtitleEntries = [];
+    let subtitleBlobUrls = [];
+    let activeSubtitleIndex = -1;
+    let subtitleLoadToken = 0;
 
     function shouldPreferNativeVideoControls() {
       const ua = navigator.userAgent || '';
@@ -489,6 +496,10 @@
       videoMuteBtn.addEventListener('click', (event) => {
         event.stopPropagation();
         toggleMute();
+      });
+      videoSubtitleBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        cycleSubtitleTrack();
       });
       videoFullscreenBtn.addEventListener('click', async (event) => {
         event.stopPropagation();
@@ -552,9 +563,167 @@
       videoLoader.style.display = 'none';
     }
 
+    function getMediaSubtitleSource(media = null) {
+      return String(media?.subtitulos || '').trim();
+    }
+
+    function inferSubtitleLabel(source = '', index = 0) {
+      const raw = String(source || '').toLowerCase();
+      if (/(^|[^a-z])(es|esp|spanish|latino|espanol)([^a-z]|$)/.test(raw)) return 'Espanol';
+      if (/(^|[^a-z])(en|eng|english|ingles)([^a-z]|$)/.test(raw)) return 'English';
+      return `Sub ${index + 1}`;
+    }
+
+    function inferSubtitleLang(label = '', source = '') {
+      const raw = `${label} ${source}`
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '');
+      if (/(^|[^a-z])(en|eng|english|ingles)([^a-z]|$)/.test(raw)) return 'en';
+      return 'es';
+    }
+
+    function getSubtitleShortLabel(label = '', lang = 'es') {
+      if (lang === 'en') return 'EN';
+      if (lang === 'es') return 'ES';
+      const compact = String(label || '').replace(/[^a-z0-9]+/gi, '').toUpperCase();
+      return compact.slice(0, 3) || 'SUB';
+    }
+
+    function resolveSubtitleUrl(value = '') {
+      const raw = String(value || '').trim();
+      if (!raw) return '';
+      return isAbsoluteHttpUrl(raw) ? raw : buildR2Url(raw);
+    }
+
+    function parseSubtitleEntries(rawValue = '') {
+      return String(rawValue || '')
+        .split(/\r?\n+/)
+        .map((line) => String(line || '').trim())
+        .filter(Boolean)
+        .map((line, index) => {
+          const parts = line.split('|').map((part) => String(part || '').trim()).filter(Boolean);
+          const source = parts.length > 1 ? parts.slice(1).join('|') : parts[0];
+          const label = parts.length > 1 ? parts[0] : inferSubtitleLabel(source, index);
+          const lang = inferSubtitleLang(label, source);
+          const src = resolveSubtitleUrl(source);
+          if (!src) return null;
+          return {
+            label,
+            shortLabel: getSubtitleShortLabel(label, lang),
+            lang,
+            src
+          };
+        })
+        .filter(Boolean);
+    }
+
+    function convertSrtToVtt(text = '') {
+      const clean = String(text || '')
+        .replace(/^\uFEFF/, '')
+        .replace(/\r+/g, '')
+        .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+      return `WEBVTT\n\n${clean}`;
+    }
+
+    function syncSubtitleButton() {
+      if (!videoSubtitleBtn) return;
+      const hasSubtitles = subtitleEntries.length > 0;
+      const activeEntry = activeSubtitleIndex >= 0 ? subtitleEntries[activeSubtitleIndex] : null;
+      videoSubtitleBtn.disabled = !hasSubtitles;
+      videoSubtitleBtn.textContent = hasSubtitles
+        ? (activeEntry ? activeEntry.shortLabel : 'Off')
+        : 'Sub';
+      videoSubtitleBtn.title = hasSubtitles
+        ? (activeEntry ? `Subtitulos: ${activeEntry.label}` : 'Subtitulos apagados')
+        : 'Sin subtitulos';
+    }
+
+    function clearLoadedSubtitles() {
+      subtitleLoadToken += 1;
+      activeSubtitleIndex = -1;
+      subtitleEntries = [];
+      if (currentVideo) {
+        [...currentVideo.querySelectorAll('track')].forEach((track) => track.remove());
+        const tracks = currentVideo.textTracks || [];
+        for (let index = 0; index < tracks.length; index += 1) {
+          tracks[index].mode = 'disabled';
+        }
+      }
+      subtitleBlobUrls.forEach((url) => URL.revokeObjectURL(url));
+      subtitleBlobUrls = [];
+      syncSubtitleButton();
+    }
+
+    function setSubtitleTrack(nextIndex = -1) {
+      if (!currentVideo) return;
+      const tracks = currentVideo.textTracks || [];
+      activeSubtitleIndex = nextIndex >= 0 && nextIndex < tracks.length ? nextIndex : -1;
+      for (let index = 0; index < tracks.length; index += 1) {
+        tracks[index].mode = index === activeSubtitleIndex ? 'showing' : 'disabled';
+      }
+      syncSubtitleButton();
+    }
+
+    function cycleSubtitleTrack() {
+      if (!subtitleEntries.length || !currentVideo) return;
+      const nextIndex = activeSubtitleIndex >= subtitleEntries.length - 1
+        ? -1
+        : activeSubtitleIndex + 1;
+      setSubtitleTrack(nextIndex);
+      showCustomControls(true);
+    }
+
+    async function loadSubtitleTracks(video, media) {
+      clearLoadedSubtitles();
+      const entries = parseSubtitleEntries(getMediaSubtitleSource(media));
+      subtitleEntries = entries;
+      syncSubtitleButton();
+      if (!entries.length) return;
+
+      const loadToken = subtitleLoadToken;
+      const loadedEntries = [];
+      for (const entry of entries) {
+        try {
+          const response = await fetch(entry.src, {
+            method: 'GET',
+            cache: 'no-store'
+          });
+          if (!response.ok) throw new Error(`No se pudo leer ${entry.src}`);
+
+          const srtText = await response.text();
+          if (loadToken !== subtitleLoadToken) return;
+
+          const blobUrl = URL.createObjectURL(new Blob([convertSrtToVtt(srtText)], { type: 'text/vtt' }));
+          subtitleBlobUrls.push(blobUrl);
+
+          const track = document.createElement('track');
+          track.kind = 'subtitles';
+          track.label = entry.label;
+          track.srclang = entry.lang;
+          track.src = blobUrl;
+          video.appendChild(track);
+          loadedEntries.push(entry);
+        } catch (error) {
+          console.warn('No se pudo cargar subtitulo SRT.', error);
+        }
+      }
+
+      if (loadToken !== subtitleLoadToken) return;
+      subtitleEntries = loadedEntries;
+      activeSubtitleIndex = -1;
+      setSubtitleTrack(-1);
+      syncSubtitleButton();
+    }
+
     function renderPlayer() {
       const media = currentEpisode || currentContent;
       if (!media) return;
+
+      clearLoadedSubtitles();
+      videoBox.querySelectorAll('video, iframe').forEach((node) => node.remove());
+      currentVideo = null;
+      videoLoader.style.display = 'flex';
 
       const directUrl = buildR2Url(media.r2Url || '');
 
@@ -599,6 +768,7 @@
         });
         videoBox.appendChild(video);
         currentVideo = video;
+        void loadSubtitleTracks(video, media);
         syncCustomVideoUi();
         showCustomControls(true);
       } else if (media.driveUrl) {
@@ -719,49 +889,65 @@
       return list.map((entry) => String(entry || '').trim()).filter(Boolean);
     }
 
-    function getMovieRecommendationItems(limit = 2) {
+    function getRecoComparableTokens(item = {}) {
+      return {
+        category: normalizeRecoValue(item.categoria),
+        genres: new Set(toRecoList(item.generos).map(normalizeRecoValue).filter(Boolean)),
+        tags: new Set(toRecoList(item.tags).map(normalizeRecoValue).filter(Boolean))
+      };
+    }
+
+    function getRecoSimilarityScore(seed, candidate) {
+      if (!seed || !candidate || seed.id === candidate.id) return 0;
+
+      const seedTokens = getRecoComparableTokens(seed);
+      const candidateTokens = getRecoComparableTokens(candidate);
+      let score = 22;
+
+      if (candidate.tipo === seed.tipo) score += 6;
+      if (seedTokens.category && seedTokens.category === candidateTokens.category) score += 16;
+      seedTokens.genres.forEach((genre) => {
+        if (candidateTokens.genres.has(genre)) score += 10;
+      });
+      seedTokens.tags.forEach((tag) => {
+        if (candidateTokens.tags.has(tag)) score += 5;
+      });
+      if (normalizeRecoValue(seed.clasificacion) && normalizeRecoValue(seed.clasificacion) === normalizeRecoValue(candidate.clasificacion)) score += 2;
+      if (normalizeRecoValue(seed.idioma) && normalizeRecoValue(seed.idioma) === normalizeRecoValue(candidate.idioma)) score += 2;
+
+      const seedYear = Number(mediaYear(seed) || 0);
+      const candidateYear = Number(mediaYear(candidate) || 0);
+      const yearGap = seedYear && candidateYear ? Math.abs(seedYear - candidateYear) : 99;
+      if (yearGap <= 3) score += 4;
+      else if (yearGap <= 8) score += 2;
+
+      return score;
+    }
+
+    function getMovieRecommendationItems(limit = 3) {
       if (!currentContent) return [];
-      const currentCategory = normalizeRecoValue(currentContent.categoria);
-      const currentGenres = new Set(toRecoList(currentContent.generos).map(normalizeRecoValue));
+      const favoriteIds = new Set(
+        (FF_STATE.userState.favorites || [])
+          .map((favorite) => String(favorite.contenidoId || ''))
+          .filter(Boolean)
+      );
 
-      const buildEntries = (items) => items
+      return FF_STATE.content
+        .filter((item) => item.id !== currentContent.id && item.estado === 'activo')
         .map((item) => {
-          const itemGenres = toRecoList(item.generos);
-          const sharedGenres = itemGenres.filter((genre) => currentGenres.has(normalizeRecoValue(genre))).length;
           const progress = getContentProgressState(item);
-          let score = 0;
+          let score = getRecoSimilarityScore(currentContent, item);
 
-          if (item.tipo === 'pelicula') score += 3;
-          if (currentCategory && normalizeRecoValue(item.categoria) === currentCategory) score += 2;
-          score += sharedGenres * 4;
-          if (progress.percent > 0 && progress.percent < 100) score += 2;
-          if (item.destacado) score += 1;
+          if (progress.percent > 0 && progress.percent < 100) score += 7;
+          if (favoriteIds.has(item.id)) score += 4;
+          if (item.destacado) score += 2;
           if (item.tipo === 'serie' && !getSeriesEpisodes(item.id).length) score -= 20;
 
-          return { item, progress, score, sharedGenres };
+          return { item, progress, score };
         })
-        .filter((entry) => entry.score > -10)
-        .sort((a, b) => {
-          const diff = b.score - a.score;
-          if (diff) return diff;
-          return String(a.item.titulo || '').localeCompare(String(b.item.titulo || ''), 'es');
-        });
-
-      const baseItems = FF_STATE.content.filter((item) => item.id !== currentContent.id && item.estado === 'activo');
-      const sameGenreEntries = buildEntries(baseItems.filter((item) =>
-        toRecoList(item.generos).some((genre) => currentGenres.has(normalizeRecoValue(genre)))
-      ));
-
-      if (sameGenreEntries.length >= limit) {
-        return sameGenreEntries.slice(0, limit);
-      }
-
-      const usedIds = new Set(sameGenreEntries.map((entry) => entry.item.id));
-      const fallbackEntries = buildEntries(baseItems.filter((item) =>
-        !usedIds.has(item.id) && (!currentCategory || normalizeRecoValue(item.categoria) === currentCategory)
-      ));
-
-      return [...sameGenreEntries, ...fallbackEntries].slice(0, limit);
+        .filter((entry) => entry.score > 28)
+        .sort((a, b) => b.score - a.score || String(a.item.titulo || '').localeCompare(String(b.item.titulo || ''), 'es'))
+        .slice(0, limit);
     }
 
     function renderMovieRecommendations() {
@@ -935,6 +1121,7 @@
       videoMuteBtn.textContent = muted ? 'Mute' : 'Vol';
       videoVolume.value = muted ? '0' : String(Number(currentVideo.volume || 0));
       videoFullscreenBtn.textContent = fullscreen ? 'Salir' : 'Full';
+      syncSubtitleButton();
       if (!isSeeking) {
         videoSeek.value = String(duration ? Math.round((current / duration) * 1000) : 0);
         setSeekFill(progress);
@@ -1107,7 +1294,8 @@
         currentContent?.categoria,
         mediaYear(currentContent),
         media?.duracion,
-        currentContent?.clasificacion
+        currentContent?.clasificacion,
+        (buildR2Url(media.r2Url || '') && getMediaSubtitleSource(media)) ? 'Subtitulos SRT' : ''
       ].filter(Boolean).map(v => `<span>${escapeHtml(String(v))}</span>`).concat(
         buildRatingPill(currentContent, { showCount: true, showSource: true })
       ).join('');
@@ -1371,6 +1559,8 @@
       hideNextEpisodeOverlay();
       goToEpisode(nextId);
     }
+
+    window.addEventListener('beforeunload', clearLoadedSubtitles);
 
     init();
   </script>
