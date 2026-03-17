@@ -189,9 +189,9 @@
     }
     body.home-screen .hero-bg-layer{
       opacity:0;
-      transform:scale(1.03);
+      transform:scale(1.008);
       filter:none;
-      transition:opacity .96s ease, transform 1.9s ease;
+      transition:opacity .78s ease, transform 1.18s ease;
       will-change:opacity, transform;
     }
     body.home-screen .hero-bg-layer.is-active{
@@ -202,7 +202,7 @@
     }
     body.home-screen .hero-bg-layer.is-leaving{
       opacity:0;
-      transform:scale(1.015);
+      transform:scale(1.01);
       filter:none;
       animation:none;
     }
@@ -1073,7 +1073,7 @@
       --hero-shift-y:0px;
     }
     body.home-screen .hero-bg{
-      transform:translate3d(calc(var(--hero-shift-x) * -.18), calc(var(--hero-shift-y) * -.18), 0) scale(1.02);
+      transform:translate3d(calc(var(--hero-shift-x) * -.18), calc(var(--hero-shift-y) * -.18), 0) scale(1.004);
       transition:transform .42s ease;
     }
     body.home-screen .hero-vignette{
@@ -1842,8 +1842,8 @@
     let deferInitialDesktopHome = false;
     let initialDesktopHomeRenderToken = 0;
     let homeRowsRenderToken = 0;
-    const HERO_BACKDROP_ROTATION_MS = 8800;
-    const HERO_LAYER_CROSSFADE_MS = 1150;
+    const HERO_BACKDROP_ROTATION_MS = 6200;
+    const HERO_LAYER_CROSSFADE_MS = 820;
     const MODAL_BACKDROP_ROTATION_MS = 6400;
     const MODAL_LAYER_CROSSFADE_MS = 980;
 
@@ -2892,7 +2892,7 @@
       if (!items.length) return 24000;
       const featured = items[heroRotationIndex % items.length] || items[0] || null;
       const backdropCount = Math.max(1, getHeroBackdropSources(featured).length);
-      return Math.max(26000, (backdropCount * HERO_BACKDROP_ROTATION_MS) + 3200);
+      return Math.min(18000, Math.max(13000, (backdropCount * HERO_BACKDROP_ROTATION_MS) + 600));
     }
 
     function stopHeroBackdropRotation() {
