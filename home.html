@@ -1470,31 +1470,21 @@
     }
     .modal-related__row{
       display:grid;
-      grid-auto-flow:column;
-      grid-auto-columns:minmax(180px,220px);
-      gap:14px;
-      overflow:auto;
-      padding:2px 2px 8px;
-      scroll-snap-type:x proximity;
-      scrollbar-width:none;
-      -ms-overflow-style:none;
-    }
-    .modal-related__row::-webkit-scrollbar{
-      display:none;
-    }
-    .modal-related__row > *{
-      scroll-snap-align:start;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:16px;
+      padding-top:4px;
+      align-items:start;
     }
     .modal-related-card .card-img{
-      aspect-ratio:16/10;
+      aspect-ratio:16/9;
       border-radius:20px 20px 18px 18px;
     }
     .modal-related-card .card-body{
-      margin-top:-14px;
-      padding:18px 14px 14px;
+      margin-top:-12px;
+      padding:16px 14px 14px;
     }
     .modal-related-card .card-title{
-      font-size:14px;
+      font-size:15px;
     }
     .modal-related-card .card-sub{
       font-size:11px;
@@ -1514,40 +1504,22 @@
       letter-spacing:-.04em;
     }
     .episode-item{
-      align-items:stretch;
-      gap:16px;
-      padding:14px 0;
-    }
-    .episode-item__media{
-      width:132px;
-      flex-shrink:0;
-      border-radius:18px;
-      overflow:hidden;
-      background:linear-gradient(135deg, rgba(18,24,38,.96), rgba(10,14,22,.98));
-      border:1px solid rgba(255,255,255,.06);
-      box-shadow:0 18px 40px rgba(0,0,0,.18);
-    }
-    .episode-item__media .media-image-shell,
-    .episode-item__media .media-image-shell img,
-    .episode-item__media .media-fallback{
-      width:100%;
-      height:100%;
+      display:block;
+      padding:16px 0;
     }
     .episode-item__main{
-      flex:1;
-      min-width:0;
       display:grid;
       gap:10px;
     }
     .episode-item__top{
-      display:flex;
+      display:grid;
+      grid-template-columns:minmax(0,1fr) auto;
       align-items:flex-start;
-      justify-content:space-between;
       gap:14px;
     }
     .episode-item__title{
       font-size:15px;
-      line-height:1.4;
+      line-height:1.45;
       color:var(--cream);
     }
     .episode-item__synopsis{
@@ -1555,7 +1527,7 @@
       font-size:13px;
       line-height:1.6;
       display:-webkit-box;
-      -webkit-line-clamp:2;
+      -webkit-line-clamp:3;
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
@@ -1588,20 +1560,13 @@
         max-height:96px;
       }
       .modal-related__row{
-        grid-auto-columns:minmax(160px,70vw);
+        grid-template-columns:1fr;
       }
       .modal-media-bottom{
         padding-bottom:92px;
       }
-      .episode-item{
-        flex-direction:column;
-      }
-      .episode-item__media{
-        width:100%;
-        aspect-ratio:16/9;
-      }
       .episode-item__top{
-        flex-direction:column;
+        grid-template-columns:1fr;
       }
     }
     @media(max-width:560px){
@@ -4212,8 +4177,8 @@
       `;
     }
 
-    function buildModalRelatedItems(item, limit = 6) {
-      if (!item) return [];
+    function buildModalRelatedItems(item, limit = 4) {
+        if (!item) return [];
 
       const movieGroups = activeSagaGroups.length
         ? activeSagaGroups
@@ -4362,7 +4327,9 @@
       document.getElementById('mProgress').innerHTML = renderModalProgress(item);
       document.getElementById('mSynopsis').textContent = item.sinopsis || 'Sinopsis no disponible.';
       document.getElementById('mTags').innerHTML = (item.tags || []).map((tag) => `<span class="tag">#${escapeHtml(tag)}</span>`).join('');
-      document.getElementById('mRelatedWrap').innerHTML = renderModalRelated(buildModalRelatedItems(item));
+      document.getElementById('mRelatedWrap').innerHTML = item.tipo === 'pelicula'
+        ? renderModalRelated(buildModalRelatedItems(item, 4))
+        : '';
       document.getElementById('mPlayBtn').textContent = primaryLabel;
       document.getElementById('mPlayBtn').onclick = () => playPrimaryAction(item.id);
 
@@ -4403,23 +4370,24 @@
         blocks.push(`
           <div class="season-box">
             <div class="season-title">Temporada ${season}</div>
-            ${list.map((episode) => `
-              <div class="episode-item">
-                <div class="episode-item__media">
-                  ${mediaCardImage(episode.portadaUrl || serie.portadaUrl, 'EP', episode.titulo)}
-                </div>
-                <div class="episode-item__main">
-                  <div class="episode-item__top">
-                    <div>
-                      <div class="episode-item__title"><strong>E${episode.numeroEpisodio}.</strong> ${escapeHtml(episode.titulo)}</div>
-                      <div class="ep-meta">${escapeHtml(renderEpisodeProgressMeta(serie.id, episode))}</div>
+            ${list.map((episode) => {
+              const progress = getEpisodeProgressState(serie.id, episode.id, episode.duracion);
+              const progressLabel = renderEpisodeProgressMeta(serie.id, episode);
+              return `
+                <div class="episode-item">
+                  <div class="episode-item__main">
+                    <div class="episode-item__top">
+                      <div>
+                        <div class="episode-item__title"><strong>E${episode.numeroEpisodio}.</strong> ${escapeHtml(episode.titulo)}</div>
+                        <div class="ep-meta">${escapeHtml(progressLabel)}</div>
+                      </div>
+                      <button class="btn btn-ghost" type="button" onclick="playEpisode('${serie.id}','${episode.id}')">${progress.hasProgress ? 'Continuar' : 'Ver'}</button>
                     </div>
-                    <button class="btn btn-ghost" type="button" onclick="playEpisode('${serie.id}','${episode.id}')">${getEpisodeProgressState(serie.id, episode.id, episode.duracion).hasProgress ? 'Continuar' : 'Ver'}</button>
+                    ${progress.hasProgress ? `<div class="modal-episode-progress"><div class="modal-episode-progress-fill" style="width:${progress.percent}%"></div></div>` : ''}
+                    ${episode.sinopsis ? `<div class="episode-item__synopsis">${escapeHtml(episode.sinopsis)}</div>` : ''}
                   </div>
-                  ${episode.sinopsis ? `<div class="episode-item__synopsis">${escapeHtml(episode.sinopsis)}</div>` : ''}
-                  ${getEpisodeProgressState(serie.id, episode.id, episode.duracion).hasProgress ? `<div class="modal-episode-progress"><div class="modal-episode-progress-fill" style="width:${getEpisodeProgressState(serie.id, episode.id, episode.duracion).percent}%"></div></div>` : ''}
-                </div>
-              </div>`).join('')}
+                </div>`;
+            }).join('')}
           </div>`);
       }
       return `<div class="modal-episodes">${blocks.join('')}</div>`;
