@@ -1531,6 +1531,11 @@
       -webkit-box-orient:vertical;
       overflow:hidden;
     }
+    .episode-item__action{
+      justify-self:end;
+      align-self:start;
+      white-space:nowrap;
+    }
     @media(max-width:900px){
       .hero-panel{
         max-width:min(100%,560px);
@@ -1541,7 +1546,17 @@
     }
     @media(max-width:640px){
       body.home-screen .hero-content{
-        min-height:min(72vh,620px);
+        min-height:min(76vh,660px)!important;
+        padding:34px 16px 28px!important;
+      }
+      body.home-screen .hero-desc{
+        display:-webkit-box;
+        -webkit-line-clamp:5;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+        max-width:min(100%,32ch);
+        font-size:13px;
+        line-height:1.58;
       }
       .hero-panel{
         max-width:none;
@@ -1552,12 +1567,25 @@
       }
       .hero-copy{
         max-width:min(100%,420px);
+        gap:12px;
+      }
+      .hero-mini-actions{
+        margin-top:8px;
+        align-items:flex-start;
+      }
+      .hero-info-link{
+        width:auto;
+        min-height:40px;
+        padding:0 16px;
       }
       .hero-title--logo{
         max-width:min(100%,360px);
       }
       .hero-title-logo{
         max-height:96px;
+      }
+      body.home-screen .hero-dots{
+        margin-top:8px;
       }
       .modal-related__row{
         grid-template-columns:1fr;
@@ -1566,12 +1594,29 @@
         padding-bottom:92px;
       }
       .episode-item__top{
-        grid-template-columns:1fr;
+        grid-template-columns:minmax(0,1fr) auto;
+        align-items:center;
+        gap:12px;
+      }
+      .episode-item__action{
+        align-self:center;
+        min-height:36px;
+        padding:0 14px;
+        font-size:12px;
+        border-radius:12px;
       }
     }
     @media(max-width:560px){
       .hero-panel{
         gap:12px;
+      }
+      .hero-mini-actions{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .hero-info-link{
+        align-self:flex-start;
+        width:auto;
       }
       .continue-spotlight__title-logo{
         max-height:82px;
@@ -4381,7 +4426,7 @@
                         <div class="episode-item__title"><strong>E${episode.numeroEpisodio}.</strong> ${escapeHtml(episode.titulo)}</div>
                         <div class="ep-meta">${escapeHtml(progressLabel)}</div>
                       </div>
-                      <button class="btn btn-ghost" type="button" onclick="playEpisode('${serie.id}','${episode.id}')">${progress.hasProgress ? 'Continuar' : 'Ver'}</button>
+                      <button class="btn btn-ghost episode-item__action" type="button" onclick="playEpisode('${serie.id}','${episode.id}')">${progress.hasProgress ? 'Continuar' : 'Ver'}</button>
                     </div>
                     ${progress.hasProgress ? `<div class="modal-episode-progress"><div class="modal-episode-progress-fill" style="width:${progress.percent}%"></div></div>` : ''}
                     ${episode.sinopsis ? `<div class="episode-item__synopsis">${escapeHtml(episode.sinopsis)}</div>` : ''}
