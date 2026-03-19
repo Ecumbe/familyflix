@@ -1,1080 +1,1842 @@
-// ============================================================
-// FamilyFlix — Google Apps Script v3
-// Base completa para usuarios, login, contenido, episodios,
-// progreso, favoritos y continuar viendo.
-//
-// 1) Pega este archivo completo en script.google.com
-// 2) Cambia SOLO la constante SHEET_ID
-// 3) Ejecuta manualmente initSystem() una sola vez
-// 4) Implementar -> Nueva implementación -> Aplicación web
-// 5) Acceso: Cualquier persona con el enlace
-// ============================================================
+/* =========================================================
+   FamilyFlix v6.1 — shared.js
+   Base completa para frontend + Google Apps Script + Worker
+   Ajustado para Apps Script vía GET (evita CORS en GitHub Pages)
+   ========================================================= */
 
-const SHEET_ID = '1-_lNyCaFw2s0uGrg1FezzuzW43qGNCHB2i3S_AAt6jI';
-const VIDEO_BASE_URL_PROPERTY = 'familyflix_video_base_url';
-const VIDEO_BASE_URL_UPDATED_AT_PROPERTY = 'familyflix_video_base_url_updated_at';
-const VIDEO_BASE_URL_SOURCE_PROPERTY = 'familyflix_video_base_url_source';
-
-const SHEETS = {
-  contenido: 'contenido',
-  episodios: 'episodios',
-  usuarios: 'usuarios',
-  progreso: 'progreso',
-  favoritos: 'favoritos',
-  continuar: 'continuar_viendo',
+const FF_CONFIG = {
+  APPS_SCRIPT_URL: 'https://script.google.com/macros/s/AKfycbyksursDb7DMx8wXL4nodOqLwI9UvLP-e5PgLF2BTm1wU18MLPgz0va2g_CDPaS5XyZfA/exec',
+  WORKER_URL: 'https://familyflix-worker.canonedu17.workers.dev',
+  SHEETS: {
+    CONTENT_TSV: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=0&single=true&output=tsv',
+    EPISODES_TSV: 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQLDXRtWlOPk8n9cz8UwzvB_0G3gHCUofVDgF5azBpUFPo0ZQuZDl2230T8mLkyA1N9dYtkkuQP0Y1w/pub?gid=1661853453&single=true&output=tsv'
+  },
+  R2_PUBLIC_BASE: 'https://pub-eb7091956e164433aa5c9ef0bcc70356.r2.dev/',
+  STORAGE_KEYS: {
+    THEME: 'ff_theme',
+    SESSION: 'ff_session',
+    ADMIN_SECRET: 'ff_admin_secret',
+    VIDEO_BASE_URL: 'ff_video_base_url',
+    CONTENT_CACHE: 'ff_content_cache_v3',
+    EPISODES_CACHE: 'ff_episodes_cache_v1'
+  },
+  CATALOG_CACHE_TTL_MS: 5 * 60 * 1000
 };
 
-const HEADERS = {
-  contenido: [
-    'id','titulo','tituloOriginal','tipo','categoria','generos','año','sinopsis','tags',
-    'portadaUrl','backdropUrl','r2Url','driveUrl','destacado','duracion','clasificacion',
-    'idioma','estado','usuariosPermitidos','fechaRegistro','creadoPor','rating','ratingCount','ratingSource','subtitulos','logoUrl','previewVideoUrl','previewStart'
-  ],
-  episodios: [
-    'id','serieId','temporada','numeroEpisodio','titulo','tituloOriginal','sinopsis',
-    'duracion','r2Url','driveUrl','portadaUrl','airDate','estado','fechaRegistro','creadoPor','subtitulos','previewVideoUrl','previewStart'
-  ],
-  usuarios: [
-    'id','usuario','passwordHash','nombreMostrado','rol','estado','avatarUrl','fechaCreacion','creadoPor'
-  ],
-  progreso: [
-    'id','usuarioId','contenidoId','episodioId','tipo','temporada','numeroEpisodio',
-    'segundosVistos','duracionSegundos','porcentaje','completado','ultimaVisualizacion','estado'
-  ],
-  favoritos: [
-    'id','usuarioId','contenidoId','episodioId','tipo','fechaAgregado'
-  ],
-  continuar: [
-    'id','usuarioId','contenidoId','episodioId','tipo','tituloMostrado','portadaUrl',
-    'segundosVistos','duracionSegundos','porcentaje','ultimaVisualizacion'
-  ],
+const FF_STATE = {
+  content: [],
+  episodes: [],
+  videoBaseUrl: '',
+  videoBaseLoaded: false,
+  videoBaseLoadingPromise: null,
+  contentLoadingPromise: null,
+  episodesLoadingPromise: null,
+  userStateLoadingPromise: null,
+  userState: {
+    progress: [],
+    favorites: [],
+    continueWatching: []
+  },
+  indexes: {
+    contentById: new Map(),
+    episodeById: new Map(),
+    episodesBySeries: new Map(),
+    favoriteKeys: new Set(),
+    progressByKey: new Map(),
+    latestSeriesProgressByContent: new Map()
+  }
 };
 
-function doPost(e) {
-  return handleRequest_(e, 'POST');
+/* -------------------------------
+   Utilidades base
+--------------------------------*/
+function escapeHtml(str = '') {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
 
-function doGet(e) {
-  return handleRequest_(e, 'GET');
+function slugify(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim();
 }
 
-function handleRequest_(e, method) {
+function fmtDateTime(date = new Date()) {
+  const d = new Date(date);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  const ss = String(d.getSeconds()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}:${ss}`;
+}
+
+function fmtDurationSeconds(seconds = 0) {
+  const s = Math.max(0, Math.floor(Number(seconds) || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+}
+
+function parseDurationToSeconds(value = '') {
+  const txt = String(value || '').trim();
+  if (!txt) return 0;
+
+  if (/^\d+$/.test(txt)) return Number(txt);
+
+  const parts = txt.split(':').map(v => Number(v));
+  if (parts.some(Number.isNaN)) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return 0;
+}
+
+function safeJsonParse(text, fallback = null) {
   try {
-    const payload = parsePayload_(e, method);
-    const action = String(payload.action || '').trim();
-    const data = payload.data || payload.row || {};
-
-    switch (action) {
-      case 'ping':
-        return out_({ ok: true, message: 'FamilyFlix Apps Script v3 activo ✅' });
-
-      case 'initSystem':
-        return out_({ ok: true, result: initSystem() });
-
-      case 'login':
-        return out_(login_(data));
-
-      case 'createUser':
-        return out_(createUser_(data));
-
-      case 'listUsers':
-        return out_({ ok: true, users: listUsers_() });
-
-      case 'updateUser':
-        return out_(updateUser_(data));
-
-      case 'deleteUser':
-        return out_(deleteUser_(data));
-
-      case 'toggleUserStatus':
-        return out_(toggleUserStatus_(data));
-
-      case 'changePassword':
-        return out_(changePassword_(data));
-
-      case 'addContent':
-      case 'addOrUpdateContent':
-        return out_(addOrUpdateContent_(data));
-
-      case 'deleteContent':
-        return out_(deleteContent_(data));
-
-      case 'addEpisode':
-      case 'addOrUpdateEpisode':
-        return out_(addOrUpdateEpisode_(data));
-
-      case 'deleteEpisode':
-        return out_(deleteEpisode_(data));
-
-      case 'listCatalog':
-        return out_({ ok: true, content: listCatalog_() });
-
-      case 'listEpisodes':
-        return out_({ ok: true, episodes: listEpisodes_() });
-
-      case 'listSeries':
-        return out_({ ok: true, series: listSeries_() });
-
-      case 'getVideoBaseUrl':
-        return out_(getVideoBaseUrl_());
-
-      case 'setVideoBaseUrl':
-        return out_(setVideoBaseUrl_(data));
-
-      case 'syncQuickTunnelUrls':
-        return out_(syncQuickTunnelUrls_(data));
-
-      case 'saveProgress':
-        return out_(saveProgress_(data));
-
-      case 'toggleFavorite':
-        return out_(toggleFavorite_(data));
-
-      case 'listFavorites':
-        return out_(listFavorites_(data));
-
-      case 'upsertContinueWatching':
-        return out_(upsertContinueWatching_(data));
-
-      case 'getUserState':
-      case 'getUserBootstrap':
-        return out_(getUserBootstrap_(data));
-
-      default:
-        return out_({ ok: false, error: 'Acción desconocida: ' + action });
-    }
-  } catch (err) {
-    return out_({ ok: false, error: err.message, stack: String(err.stack || '') });
+    return JSON.parse(text);
+  } catch {
+    return fallback;
   }
 }
 
-function parsePayload_(e, method) {
-  if (method === 'POST') {
-    const raw = e && e.postData && e.postData.contents ? e.postData.contents : '{}';
-    return JSON.parse(raw || '{}');
+function debounce(fn, delay = 500) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), delay);
+  };
+}
+
+function splitTags(value = '') {
+  return String(value || '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function normalizeRatingValue(value = '') {
+  const normalized = Number(String(value ?? '').replace(',', '.').trim());
+  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
+  return Math.max(0, Math.min(10, Math.round(normalized * 10) / 10));
+}
+
+function normalizeRatingCount(value = 0) {
+  const normalized = Number(String(value ?? '').replace(/[^\d.-]/g, '').trim());
+  if (!Number.isFinite(normalized) || normalized <= 0) return 0;
+  return Math.round(normalized);
+}
+
+function formatRatingCount(value = 0) {
+  const count = normalizeRatingCount(value);
+  if (!count) return '';
+  if (count >= 1000000) {
+    return `${(count / 1000000).toFixed(count >= 10000000 ? 0 : 1).replace(/\.0$/, '')}M`;
   }
-  const action = e && e.parameter ? e.parameter.action : '';
-  const dataRaw = e && e.parameter ? e.parameter.data : '{}';
-  return { action: action, data: JSON.parse(dataRaw || '{}') };
+  if (count >= 1000) {
+    return `${(count / 1000).toFixed(count >= 10000 ? 0 : 1).replace(/\.0$/, '')}k`;
+  }
+  return String(count);
 }
 
-function out_(obj) {
-  return ContentService
-    .createTextOutput(JSON.stringify(obj))
-    .setMimeType(ContentService.MimeType.JSON);
+function getRatingState(item = {}) {
+  const rating = normalizeRatingValue(item.rating || '');
+  const count = normalizeRatingCount(item.ratingCount || 0);
+  const source = String(item.ratingSource || '').trim();
+  return {
+    rating,
+    count,
+    source,
+    hasRating: rating > 0,
+    fillPercent: Math.max(0, Math.min(100, rating * 10)),
+    valueText: rating ? rating.toFixed(1) : ''
+  };
 }
 
-// ============================================================
-// INICIALIZACIÓN
-// ============================================================
+function formatRatingShortText(item = {}) {
+  const state = getRatingState(item);
+  return state.hasRating ? `\u2605 ${state.valueText}` : '';
+}
 
-function initSystem() {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const created = [];
-  Object.keys(SHEETS).forEach((key) => {
-    const name = SHEETS[key];
-    let sh = ss.getSheetByName(name);
-    if (!sh) {
-      sh = ss.insertSheet(name);
-      created.push(name);
-    }
-    ensureHeader_(sh, HEADERS[key]);
+function buildRatingPill(item = {}, options = {}) {
+  const state = getRatingState(item);
+  if (!state.hasRating) return '';
+
+  const showCount = Boolean(options.showCount);
+  const showSource = Boolean(options.showSource);
+  const compact = Boolean(options.compact);
+  const classes = ['ff-rating-chip'];
+  if (compact) classes.push('ff-rating-chip--compact');
+  const starText = '\u2605\u2605\u2605\u2605\u2605';
+
+  const titleParts = [`${state.valueText}/10`];
+  if (state.count) titleParts.push(`${formatRatingCount(state.count)} votos`);
+  if (state.source) titleParts.push(state.source);
+
+  return `
+    <span class="${classes.join(' ')}" title="${escapeHtml(titleParts.join(' · '))}">
+      <span class="ff-rating-stars" aria-hidden="true">
+        <span class="ff-rating-stars-base">${starText}</span>
+        <span class="ff-rating-stars-fill" style="width:${state.fillPercent}%">${starText}</span>
+      </span>
+      <span class="ff-rating-value">${escapeHtml(state.valueText)}</span>
+      ${showCount && state.count ? `<span class="ff-rating-count">${escapeHtml(formatRatingCount(state.count))}</span>` : ''}
+      ${showSource && state.source ? `<span class="ff-rating-source">${escapeHtml(state.source)}</span>` : ''}
+    </span>
+  `.trim();
+}
+
+function isAllAudienceToken(value = '') {
+  const token = String(value || '').trim().toLowerCase();
+  return !token || token === 'todos' || token === '*' || token === 'all';
+}
+
+function normalizeAudienceTokens(value = '') {
+  const rawList = Array.isArray(value) ? value : splitTags(value);
+  const normalized = [];
+  const seen = new Set();
+
+  rawList.forEach((entry) => {
+    const raw = String(entry || '').trim();
+    const key = raw.toLowerCase();
+    if (!raw || seen.has(key)) return;
+    seen.add(key);
+    normalized.push(raw);
   });
 
-  seedAdminIfMissing_();
-
+  const all = !normalized.length || normalized.some(isAllAudienceToken);
   return {
-    message: 'Sistema inicializado correctamente.',
-    createdSheets: created,
-    sheets: SHEETS,
+    all,
+    list: all ? [] : normalized
   };
 }
 
-function ensureHeader_(sheet, headers) {
-  const current = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
-  const same = headers.every((h, i) => String(current[i] || '').trim() === h);
-  if (!same) {
-    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
-    sheet.setFrozenRows(1);
-  }
+function uniqueBy(arr = [], getKey = v => v) {
+  const map = new Map();
+  arr.forEach(item => map.set(getKey(item), item));
+  return [...map.values()];
 }
 
-function seedAdminIfMissing_() {
-  const sh = getSheet_('usuarios');
-  const rows = getObjects_('usuarios');
-  const exists = rows.some(r => normalize_(r.usuario) === 'admin');
-  if (exists) return;
-
-  sh.appendRow([
-    nextId_('usr'),
-    'admin',
-    hashPassword_('12345'),
-    'Administrador',
-    'admin',
-    'activo',
-    '',
-    nowIso_(),
-    'system',
-  ]);
+function qs(selector, root = document) {
+  return root.querySelector(selector);
 }
 
-// ============================================================
-// USUARIOS / LOGIN
-// ============================================================
-
-function login_(data) {
-  const usuario = normalize_(data.usuario);
-  const password = String(data.password || '');
-  if (!usuario || !password) {
-    return { ok: false, error: 'Usuario y contraseña son obligatorios.' };
-  }
-
-  const users = getObjects_('usuarios');
-  const found = users.find(u => normalize_(u.usuario) === usuario);
-  if (!found) {
-    return { ok: false, error: 'Usuario no encontrado.' };
-  }
-  if (normalize_(found.estado) !== 'activo') {
-    return { ok: false, error: 'Usuario inactivo.' };
-  }
-  if (found.passwordHash !== hashPassword_(password)) {
-    return { ok: false, error: 'Contraseña incorrecta.' };
-  }
-
-  return {
-    ok: true,
-    user: {
-      id: found.id,
-      usuario: found.usuario,
-      nombreMostrado: found.nombreMostrado,
-      rol: found.rol,
-      estado: found.estado,
-      avatarUrl: found.avatarUrl || '',
-    }
-  };
+function qsa(selector, root = document) {
+  return [...root.querySelectorAll(selector)];
 }
 
-function createUser_(data) {
-  const usuario = normalize_(data.usuario);
-  const password = String(data.password || '');
-  const nombreMostrado = String(data.nombreMostrado || '').trim();
-  const rol = normalize_(data.rol || 'familiar');
-  const estado = normalize_(data.estado || 'activo');
-  const avatarUrl = String(data.avatarUrl || '').trim();
-  const creadoPor = String(data.creadoPor || 'admin').trim();
-
-  if (!usuario) return { ok: false, error: 'El usuario es obligatorio.' };
-  if (!password) return { ok: false, error: 'La contraseña es obligatoria.' };
-  if (!nombreMostrado) return { ok: false, error: 'El nombre mostrado es obligatorio.' };
-  if (!['admin', 'familiar'].includes(rol)) return { ok: false, error: 'Rol inválido.' };
-  if (!['activo', 'inactivo'].includes(estado)) return { ok: false, error: 'Estado inválido.' };
-
-  const users = getObjects_('usuarios');
-  const exists = users.some(u => normalize_(u.usuario) === usuario);
-  if (exists) return { ok: false, error: 'Ese usuario ya existe.' };
-
-  const sh = getSheet_('usuarios');
-  sh.appendRow([
-    nextId_('usr'),
-    usuario,
-    hashPassword_(password),
-    nombreMostrado,
-    rol,
-    estado,
-    avatarUrl,
-    nowIso_(),
-    creadoPor,
-  ]);
-
-  return { ok: true, message: 'Usuario creado correctamente.' };
+function sleep(ms = 0) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function listUsers_() {
-  return getObjects_('usuarios').map(u => ({
-    id: u.id,
-    usuario: u.usuario,
-    nombreMostrado: u.nombreMostrado,
-    rol: u.rol,
-    estado: u.estado,
-    avatarUrl: u.avatarUrl || '',
-    fechaCreacion: u.fechaCreacion || '',
-    creadoPor: u.creadoPor || '',
-  }));
+/* -------------------------------
+   Tema
+--------------------------------*/
+function initTheme() {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
 }
 
-function updateUser_(data) {
-  const id = str_(data.id);
-  if (!id) return { ok: false, error: 'Falta el id del usuario.' };
+function toggleTheme() {
+  document.documentElement.setAttribute('data-theme', 'dark');
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
+}
 
-  const ref = findRowById_('usuarios', id);
-  if (!ref) return { ok: false, error: 'Usuario no encontrado.' };
+/* -------------------------------
+   Toast
+--------------------------------*/
+function ensureToastEl() {
+  let el = document.getElementById('_ff_toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = '_ff_toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  return el;
+}
 
-  const current = ref.obj || {};
-  const usuario = normalize_(data.usuario || current.usuario);
-  const password = String(data.password || '');
-  const nombreMostrado = str_(data.nombreMostrado || current.nombreMostrado);
-  const rol = normalize_(data.rol || current.rol || 'familiar');
-  const estado = normalize_(data.estado || current.estado || 'activo');
-  const avatarUrl = data.avatarUrl === undefined ? str_(current.avatarUrl) : str_(data.avatarUrl);
+function showToast(message, type = 'success') {
+  const el = ensureToastEl();
+  el.className = `toast ${type} show`;
+  el.textContent = message;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3200);
+}
 
-  if (!usuario) return { ok: false, error: 'El usuario es obligatorio.' };
-  if (!nombreMostrado) return { ok: false, error: 'El nombre mostrado es obligatorio.' };
-  if (!['admin', 'familiar'].includes(rol)) return { ok: false, error: 'Rol inválido.' };
-  if (!['activo', 'inactivo'].includes(estado)) return { ok: false, error: 'Estado inválido.' };
-
-  const users = getObjects_('usuarios');
-  const exists = users.some(u => str_(u.id) !== id && normalize_(u.usuario) === usuario);
-  if (exists) return { ok: false, error: 'Ese usuario ya existe.' };
-
-  if (wouldLeaveWithoutActiveAdmin_(current, id, rol, estado)) {
-    return { ok: false, error: 'Debe quedar al menos un administrador activo.' };
+/* -------------------------------
+   Sesión y auth
+--------------------------------*/
+function getSession() {
+  const local = safeJsonParse(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.SESSION), null);
+  if (local?.ok && local?.user?.id) {
+    return local;
   }
 
-  const passwordHash = password ? hashPassword_(password) : str_(current.passwordHash);
-  ref.sheet.getRange(ref.rowIndex, 1, 1, HEADERS.usuarios.length).setValues([[
-    id,
-    usuario,
-    passwordHash,
-    nombreMostrado,
-    rol,
-    estado,
-    avatarUrl,
-    str_(current.fechaCreacion || nowIso_()),
-    str_(current.creadoPor || 'system'),
-  ]]);
-
-  return { ok: true, message: 'Usuario actualizado.' };
-}
-
-function toggleUserStatus_(data) {
-  const id = String(data.id || '').trim();
-  if (!id) return { ok: false, error: 'Falta el id del usuario.' };
-
-  const ref = findRowById_('usuarios', id);
-  if (!ref) return { ok: false, error: 'Usuario no encontrado.' };
-
-  const nextStatus = normalize_(ref.obj.estado) === 'activo' ? 'inactivo' : 'activo';
-  if (wouldLeaveWithoutActiveAdmin_(ref.obj, id, normalize_(ref.obj.rol), nextStatus)) {
-    return { ok: false, error: 'Debe quedar al menos un administrador activo.' };
-  }
-  ref.sheet.getRange(ref.rowIndex, colIndex_('usuarios', 'estado')).setValue(nextStatus);
-
-  return { ok: true, message: 'Estado actualizado.', estado: nextStatus };
-}
-
-function changePassword_(data) {
-  const id = String(data.id || '').trim();
-  const password = String(data.password || '');
-  if (!id) return { ok: false, error: 'Falta el id del usuario.' };
-  if (!password) return { ok: false, error: 'Falta la nueva contraseña.' };
-
-  const ref = findRowById_('usuarios', id);
-  if (!ref) return { ok: false, error: 'Usuario no encontrado.' };
-
-  ref.sheet.getRange(ref.rowIndex, colIndex_('usuarios', 'passwordHash')).setValue(hashPassword_(password));
-  return { ok: true, message: 'Contraseña actualizada.' };
-}
-
-function deleteUser_(data) {
-  const id = str_(data.id);
-  if (!id) return { ok: false, error: 'Falta el id del usuario.' };
-
-  const ref = findRowById_('usuarios', id);
-  if (!ref) return { ok: false, error: 'Usuario no encontrado.' };
-
-  if (wouldLeaveWithoutActiveAdmin_(ref.obj, id, 'eliminado', 'inactivo')) {
-    return { ok: false, error: 'Debe quedar al menos un administrador activo.' };
+  const session = safeJsonParse(sessionStorage.getItem(FF_CONFIG.STORAGE_KEYS.SESSION), null);
+  if (session?.ok && session?.user?.id) {
+    localStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(session));
+    return session;
   }
 
-  deleteRowsByFieldValues_('progreso', 'usuarioId', [id]);
-  deleteRowsByFieldValues_('favoritos', 'usuarioId', [id]);
-  deleteRowsByFieldValues_('continuar', 'usuarioId', [id]);
-  ref.sheet.deleteRow(ref.rowIndex);
-
-  return { ok: true, message: 'Usuario eliminado.' };
+  return null;
 }
 
-// ============================================================
-// CONTENIDO Y EPISODIOS
-// ============================================================
-
-function addOrUpdateContent_(data) {
-  const row = sanitizeContent_(data.row || data);
-  const validation = validateContent_(row);
-  if (!validation.ok) return validation;
-
-  const sh = getSheet_('contenido');
-  const existing = row.id ? findRowById_('contenido', row.id) : null;
-
-  if (existing) {
-    sh.getRange(existing.rowIndex, 1, 1, HEADERS.contenido.length).setValues([contentRow_(row)]);
-    return { ok: true, message: 'Contenido actualizado.', id: row.id };
-  }
-
-  if (!row.id) row.id = nextId_(row.tipo === 'serie' ? 'ser' : 'pel');
-
-  const dup = getObjects_('contenido').some(r => normalize_(r.id) === normalize_(row.id));
-  if (dup) return { ok: false, error: 'El ID de contenido ya existe: ' + row.id };
-
-  sh.appendRow(contentRow_(row));
-  return { ok: true, message: 'Contenido guardado.', id: row.id };
+function setSession(data) {
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
+  sessionStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
 }
 
-function addOrUpdateEpisode_(data) {
-  const row = sanitizeEpisode_(data.row || data);
-  const validation = validateEpisode_(row);
-  if (!validation.ok) return validation;
-
-  const series = getObjects_('contenido');
-  const serie = series.find(r => r.id === row.serieId && normalize_(r.tipo) === 'serie');
-  if (!serie) return { ok: false, error: 'La serie indicada no existe en la hoja contenido.' };
-
-  const allEpisodes = getObjects_('episodios');
-  const duplicatedCombo = allEpisodes.some(ep =>
-    ep.id !== row.id &&
-    ep.serieId === row.serieId &&
-    Number(ep.temporada) === Number(row.temporada) &&
-    Number(ep.numeroEpisodio) === Number(row.numeroEpisodio)
-  );
-  if (duplicatedCombo) {
-    return { ok: false, error: 'Ya existe un episodio con esa serie, temporada y número.' };
-  }
-
-  const sh = getSheet_('episodios');
-  const existing = row.id ? findRowById_('episodios', row.id) : null;
-
-  if (existing) {
-    sh.getRange(existing.rowIndex, 1, 1, HEADERS.episodios.length).setValues([episodeRow_(row)]);
-    return { ok: true, message: 'Episodio actualizado.', id: row.id };
-  }
-
-  if (!row.id) row.id = nextId_('epi');
-
-  sh.appendRow(episodeRow_(row));
-  return { ok: true, message: 'Episodio guardado.', id: row.id };
+function clearSession() {
+  localStorage.removeItem(FF_CONFIG.STORAGE_KEYS.SESSION);
+  sessionStorage.removeItem(FF_CONFIG.STORAGE_KEYS.SESSION);
 }
 
-function deleteContent_(data) {
-  const id = str_(data.id);
-  const force = normalize_(data.force) === 'si' || data.force === true;
-  if (!id) return { ok: false, error: 'Falta el id del contenido.' };
-
-  const ref = findRowById_('contenido', id);
-  if (!ref) return { ok: false, error: 'Contenido no encontrado.' };
-
-  const type = normalize_(ref.obj.tipo || '');
-  if (type === 'serie') {
-    const relatedEpisodes = getObjects_('episodios').filter(ep => str_(ep.serieId) === id);
-    if (relatedEpisodes.length && !force) {
-      return {
-        ok: false,
-        error: 'La serie tiene episodios asociados. Eliminalos primero o usa force.',
-        relatedEpisodes: relatedEpisodes.map(ep => ({ id: ep.id, titulo: ep.titulo }))
-      };
-    }
-    if (relatedEpisodes.length) {
-      deleteRowsByIds_('episodios', relatedEpisodes.map(ep => ep.id));
-    }
-  }
-
-  ref.sheet.deleteRow(ref.rowIndex);
-  return { ok: true, message: 'Contenido eliminado.', id: id };
+function isLoggedIn() {
+  const session = getSession();
+  return Boolean(session?.ok && session?.user?.id);
 }
 
-function deleteEpisode_(data) {
-  const id = str_(data.id);
-  if (!id) return { ok: false, error: 'Falta el id del episodio.' };
-
-  const ref = findRowById_('episodios', id);
-  if (!ref) return { ok: false, error: 'Episodio no encontrado.' };
-
-  ref.sheet.deleteRow(ref.rowIndex);
-  return { ok: true, message: 'Episodio eliminado.', id: id };
+function getCurrentUser() {
+  return getSession()?.user || null;
 }
 
-function listSeries_() {
-  return getObjects_('contenido')
-    .filter(r => normalize_(r.tipo) === 'serie' && normalize_(r.estado || 'activo') !== 'oculto')
-    .map(r => ({
-      id: r.id,
-      titulo: r.titulo,
-      año: r['año'] || '',
-      categoria: r.categoria || '',
-      portadaUrl: r.portadaUrl || '',
-      estado: r.estado || 'activo',
-    }));
+function isAdmin() {
+  return getCurrentUser()?.rol === 'admin';
 }
 
-function listCatalog_() {
-  return getObjects_('contenido')
-    .filter(r => normalize_(r.estado || 'activo') !== 'oculto')
-    .map(sanitizeContent_);
+function logout() {
+  clearSession();
+  window.location.href = 'index.html';
 }
 
-function listEpisodes_() {
-  return getObjects_('episodios')
-    .filter(r => normalize_(r.estado || 'activo') !== 'oculto')
-    .map(sanitizeEpisode_);
-}
-
-function getVideoBaseUrl_() {
-  const props = PropertiesService.getScriptProperties();
-  return {
-    ok: true,
-    url: str_(props.getProperty(VIDEO_BASE_URL_PROPERTY)),
-    updatedAt: str_(props.getProperty(VIDEO_BASE_URL_UPDATED_AT_PROPERTY)),
-    source: str_(props.getProperty(VIDEO_BASE_URL_SOURCE_PROPERTY))
-  };
-}
-
-function setVideoBaseUrl_(data) {
-  const props = PropertiesService.getScriptProperties();
-  const url = str_(data.url).replace(/\/+$/, '');
-  const source = str_(data.source || 'manual');
-
-  if (url) {
-    const updatedAt = nowIso_();
-    props.setProperty(VIDEO_BASE_URL_PROPERTY, url);
-    props.setProperty(VIDEO_BASE_URL_UPDATED_AT_PROPERTY, updatedAt);
-    props.setProperty(VIDEO_BASE_URL_SOURCE_PROPERTY, source);
-    return { ok: true, url: url, updatedAt: updatedAt, source: source };
-  }
-
-  props.deleteProperty(VIDEO_BASE_URL_PROPERTY);
-  props.deleteProperty(VIDEO_BASE_URL_UPDATED_AT_PROPERTY);
-  props.deleteProperty(VIDEO_BASE_URL_SOURCE_PROPERTY);
-  return { ok: true, url: '', updatedAt: '', source: '' };
-}
-
-function syncQuickTunnelUrls_(data) {
-  const url = str_(data.url).replace(/\/+$/, '');
-  const source = str_(data.source || 'quick_tunnel_auto');
-  if (!url) {
-    return { ok: false, error: 'Falta la URL publica del Quick Tunnel.' };
-  }
-
-  const baseResult = setVideoBaseUrl_({ url: url, source: source });
-  if (!baseResult.ok) return baseResult;
-
-  const content = rewriteQuickTunnelUrlsInSheet_('contenido', url);
-  const episodes = rewriteQuickTunnelUrlsInSheet_('episodios', url);
-
-  return {
-    ok: true,
-    url: url,
-    source: source,
-    updatedAt: baseResult.updatedAt,
-    updatedContent: content.updatedRows,
-    updatedEpisodes: episodes.updatedRows,
-    updatedTotal: Number(content.updatedRows || 0) + Number(episodes.updatedRows || 0)
-  };
-}
-
-function sanitizeContent_(data) {
-  const rawAudience = data.usuariosPermitidos || data.visibleToUsers || data.audiencia;
-  const hasLegacyShift = !str_(data.creadoPor) && /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2})?$/.test(str_(rawAudience));
-  return {
-    id: str_(data.id),
-    titulo: str_(data.titulo),
-    tituloOriginal: str_(data.tituloOriginal),
-    tipo: normalize_(data.tipo || 'pelicula'),
-    categoria: str_(data.categoria || 'Familia'),
-    generos: arrayOrCsv_(data.generos),
-    año: numberOrBlank_(data.año),
-    sinopsis: str_(data.sinopsis),
-    tags: arrayOrCsv_(data.tags),
-    portadaUrl: str_(data.portadaUrl),
-    backdropUrl: str_(data.backdropUrl),
-    r2Url: str_(data.r2Url),
-    driveUrl: str_(data.driveUrl),
-    destacado: normalize_(data.destacado) === 'si' ? 'si' : '',
-    duracion: str_(data.duracion),
-    clasificacion: str_(data.clasificacion || 'Familiar'),
-    idioma: str_(data.idioma || 'Español'),
-    estado: normalize_(data.estado || 'activo'),
-    usuariosPermitidos: sanitizeAllowedUsersCsv_(hasLegacyShift ? 'todos' : rawAudience),
-    fechaRegistro: str_(hasLegacyShift ? data.usuariosPermitidos : (data.fechaRegistro || nowIso_())),
-    creadoPor: str_(hasLegacyShift ? data.fechaRegistro : (data.creadoPor || 'admin')),
-    rating: numberOrBlank_(data.rating),
-    ratingCount: numberOrBlank_(data.ratingCount),
-    ratingSource: str_(data.ratingSource),
-    subtitulos: str_(data.subtitulos),
-    logoUrl: str_(data.logoUrl),
-    previewVideoUrl: str_(data.previewVideoUrl || data.previewUrl || data.previewClipUrl),
-    previewStart: str_(data.previewStart || data.previewAt || data.previewOffset || data.previewStartSeconds),
-  };
-}
-
-function sanitizeEpisode_(data) {
-  return {
-    id: str_(data.id),
-    serieId: str_(data.serieId),
-    temporada: numberOrBlank_(data.temporada),
-    numeroEpisodio: numberOrBlank_(data.numeroEpisodio),
-    titulo: str_(data.titulo),
-    tituloOriginal: str_(data.tituloOriginal),
-    sinopsis: str_(data.sinopsis),
-    duracion: str_(data.duracion),
-    r2Url: str_(data.r2Url),
-    driveUrl: str_(data.driveUrl),
-    portadaUrl: str_(data.portadaUrl),
-    airDate: str_(data.airDate),
-    estado: normalize_(data.estado || 'activo'),
-    fechaRegistro: str_(data.fechaRegistro || nowIso_()),
-    creadoPor: str_(data.creadoPor || 'admin'),
-    subtitulos: str_(data.subtitulos),
-    previewVideoUrl: str_(data.previewVideoUrl || data.previewUrl || data.previewClipUrl),
-    previewStart: str_(data.previewStart || data.previewAt || data.previewOffset || data.previewStartSeconds),
-  };
-}
-
-function validateContent_(row) {
-  if (!row.titulo) return { ok: false, error: 'El título es obligatorio.' };
-  if (!['pelicula', 'serie'].includes(row.tipo)) return { ok: false, error: 'Tipo inválido en contenido.' };
-  if (!['activo', 'borrador', 'oculto'].includes(row.estado)) return { ok: false, error: 'Estado inválido en contenido.' };
-  if (row.tipo === 'pelicula' && !row.r2Url && !row.driveUrl && row.estado === 'activo') {
-    return { ok: false, error: 'La película activa debe tener r2Url o driveUrl.' };
-  }
-  return { ok: true };
-}
-
-function validateEpisode_(row) {
-  if (!row.serieId) return { ok: false, error: 'El serieId es obligatorio.' };
-  if (!row.temporada) return { ok: false, error: 'La temporada es obligatoria.' };
-  if (!row.numeroEpisodio) return { ok: false, error: 'El número de episodio es obligatorio.' };
-  if (!row.titulo) return { ok: false, error: 'El título del episodio es obligatorio.' };
-  if (!['activo', 'borrador', 'oculto'].includes(row.estado)) return { ok: false, error: 'Estado inválido en episodio.' };
-  if (!row.r2Url && !row.driveUrl && row.estado === 'activo') {
-    return { ok: false, error: 'El episodio activo debe tener r2Url o driveUrl.' };
-  }
-  return { ok: true };
-}
-
-function rewriteQuickTunnelUrlsInSheet_(key, baseUrl) {
-  const sh = getSheet_(key);
-  const values = sh.getDataRange().getValues();
-  if (values.length < 2) {
-    return { updatedRows: 0 };
-  }
-
-  const headers = values[0].map(String);
-  const r2Idx = headers.indexOf('r2Url');
-  if (r2Idx === -1) {
-    return { updatedRows: 0 };
-  }
-
-  let updatedRows = 0;
-  const updates = [];
-  for (var i = 1; i < values.length; i++) {
-    const current = str_(values[i][r2Idx]);
-    if (!current) continue;
-
-    if (!shouldRewriteQuickTunnelUrl_(current)) continue;
-
-    const relativePath = extractQuickTunnelRelativePath_(current);
-    if (!relativePath) continue;
-
-    const nextUrl = joinQuickTunnelUrl_(baseUrl, relativePath);
-    if (!nextUrl || nextUrl === current) continue;
-
-    updates.push({
-      rowIndex: i + 1,
-      value: nextUrl
-    });
-    updatedRows++;
-  }
-
-  updates.forEach(function(update) {
-    sh.getRange(update.rowIndex, r2Idx + 1).setValue(update.value);
-  });
-
-  return { updatedRows: updatedRows };
-}
-
-function shouldRewriteQuickTunnelUrl_(value) {
-  const raw = str_(value);
-  if (!raw) return false;
-  if (isR2PublicUrl_(raw)) return false;
-  if (/^https?:\/\//i.test(raw)) {
-    return isQuickTunnelUrl_(raw);
+function requireAuth() {
+  if (!isLoggedIn()) {
+    window.location.href = 'index.html';
+    return false;
   }
   return true;
 }
 
-function isQuickTunnelUrl_(value) {
-  const raw = str_(value);
-  if (!raw) return false;
-  return /^https?:\/\/[^\/?#]+\.trycloudflare\.com(?:[\/?#]|$)/i.test(raw);
+function requireAdmin() {
+  if (!requireAuth()) return false;
+  if (!isAdmin()) {
+    showToast('No tienes acceso a esta sección.', 'error');
+    window.location.href = 'home.html';
+    return false;
+  }
+  return true;
 }
 
-function isR2PublicUrl_(value) {
-  const raw = str_(value);
-  if (!raw) return false;
-  return /^https?:\/\/pub-eb7091956e164433aa5c9ef0bcc70356\.r2\.dev(?:[\/?#]|$)/i.test(raw);
+/* -------------------------------
+   API Apps Script
+   IMPORTANTE: usamos GET para evitar CORS en GitHub Pages
+--------------------------------*/
+function normalizeAppsScriptUrl(url = '') {
+  return String(url || '').trim();
 }
 
-function extractQuickTunnelRelativePath_(value) {
-  const raw = str_(value);
-  if (!raw) return '';
-
-  if (/^https?:\/\//i.test(raw)) {
-    const match = raw.match(/^https?:\/\/[^\/?#]+(\/[^?#]*)?(?:\?[^#]*)?(?:#.*)?$/i);
-    const pathname = match && match[1] ? match[1] : '';
-    return decodeURIComponent(String(pathname || '')).replace(/^\/+/, '');
+async function apiCall(action, payload = {}) {
+  const base = normalizeAppsScriptUrl(FF_CONFIG.APPS_SCRIPT_URL);
+  if (!base) {
+    throw new Error('Falta configurar FF_CONFIG.APPS_SCRIPT_URL');
   }
 
-  return raw.replace(/[?#].*$/, '').replace(/^\/+/, '');
-}
+  const url = new URL(base);
+  url.searchParams.set('action', action);
+  url.searchParams.set('data', JSON.stringify(payload || {}));
+  url.searchParams.set('_t', Date.now().toString());
 
-function joinQuickTunnelUrl_(baseUrl, relativePath) {
-  const base = str_(baseUrl).replace(/\/+$/, '');
-  const path = str_(relativePath).replace(/^\/+/, '');
-  if (!base || !path) return '';
-
-  const encodedPath = path.split('/').filter(Boolean).map(function(part) {
-    return encodeURIComponent(part);
-  }).join('/');
-
-  return base + '/' + encodedPath;
-}
-
-function contentRow_(r) {
-  return HEADERS.contenido.map(h => r[h] || '');
-}
-
-function episodeRow_(r) {
-  return HEADERS.episodios.map(h => r[h] || '');
-}
-
-// ============================================================
-// PROGRESO / FAVORITOS / CONTINUAR VIENDO
-// ============================================================
-
-function saveProgress_(data) {
-  const row = {
-    id: str_(data.id),
-    usuarioId: str_(data.usuarioId),
-    contenidoId: str_(data.contenidoId),
-    episodioId: str_(data.episodioId),
-    tipo: normalize_(data.tipo),
-    temporada: numberOrBlank_(data.temporada),
-    numeroEpisodio: numberOrBlank_(data.numeroEpisodio),
-    segundosVistos: numberOrZero_(data.segundosVistos),
-    duracionSegundos: numberOrZero_(data.duracionSegundos),
-    porcentaje: numberOrZero_(data.porcentaje),
-    completado: normalize_(data.completado) === 'si' ? 'si' : 'no',
-    ultimaVisualizacion: str_(data.ultimaVisualizacion || nowIso_()),
-    estado: normalize_(data.estado || 'viendo'),
-  };
-
-  if (!row.usuarioId) return { ok: false, error: 'usuarioId es obligatorio.' };
-  if (!row.contenidoId) return { ok: false, error: 'contenidoId es obligatorio.' };
-  if (!['pelicula', 'episodio'].includes(row.tipo)) return { ok: false, error: 'Tipo de progreso inválido.' };
-
-  const keyMatch = (p) => p.usuarioId === row.usuarioId && p.contenidoId === row.contenidoId && p.episodioId === row.episodioId;
-  const all = getObjects_('progreso');
-  const existing = all.find(keyMatch);
-  const sh = getSheet_('progreso');
-
-  if (existing) {
-    const ref = findRowById_('progreso', existing.id);
-    row.id = existing.id;
-    sh.getRange(ref.rowIndex, 1, 1, HEADERS.progreso.length).setValues([HEADERS.progreso.map(h => row[h] || '')]);
-  } else {
-    row.id = nextId_('prg');
-    sh.appendRow(HEADERS.progreso.map(h => row[h] || ''));
-  }
-
-  upsertContinueWatching_({
-    usuarioId: row.usuarioId,
-    contenidoId: row.contenidoId,
-    episodioId: row.episodioId,
-    tipo: row.tipo,
-    tituloMostrado: str_(data.tituloMostrado),
-    portadaUrl: str_(data.portadaUrl),
-    segundosVistos: row.segundosVistos,
-    duracionSegundos: row.duracionSegundos,
-    porcentaje: row.porcentaje,
-    ultimaVisualizacion: row.ultimaVisualizacion,
+  const res = await fetch(url.toString(), {
+    method: 'GET',
+    cache: 'no-store'
   });
 
-  return { ok: true, message: 'Progreso guardado.' };
-}
+  const text = await res.text();
+  const data = safeJsonParse(text, null);
 
-function toggleFavorite_(data) {
-  const usuarioId = str_(data.usuarioId);
-  const contenidoId = str_(data.contenidoId);
-  const episodioId = str_(data.episodioId);
-  const tipo = normalize_(data.tipo || (episodioId ? 'episodio' : 'pelicula'));
-
-  if (!usuarioId) return { ok: false, error: 'usuarioId es obligatorio.' };
-  if (!contenidoId && !episodioId) return { ok: false, error: 'Falta contenidoId o episodioId.' };
-
-  const sh = getSheet_('favoritos');
-  const all = getObjects_('favoritos');
-  const existing = all.find(f =>
-    f.usuarioId === usuarioId &&
-    String(f.contenidoId || '') === contenidoId &&
-    String(f.episodioId || '') === episodioId
-  );
-
-  if (existing) {
-    const ref = findRowById_('favoritos', existing.id);
-    sh.deleteRow(ref.rowIndex);
-    return { ok: true, favorite: false, message: 'Quitado de favoritos.' };
+  if (!res.ok) {
+    throw new Error((data && data.error) || `Error ${res.status} de Apps Script`);
   }
 
-  sh.appendRow([
-    nextId_('fav'),
-    usuarioId,
-    contenidoId,
-    episodioId,
-    tipo,
-    nowIso_(),
-  ]);
+  if (!data || typeof data !== 'object') {
+    throw new Error('Respuesta inválida de Apps Script');
+  }
 
-  return { ok: true, favorite: true, message: 'Agregado a favoritos.' };
+  if (!data.ok) {
+    throw new Error(data.error || 'Error de Apps Script');
+  }
+
+  return data;
 }
 
-function listFavorites_(data) {
-  const usuarioId = str_(data.usuarioId);
-  if (!usuarioId) return { ok: false, error: 'usuarioId es obligatorio.' };
-
-  const favorites = getObjects_('favoritos').filter(f => f.usuarioId === usuarioId);
-  return { ok: true, favorites: favorites };
+async function loginUser(usuario, password) {
+  return apiCall('login', { usuario, password });
 }
 
-function upsertContinueWatching_(data) {
-  const row = {
-    id: str_(data.id),
-    usuarioId: str_(data.usuarioId),
-    contenidoId: str_(data.contenidoId),
-    episodioId: str_(data.episodioId),
-    tipo: normalize_(data.tipo),
-    tituloMostrado: str_(data.tituloMostrado),
-    portadaUrl: str_(data.portadaUrl),
-    segundosVistos: numberOrZero_(data.segundosVistos),
-    duracionSegundos: numberOrZero_(data.duracionSegundos),
-    porcentaje: numberOrZero_(data.porcentaje),
-    ultimaVisualizacion: str_(data.ultimaVisualizacion || nowIso_()),
+async function createUser(payload) {
+  return apiCall('createUser', payload);
+}
+
+async function listUsers() {
+  return apiCall('listUsers', {});
+}
+
+async function updateUser(payload) {
+  return apiCall('updateUser', payload);
+}
+
+async function deleteUserRemote(id) {
+  return apiCall('deleteUser', { id });
+}
+
+async function addContent(payload) {
+  return apiCall('addOrUpdateContent', payload);
+}
+
+async function deleteContentRemote(id, force = false) {
+  return apiCall('deleteContent', { id, force });
+}
+
+async function addEpisode(payload) {
+  return apiCall('addOrUpdateEpisode', payload);
+}
+
+async function deleteEpisodeRemote(id) {
+  return apiCall('deleteEpisode', { id });
+}
+
+async function listCatalogFromApi() {
+  return apiCall('listCatalog', {});
+}
+
+async function listEpisodesFromApi() {
+  return apiCall('listEpisodes', {});
+}
+
+async function saveProgressRemote(payload) {
+  return apiCall('saveProgress', payload);
+}
+
+async function getUserStateRemote(usuarioId) {
+  return apiCall('getUserBootstrap', { usuarioId });
+}
+
+async function toggleFavoriteRemote(payload) {
+  return apiCall('toggleFavorite', payload);
+}
+
+async function getVideoBaseUrlRemote() {
+  return apiCall('getVideoBaseUrl', {});
+}
+
+async function setVideoBaseUrlRemote(url, source = 'manual') {
+  return apiCall('setVideoBaseUrl', { url, source });
+}
+
+/* -------------------------------
+   Worker Cloudflare
+--------------------------------*/
+function normalizeWorkerBaseUrl(url = '') {
+  return String(url || '').replace(/\/$/, '');
+}
+
+function getAdminSecret() {
+  return localStorage.getItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET) || '';
+}
+
+function setAdminSecret(secret) {
+  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET, secret || '');
+}
+
+function isAbsoluteHttpUrl(value = '') {
+  return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function normalizeVideoBaseUrl(url = '') {
+  return String(url || '').trim().replace(/\/+$/, '');
+}
+
+function getVideoBaseUrl() {
+  return FF_STATE.videoBaseUrl
+    || normalizeVideoBaseUrl(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL) || '')
+    || detectCurrentAppVideoBaseUrl();
+}
+
+function setVideoBaseUrl(url) {
+  const normalized = normalizeVideoBaseUrl(url);
+  FF_STATE.videoBaseUrl = normalized;
+  FF_STATE.videoBaseLoaded = true;
+  if (normalized) {
+    localStorage.setItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL, normalized);
+  } else {
+    localStorage.removeItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL);
+  }
+  return normalized;
+}
+
+async function ensureVideoBaseUrlLoaded(force = false) {
+  if (!force && FF_STATE.videoBaseLoaded) {
+    return getVideoBaseUrl();
+  }
+
+  if (!force && FF_STATE.videoBaseLoadingPromise) {
+    return FF_STATE.videoBaseLoadingPromise;
+  }
+
+  FF_STATE.videoBaseLoadingPromise = (async () => {
+    const currentOrigin = detectCurrentAppVideoBaseUrl();
+    const localValue = normalizeVideoBaseUrl(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL) || '');
+    let remoteValue = '';
+
+    try {
+      const remote = await getVideoBaseUrlRemote();
+      remoteValue = normalizeVideoBaseUrl(remote?.url || '');
+    } catch (error) {
+      console.error(error);
+    }
+
+    const resolved = currentOrigin || remoteValue || localValue || '';
+    setVideoBaseUrl(resolved);
+    FF_STATE.videoBaseLoaded = true;
+    FF_STATE.videoBaseLoadingPromise = null;
+    return resolved;
+  })();
+
+  return FF_STATE.videoBaseLoadingPromise;
+}
+
+function detectCurrentAppVideoBaseUrl() {
+  if (typeof window === 'undefined' || !window.location) return '';
+  const { protocol, hostname, origin } = window.location;
+  if (!/^https?:$/i.test(protocol || '')) return '';
+  if (/trycloudflare\.com$/i.test(hostname || '')) return normalizeVideoBaseUrl(origin);
+  return '';
+}
+
+function safeDecodeUriComponent(value = '') {
+  try {
+    return decodeURIComponent(value);
+  } catch {
+    return value;
+  }
+}
+
+function joinPublicVideoUrl(base, path = '') {
+  const cleanBase = normalizeVideoBaseUrl(base);
+  const cleanPath = String(path || '').trim().replace(/^\/+/, '');
+  if (!cleanPath) return '';
+  if (!cleanBase) return cleanPath;
+
+  const parts = cleanPath.split('?');
+  const pathname = parts.shift() || '';
+  const query = parts.length ? `?${parts.join('?')}` : '';
+  const encodedPath = pathname
+    .split('/')
+    .filter(Boolean)
+    .map(part => encodeURIComponent(safeDecodeUriComponent(part)))
+    .join('/');
+
+  return `${cleanBase}/${encodedPath}${query}`;
+}
+
+function extractQuickTunnelPath(url = '') {
+  try {
+    const parsed = new URL(String(url || '').trim());
+    if (!/trycloudflare\.com$/i.test(parsed.hostname)) return '';
+    return safeDecodeUriComponent(parsed.pathname || '').replace(/^\/+/, '');
+  } catch {
+    return '';
+  }
+}
+
+async function workerRequest(path, options = {}) {
+  if (!FF_CONFIG.WORKER_URL) {
+    throw new Error('Falta configurar FF_CONFIG.WORKER_URL');
+  }
+
+  const headers = {
+    ...(options.headers || {}),
+    'X-Admin-Secret': getAdminSecret()
   };
 
-  if (!row.usuarioId || !row.contenidoId) return { ok: false, error: 'usuarioId y contenidoId son obligatorios.' };
+  const base = normalizeWorkerBaseUrl(FF_CONFIG.WORKER_URL);
+  const finalPath = String(path || '').startsWith('/') ? path : `/${path}`;
 
-  const sh = getSheet_('continuar');
-  const all = getObjects_('continuar');
-  const existing = all.find(c => c.usuarioId === row.usuarioId && c.contenidoId === row.contenidoId && c.episodioId === row.episodioId);
+  const res = await fetch(`${base}${finalPath}`, {
+    ...options,
+    headers
+  });
 
-  if (existing) {
-    const ref = findRowById_('continuar', existing.id);
-    row.id = existing.id;
-    sh.getRange(ref.rowIndex, 1, 1, HEADERS.continuar.length).setValues([HEADERS.continuar.map(h => row[h] || '')]);
-  } else {
-    row.id = nextId_('cvw');
-    sh.appendRow(HEADERS.continuar.map(h => row[h] || ''));
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || data.ok === false) {
+    throw new Error(data.error || `Error ${res.status} del Worker`);
   }
-
-  return { ok: true, message: 'Continuar viendo actualizado.' };
+  return data;
 }
 
-function getUserBootstrap_(data) {
-  const usuarioId = str_(data.usuarioId);
-  if (!usuarioId) return { ok: false, error: 'usuarioId es obligatorio.' };
+async function uploadFileToR2(file) {
+  const form = new FormData();
+  form.append('file', file);
+  return workerRequest('/upload', { method: 'POST', body: form });
+}
 
-  const progress = getObjects_('progreso').filter(r => r.usuarioId === usuarioId);
-  const favorites = getObjects_('favoritos').filter(r => r.usuarioId === usuarioId);
-  const continueWatching = getObjects_('continuar')
-    .filter(r => r.usuarioId === usuarioId)
-    .sort((a, b) => String(b.ultimaVisualizacion || '').localeCompare(String(a.ultimaVisualizacion || '')));
+async function listR2Files(options = {}) {
+  const prefix = String(options.prefix || '').trim();
+  const limit = Math.max(1, Math.min(1000, Number(options.limit) || 1000));
+  const allFiles = [];
+  let cursor = '';
+  let pages = 0;
+
+  while (pages < 25) {
+    const params = new URLSearchParams();
+    if (prefix) params.set('prefix', prefix);
+    params.set('limit', String(limit));
+    if (cursor) params.set('cursor', cursor);
+
+    const res = await workerRequest(`/list?${params.toString()}`, { method: 'GET' });
+    allFiles.push(...(res.files || []));
+    pages += 1;
+
+    if (!res.truncated || !res.cursor) {
+      return {
+        ok: true,
+        files: uniqueBy(allFiles, file => file.name)
+      };
+    }
+
+    cursor = res.cursor;
+  }
 
   return {
     ok: true,
-    progress: progress,
-    favorites: favorites,
-    continueWatching: continueWatching,
+    files: uniqueBy(allFiles, file => file.name)
   };
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
-
-function getSheet_(key) {
-  const ss = SpreadsheetApp.openById(SHEET_ID);
-  const name = SHEETS[key];
-  const sh = ss.getSheetByName(name);
-  if (!sh) throw new Error('No existe la hoja: ' + name);
-  ensureHeader_(sh, HEADERS[key]);
-  return sh;
+async function deleteR2File(name) {
+  return workerRequest(`/delete?name=${encodeURIComponent(name)}`, { method: 'DELETE' });
 }
 
-function getObjects_(key) {
-  const sh = getSheet_(key);
-  const values = sh.getDataRange().getValues();
-  if (values.length < 2) return [];
-  const headers = values[0].map(String);
-  return values.slice(1).map(row => {
-    const obj = {};
-    headers.forEach((h, i) => obj[h] = row[i]);
-    return obj;
-  }).filter(obj => Object.values(obj).some(v => String(v || '').trim() !== ''));
-}
-
-function findRowById_(key, id) {
-  const sh = getSheet_(key);
-  const values = sh.getDataRange().getValues();
-  if (values.length < 2) return null;
-  const headers = values[0].map(String);
-  const idIdx = headers.indexOf('id');
-  if (idIdx === -1) throw new Error('La hoja ' + key + ' no tiene columna id.');
-
-  for (var i = 1; i < values.length; i++) {
-    if (String(values[i][idIdx]).trim() === String(id).trim()) {
-      const obj = {};
-      headers.forEach((h, idx) => obj[h] = values[i][idx]);
-      return { sheet: sh, rowIndex: i + 1, obj: obj };
-    }
-  }
-  return null;
-}
-
-function deleteRowsByIds_(key, ids) {
-  const wanted = ids.map(str_).filter(Boolean);
-  if (!wanted.length) return;
-
-  const sh = getSheet_(key);
-  const values = sh.getDataRange().getValues();
-  if (values.length < 2) return;
-  const headers = values[0].map(String);
-  const idIdx = headers.indexOf('id');
-  if (idIdx === -1) throw new Error('La hoja ' + key + ' no tiene columna id.');
-
-  const rowIndexes = [];
-  for (var i = 1; i < values.length; i++) {
-    if (wanted.indexOf(String(values[i][idIdx]).trim()) !== -1) {
-      rowIndexes.push(i + 1);
-    }
-  }
-
-  rowIndexes.sort(function(a, b) { return b - a; }).forEach(function(rowIndex) {
-    sh.deleteRow(rowIndex);
+async function analyzeWithAI(titleToSearch, contentType, extraContext = '', extraPayload = {}) {
+  return workerRequest('/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ titleToSearch, contentType, extraContext, ...extraPayload })
   });
 }
 
-function deleteRowsByFieldValues_(key, headerName, values) {
-  const wanted = values.map(str_).filter(Boolean);
-  if (!wanted.length) return;
+async function getTrailerData({ title, contentType = 'pelicula', year = 0, seriesTitle = '' } = {}) {
+  const params = new URLSearchParams();
+  if (title) params.set('title', title);
+  if (contentType) params.set('contentType', contentType);
+  if (year) params.set('year', String(year));
+  if (seriesTitle) params.set('seriesTitle', seriesTitle);
+  return workerRequest(`/trailer?${params.toString()}`, { method: 'GET' });
+}
 
-  const sh = getSheet_(key);
-  const valuesMatrix = sh.getDataRange().getValues();
-  if (valuesMatrix.length < 2) return;
-  const headers = valuesMatrix[0].map(String);
-  const headerIdx = headers.indexOf(headerName);
-  if (headerIdx === -1) throw new Error('La hoja ' + key + ' no tiene columna ' + headerName + '.');
+function buildR2Url(fileName = '') {
+  const raw = String(fileName || '').trim();
+  if (!raw) return '';
 
-  const rowIndexes = [];
-  for (var i = 1; i < valuesMatrix.length; i++) {
-    if (wanted.indexOf(String(valuesMatrix[i][headerIdx]).trim()) !== -1) {
-      rowIndexes.push(i + 1);
+  if (isAbsoluteHttpUrl(raw)) {
+    const activeVideoBase = getVideoBaseUrl();
+    const quickTunnelPath = activeVideoBase ? extractQuickTunnelPath(raw) : '';
+    return quickTunnelPath ? joinPublicVideoUrl(activeVideoBase, quickTunnelPath) : raw;
+  }
+
+  return joinPublicVideoUrl(getVideoBaseUrl() || FF_CONFIG.R2_PUBLIC_BASE, raw);
+}
+
+/* -------------------------------
+   TSV público para catálogo
+--------------------------------*/
+async function fetchTsv(url) {
+  if (!url) return '';
+  const res = await fetch(`${url}${url.includes('?') ? '&' : '?'}t=${Date.now()}`, {
+    method: 'GET',
+    cache: 'no-store'
+  });
+  if (!res.ok) throw new Error(`No se pudo leer ${url}`);
+  return res.text();
+}
+
+function parseTsv(text = '') {
+  const clean = String(text || '').trim();
+  if (!clean) return [];
+  const lines = clean.split('\n').filter(Boolean);
+  const headers = lines[0].split('\t').map(v => v.trim().replace(/\r/g, ''));
+  return lines.slice(1).map(line => {
+    const cols = line.split('\t').map(v => v.trim().replace(/\r/g, ''));
+    const row = {};
+    headers.forEach((h, i) => {
+      row[h] = cols[i] || '';
+    });
+    return row;
+  });
+}
+
+function normalizeContentRow(row = {}) {
+  const rawAudience = row.usuariosPermitidos || row.visibleToUsers || row.audiencia || row.visibleTo || '';
+  const hasLegacyShift = !String(row.creadoPor || '').trim() && /^\d{4}-\d{2}-\d{2}(?:[T\s]\d{2}:\d{2}:\d{2})?$/.test(String(rawAudience || '').trim());
+  const audience = normalizeAudienceTokens(hasLegacyShift ? 'todos' : rawAudience);
+  const yearValue = Number(row.anio || row['año'] || row['aÃ±o']) || null;
+  return {
+    id: row.id || '',
+    titulo: row.titulo || '',
+    tituloOriginal: row.tituloOriginal || '',
+    tipo: (row.tipo || 'pelicula').toLowerCase(),
+    categoria: row.categoria || 'Familia',
+    generos: splitTags(row.generos),
+    anio: yearValue,
+    ['a\u00f1o']: yearValue,
+    sinopsis: row.sinopsis || '',
+    tags: splitTags(row.tags),
+    portadaUrl: row.portadaUrl || row.portadaId || '',
+    backdropUrl: row.backdropUrl || '',
+    logoUrl: row.logoUrl || row.titleLogoUrl || row.tituloLogoUrl || '',
+    previewVideoUrl: row.previewVideoUrl || row.previewUrl || row.previewClipUrl || row.clipPreviewUrl || '',
+    previewStart: row.previewStart || row.previewAt || row.previewOffset || row.previewStartSeconds || '',
+    sagaId: row.sagaId || row.saga || row.collectionId || '',
+    sagaTitulo: row.sagaTitulo || row.sagaTitle || row.collectionTitle || row.collection || '',
+    sagaOrden: Number(row.sagaOrden || row.ordenSaga || row.collectionOrder || 0) || 0,
+    sagaBackdropUrl: row.sagaBackdropUrl || row.collectionBackdropUrl || '',
+    sagaPortadaUrl: row.sagaPortadaUrl || row.collectionPosterUrl || '',
+    rating: normalizeRatingValue(row.rating || ''),
+    ratingCount: normalizeRatingCount(row.ratingCount || 0),
+    ratingSource: String(row.ratingSource || '').trim(),
+    r2Url: row.r2Url || '',
+    driveUrl: row.driveUrl || row.driveId || '',
+    subtitulos: String(row.subtitulos || '').trim(),
+    destacado: String(row.destacado || '').toLowerCase() === 'si',
+    duracion: row.duracion || '',
+    clasificacion: row.clasificacion || '',
+    idioma: row.idioma || '',
+    estado: (row.estado || 'activo').toLowerCase(),
+    usuariosPermitidosRaw: audience.all ? 'todos' : audience.list.join(', '),
+    usuariosPermitidos: audience.list,
+    visibleToAll: audience.all,
+    fechaRegistro: hasLegacyShift ? (row.usuariosPermitidos || '') : (row.fechaRegistro || ''),
+    creadoPor: hasLegacyShift ? (row.fechaRegistro || '') : (row.creadoPor || '')
+  };
+}
+
+function normalizeEpisodeRow(row = {}) {
+  return {
+    id: row.id || '',
+    serieId: row.serieId || '',
+    temporada: Number(row.temporada) || 1,
+    numeroEpisodio: Number(row.numeroEpisodio || row.numero) || 1,
+    titulo: row.titulo || '',
+    tituloOriginal: row.tituloOriginal || '',
+    sinopsis: row.sinopsis || '',
+    duracion: row.duracion || '',
+    r2Url: row.r2Url || '',
+    driveUrl: row.driveUrl || row.driveId || '',
+    portadaUrl: row.portadaUrl || row.portadaId || '',
+    previewVideoUrl: row.previewVideoUrl || row.previewUrl || row.previewClipUrl || row.clipPreviewUrl || '',
+    previewStart: row.previewStart || row.previewAt || row.previewOffset || row.previewStartSeconds || '',
+    airDate: row.airDate || '',
+    subtitulos: String(row.subtitulos || '').trim(),
+    estado: (row.estado || 'activo').toLowerCase(),
+    fechaRegistro: row.fechaRegistro || '',
+    creadoPor: row.creadoPor || ''
+  };
+}
+
+function pickApiList(res, keys = []) {
+  for (const key of keys) {
+    if (Array.isArray(res?.[key])) return res[key];
+  }
+  return [];
+}
+
+function readCatalogCache(storageKey, options = {}) {
+  const allowExpired = Boolean(options.allowExpired);
+  try {
+    const raw = localStorage.getItem(storageKey);
+    if (!raw) return [];
+
+    const payload = JSON.parse(raw);
+    const ts = Number(payload?.ts || 0);
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    if (!ts || !items.length) return [];
+    if (!allowExpired && Date.now() - ts > Number(FF_CONFIG.CATALOG_CACHE_TTL_MS || 0)) return [];
+    return items;
+  } catch (error) {
+    console.warn('No se pudo leer cache local.', error);
+    return [];
+  }
+}
+
+function writeCatalogCache(storageKey, items = []) {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify({
+      ts: Date.now(),
+      items: Array.isArray(items) ? items : []
+    }));
+  } catch (error) {
+    console.warn('No se pudo guardar cache local.', error);
+  }
+}
+
+function progressLookupKey(itemType, contenidoId, episodioId = '') {
+  return `${itemType || ''}::${contenidoId || ''}::${episodioId || ''}`;
+}
+
+function progressTimestamp(record = {}) {
+  return new Date(record?.ultimaVisualizacion || 0).getTime() || 0;
+}
+
+function rebuildCatalogIndexes() {
+  const contentById = new Map();
+  const episodeById = new Map();
+  const episodesBySeries = new Map();
+
+  FF_STATE.content.forEach((item) => {
+    contentById.set(String(item.id), item);
+  });
+
+  FF_STATE.episodes.forEach((episode) => {
+    episodeById.set(String(episode.id), episode);
+    if (episode.estado !== 'activo') return;
+
+    const key = String(episode.serieId || '');
+    if (!episodesBySeries.has(key)) episodesBySeries.set(key, []);
+    episodesBySeries.get(key).push(episode);
+  });
+
+  episodesBySeries.forEach((list) => {
+    list.sort((a, b) => (a.temporada - b.temporada) || (a.numeroEpisodio - b.numeroEpisodio));
+  });
+
+  FF_STATE.indexes.contentById = contentById;
+  FF_STATE.indexes.episodeById = episodeById;
+  FF_STATE.indexes.episodesBySeries = episodesBySeries;
+}
+
+function rebuildUserStateIndexes() {
+  const favoriteKeys = new Set();
+  const progressByKey = new Map();
+  const latestSeriesProgressByContent = new Map();
+
+  (FF_STATE.userState.favorites || []).forEach((favorite) => {
+    favoriteKeys.add(favoriteKeyFor(favorite.tipo, favorite.contenidoId, favorite.episodioId));
+  });
+
+  (FF_STATE.userState.progress || []).forEach((record) => {
+    const key = progressLookupKey(record.tipo, record.contenidoId, record.episodioId);
+    const current = progressByKey.get(key);
+    if (!current || progressTimestamp(record) >= progressTimestamp(current)) {
+      progressByKey.set(key, record);
+    }
+
+    if (
+      record.tipo !== 'episodio'
+      || Number(record.porcentaje || 0) <= 0
+      || String(record.completado || '').toLowerCase() === 'si'
+    ) {
+      return;
+    }
+
+    const contentKey = String(record.contenidoId || '');
+    const currentSeriesRecord = latestSeriesProgressByContent.get(contentKey);
+    if (!currentSeriesRecord || progressTimestamp(record) >= progressTimestamp(currentSeriesRecord)) {
+      latestSeriesProgressByContent.set(contentKey, record);
+    }
+  });
+
+  FF_STATE.indexes.favoriteKeys = favoriteKeys;
+  FF_STATE.indexes.progressByKey = progressByKey;
+  FF_STATE.indexes.latestSeriesProgressByContent = latestSeriesProgressByContent;
+}
+
+function setContentState(items = []) {
+  FF_STATE.content = items.filter(item => item.id && item.estado !== 'oculto' && canUserAccessContent(item));
+  rebuildCatalogIndexes();
+  return FF_STATE.content;
+}
+
+function setEpisodesState(items = []) {
+  FF_STATE.episodes = items.filter(item => item.id && item.estado !== 'oculto');
+  rebuildCatalogIndexes();
+  return FF_STATE.episodes;
+}
+
+function canUserAccessContent(item, user = getCurrentUser()) {
+  if (!item?.id) return false;
+  if (!user?.id) return true;
+  if (String(user.rol || '').toLowerCase() === 'admin') return true;
+
+  const audience = normalizeAudienceTokens(
+    item.usuariosPermitidosRaw || item.usuariosPermitidos || item.visibleToUsers || ''
+  );
+  if (audience.all) return true;
+
+  const userKeys = new Set(
+    [user.id, user.usuario]
+      .map(value => String(value || '').trim().toLowerCase())
+      .filter(Boolean)
+  );
+
+  return audience.list.some(entry => userKeys.has(String(entry || '').trim().toLowerCase()));
+}
+
+async function fetchContent(options = {}) {
+  const force = Boolean(options?.force);
+  const preferApi = Boolean(options?.preferApi);
+
+  if (!force && FF_STATE.content.length) return FF_STATE.content;
+  if (!force && FF_STATE.contentLoadingPromise) return FF_STATE.contentLoadingPromise;
+
+  if (!force) {
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, { allowExpired: true })
+      .map(normalizeContentRow)
+      .filter(item => item.id && item.estado !== 'oculto');
+    if (cachedItems.length && !FF_STATE.content.length) {
+      setContentState(cachedItems);
     }
   }
 
-  rowIndexes.sort(function(a, b) { return b - a; }).forEach(function(rowIndex) {
-    sh.deleteRow(rowIndex);
-  });
+  FF_STATE.contentLoadingPromise = (async () => {
+    ensureVideoBaseUrlLoaded();
+    const previousItems = [...FF_STATE.content];
+
+    const sources = preferApi
+      ? [
+          async () => {
+            const res = await listCatalogFromApi();
+            return pickApiList(res, ['content', 'catalog', 'items']);
+          },
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV))
+        ]
+      : [
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.CONTENT_TSV)),
+          async () => {
+            const res = await listCatalogFromApi();
+            return pickApiList(res, ['content', 'catalog', 'items']);
+          }
+        ];
+
+    let gotEmptyResponse = false;
+    let successfulLoads = 0;
+
+    try {
+      for (const loadItems of sources) {
+        try {
+          const items = (await loadItems())
+            .map(normalizeContentRow)
+            .filter(item => item.id && item.estado !== 'oculto');
+          successfulLoads++;
+          if (items.length) {
+            writeCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, items);
+            return setContentState(items);
+          }
+          gotEmptyResponse = true;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (gotEmptyResponse && successfulLoads > 0) {
+        writeCatalogCache(FF_CONFIG.STORAGE_KEYS.CONTENT_CACHE, []);
+        return setContentState([]);
+      }
+
+      return previousItems.length ? setContentState(previousItems) : FF_STATE.content;
+    } finally {
+      FF_STATE.contentLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.contentLoadingPromise;
 }
 
-function countActiveAdminsExcluding_(excludeId) {
-  return getObjects_('usuarios').filter(function(user) {
-    if (str_(user.id) === str_(excludeId)) return false;
-    return normalize_(user.rol) === 'admin' && normalize_(user.estado) === 'activo';
-  }).length;
-}
+async function fetchEpisodes(options = {}) {
+  const force = Boolean(options?.force);
+  const preferApi = Boolean(options?.preferApi);
 
-function wouldLeaveWithoutActiveAdmin_(currentUser, targetId, nextRol, nextEstado) {
-  const isActiveAdmin = normalize_(currentUser.rol) === 'admin' && normalize_(currentUser.estado) === 'activo';
-  if (!isActiveAdmin) return false;
+  if (!force && FF_STATE.episodes.length) return FF_STATE.episodes;
+  if (!force && FF_STATE.episodesLoadingPromise) return FF_STATE.episodesLoadingPromise;
 
-  const keepsAdminActive = normalize_(nextRol) === 'admin' && normalize_(nextEstado) === 'activo';
-  if (keepsAdminActive) return false;
-
-  return countActiveAdminsExcluding_(targetId) === 0;
-}
-
-function colIndex_(key, headerName) {
-  const idx = HEADERS[key].indexOf(headerName);
-  if (idx === -1) throw new Error('No existe la columna ' + headerName + ' en ' + key);
-  return idx + 1;
-}
-
-function nextId_(prefix) {
-  return prefix + '_' + Utilities.getUuid().replace(/-/g, '').slice(0, 12);
-}
-
-function nowIso_() {
-  return Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss");
-}
-
-function hashPassword_(plain) {
-  const digest = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, String(plain), Utilities.Charset.UTF_8);
-  return digest.map(function(b) {
-    const v = (b < 0 ? b + 256 : b).toString(16);
-    return v.length === 1 ? '0' + v : v;
-  }).join('');
-}
-
-function normalize_(v) {
-  return String(v || '').trim().toLowerCase();
-}
-
-function str_(v) {
-  return String(v || '').trim();
-}
-
-function numberOrBlank_(v) {
-  if (v === null || v === undefined || v === '') return '';
-  const n = Number(v);
-  return isNaN(n) ? '' : n;
-}
-
-function numberOrZero_(v) {
-  const n = Number(v);
-  return isNaN(n) ? 0 : n;
-}
-
-function arrayOrCsv_(v) {
-  if (Array.isArray(v)) return v.map(str_).filter(Boolean).join(', ');
-  return str_(v);
-}
-
-function sanitizeAllowedUsersCsv_(value) {
-  const list = Array.isArray(value)
-    ? value
-    : String(value || '')
-        .split(',')
-        .map(function(part) { return part.trim(); })
-        .filter(Boolean);
-
-  if (!list.length) return 'todos';
-
-  const normalized = [];
-  const seen = {};
-
-  list.forEach(function(entry) {
-    const raw = str_(entry);
-    const key = normalize_(raw);
-    if (!raw || seen[key]) return;
-    seen[key] = true;
-    normalized.push(raw);
-  });
-
-  if (!normalized.length) return 'todos';
-  if (normalized.some(function(entry) {
-    const key = normalize_(entry);
-    return key === 'todos' || key === '*' || key === 'all';
-  })) {
-    return 'todos';
+  if (!force) {
+    const cachedItems = readCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, { allowExpired: true })
+      .map(normalizeEpisodeRow)
+      .filter(item => item.id && item.estado !== 'oculto');
+    if (cachedItems.length && !FF_STATE.episodes.length) {
+      setEpisodesState(cachedItems);
+    }
   }
 
-  return normalized.join(', ');
+  FF_STATE.episodesLoadingPromise = (async () => {
+    ensureVideoBaseUrlLoaded();
+    const previousItems = [...FF_STATE.episodes];
+
+    const sources = preferApi
+      ? [
+          async () => {
+            const res = await listEpisodesFromApi();
+            return pickApiList(res, ['episodes', 'items']);
+          },
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV))
+        ]
+      : [
+          async () => parseTsv(await fetchTsv(FF_CONFIG.SHEETS.EPISODES_TSV)),
+          async () => {
+            const res = await listEpisodesFromApi();
+            return pickApiList(res, ['episodes', 'items']);
+          }
+        ];
+
+    let gotEmptyResponse = false;
+    let successfulLoads = 0;
+
+    try {
+      for (const loadItems of sources) {
+        try {
+          const items = (await loadItems())
+            .map(normalizeEpisodeRow)
+            .filter(item => item.id && item.estado !== 'oculto');
+          successfulLoads++;
+          if (items.length) {
+            writeCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, items);
+            return setEpisodesState(items);
+          }
+          gotEmptyResponse = true;
+        } catch (error) {
+          console.error(error);
+        }
+      }
+
+      if (gotEmptyResponse && successfulLoads > 0) {
+        writeCatalogCache(FF_CONFIG.STORAGE_KEYS.EPISODES_CACHE, []);
+        return setEpisodesState([]);
+      }
+
+      return previousItems.length ? setEpisodesState(previousItems) : FF_STATE.episodes;
+    } finally {
+      FF_STATE.episodesLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.episodesLoadingPromise;
 }
+
+async function loadCatalog(options = {}) {
+  await Promise.all([fetchContent(options), fetchEpisodes(options)]);
+  return {
+    content: FF_STATE.content,
+    episodes: FF_STATE.episodes
+  };
+}
+
+/* -------------------------------
+   Estado del usuario
+--------------------------------*/
+async function loadUserState() {
+  const user = getCurrentUser();
+  if (!user?.id) {
+    FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
+    rebuildUserStateIndexes();
+    return FF_STATE.userState;
+  }
+
+  if (FF_STATE.userStateLoadingPromise) return FF_STATE.userStateLoadingPromise;
+
+  FF_STATE.userStateLoadingPromise = (async () => {
+    try {
+      const res = await getUserStateRemote(user.id);
+      FF_STATE.userState = {
+        progress: res.progress || [],
+        favorites: res.favorites || [],
+        continueWatching: res.continueWatching || []
+      };
+      rebuildUserStateIndexes();
+      return FF_STATE.userState;
+    } catch (error) {
+      console.error(error);
+      FF_STATE.userState = { progress: [], favorites: [], continueWatching: [] };
+      rebuildUserStateIndexes();
+      return FF_STATE.userState;
+    } finally {
+      FF_STATE.userStateLoadingPromise = null;
+    }
+  })();
+
+  return FF_STATE.userStateLoadingPromise;
+}
+
+function favoriteKeyFor(itemType, contenidoId, episodioId = '') {
+  return `${itemType}::${contenidoId || ''}::${episodioId || ''}`;
+}
+
+function isFavorite(itemType, contenidoId, episodioId = '') {
+  const key = favoriteKeyFor(itemType, contenidoId, episodioId);
+  return FF_STATE.indexes.favoriteKeys.has(key);
+}
+
+function getProgressRecord(itemType, contenidoId, episodioId = '') {
+  return FF_STATE.indexes.progressByKey.get(progressLookupKey(itemType, contenidoId, episodioId)) || null;
+}
+
+function getProgressPercent(itemType, contenidoId, episodioId = '') {
+  return Number(getProgressRecord(itemType, contenidoId, episodioId)?.porcentaje || 0);
+}
+
+function getContentProgressState(item = {}) {
+  if (!item?.id) {
+    return { hasProgress: false, percent: 0, record: null, type: item?.tipo || '' };
+  }
+
+  if (item.tipo === 'pelicula') {
+    const record = getProgressRecord('pelicula', item.id, '');
+    const percent = Number(record?.porcentaje || 0);
+    return {
+      hasProgress: percent > 0 && percent < 100,
+      percent,
+      record,
+      type: 'pelicula'
+    };
+  }
+
+  const record = FF_STATE.indexes.latestSeriesProgressByContent.get(String(item.id)) || null;
+
+  const percent = Number(record?.porcentaje || 0);
+  return {
+    hasProgress: percent > 0,
+    percent,
+    record,
+    type: 'serie'
+  };
+}
+
+function getEpisodeProgressState(contenidoId, episodioId = '', fallbackDuration = '') {
+  const record = getProgressRecord('episodio', contenidoId, episodioId);
+  const viewedSeconds = Math.max(0, Math.floor(Number(record?.segundosVistos || 0)));
+  const durationFromRecord = Math.max(0, Math.floor(Number(record?.duracionSegundos || 0)));
+  const fallbackSeconds = parseDurationToSeconds(fallbackDuration);
+  const durationSeconds = durationFromRecord || fallbackSeconds;
+  const percent = durationSeconds
+    ? Math.min(100, Math.round((viewedSeconds / durationSeconds) * 100))
+    : Number(record?.porcentaje || 0);
+
+  return {
+    record,
+    viewedSeconds,
+    durationSeconds,
+    percent,
+    hasProgress: viewedSeconds > 0 || percent > 0
+  };
+}
+
+function getContinueWatchingItems() {
+  const progress = [...(FF_STATE.userState.progress || [])]
+    .filter(p => Number(p.porcentaje) > 0 && String(p.completado || '').toLowerCase() !== 'si')
+    .sort((a, b) => progressTimestamp(b) - progressTimestamp(a));
+
+  return progress.map(p => {
+    if (p.tipo === 'pelicula') {
+      const item = FF_STATE.indexes.contentById.get(String(p.contenidoId || ''));
+      if (!item) return null;
+      return { kind: 'content', item, progress: p };
+    }
+
+    const ep = FF_STATE.indexes.episodeById.get(String(p.episodioId || ''));
+    const serie = FF_STATE.indexes.contentById.get(String(p.contenidoId || ''));
+    if (!ep || !serie) return null;
+    return { kind: 'episode', episode: ep, serie, progress: p };
+  }).filter(Boolean);
+}
+
+async function toggleFavorite(itemType, contenidoId, episodioId = '') {
+  const user = getCurrentUser();
+  if (!user?.id) throw new Error('No hay usuario autenticado');
+
+  const payload = {
+    usuarioId: user.id,
+    tipo: itemType,
+    contenidoId,
+    episodioId
+  };
+
+  const res = await toggleFavoriteRemote(payload);
+  await loadUserState();
+  return res;
+}
+
+async function savePlaybackProgress({
+  tipo,
+  contenidoId,
+  episodioId = '',
+  temporada = '',
+  numeroEpisodio = '',
+  segundosVistos = 0,
+  duracionSegundos = 0,
+  completado = 'no'
+}) {
+  const user = getCurrentUser();
+  if (!user?.id) throw new Error('No hay usuario autenticado');
+
+  const porcentaje = duracionSegundos > 0
+    ? Math.min(100, Math.round((Number(segundosVistos || 0) / Number(duracionSegundos || 1)) * 100))
+    : 0;
+
+  const payload = {
+    usuarioId: user.id,
+    contenidoId,
+    episodioId,
+    tipo,
+    temporada,
+    numeroEpisodio,
+    segundosVistos: Number(segundosVistos || 0),
+    duracionSegundos: Number(duracionSegundos || 0),
+    porcentaje,
+    completado,
+    ultimaVisualizacion: fmtDateTime()
+  };
+
+  const res = await saveProgressRemote(payload);
+  await loadUserState();
+  return res;
+}
+
+/* -------------------------------
+   Consultas y helpers de catálogo
+--------------------------------*/
+function getSeriesEpisodes(serieId) {
+  const serie = getContentById(serieId);
+  if (!serie || !canUserAccessContent(serie)) return [];
+  return FF_STATE.indexes.episodesBySeries.get(String(serieId)) || [];
+}
+
+function buildSeasonsMap(episodes = []) {
+  const map = new Map();
+  episodes.forEach(ep => {
+    const season = Number(ep.temporada) || 1;
+    if (!map.has(season)) map.set(season, []);
+    map.get(season).push(ep);
+  });
+  for (const [, list] of map.entries()) {
+    list.sort((a, b) => a.numeroEpisodio - b.numeroEpisodio);
+  }
+  return map;
+}
+
+function getContentById(id) {
+  return FF_STATE.indexes.contentById.get(String(id)) || null;
+}
+
+function getEpisodeById(id) {
+  return FF_STATE.indexes.episodeById.get(String(id)) || null;
+}
+
+function getFeaturedContent() {
+  return FF_STATE.content.filter(item => item.estado === 'activo' && item.destacado);
+}
+
+function getMovies() {
+  return FF_STATE.content.filter(item => item.estado === 'activo' && item.tipo === 'pelicula');
+}
+
+function getSeries() {
+  return FF_STATE.content.filter(item => item.estado === 'activo' && item.tipo === 'serie');
+}
+
+function searchCatalog(query = '') {
+  const q = slugify(query);
+  if (!q) return FF_STATE.content.filter(item => item.estado === 'activo');
+
+  return FF_STATE.content.filter(item => {
+    const haystack = [
+      item.titulo,
+      item.tituloOriginal,
+      item.categoria,
+      ...(item.generos || []),
+      ...(item.tags || []),
+      item.sinopsis
+    ].join(' ');
+
+    return slugify(haystack).includes(q);
+  });
+}
+
+function getCategories() {
+  const values = FF_STATE.content
+    .filter(item => item.estado === 'activo')
+    .flatMap(item => [item.categoria, ...(item.generos || [])])
+    .filter(Boolean)
+    .map(v => String(v).trim());
+
+  return uniqueBy(values, v => v).sort((a, b) => a.localeCompare(b, 'es'));
+}
+
+function getItemsByCategory(category = '') {
+  const target = String(category || '').trim().toLowerCase();
+  return FF_STATE.content.filter(item => {
+    const set = [item.categoria, ...(item.generos || [])].map(v => String(v || '').trim().toLowerCase());
+    return set.includes(target) && item.estado === 'activo';
+  });
+}
+
+function getHeroItem() {
+  return getFeaturedContent()[0] || FF_STATE.content.find(item => item.estado === 'activo') || null;
+}
+
+function getPlayableUrl(item = {}) {
+  return buildR2Url(item.r2Url || '') || item.driveUrl || '';
+}
+
+function isDriveUrl(url = '') {
+  return /drive\.google\.com/i.test(String(url || ''));
+}
+
+function toDrivePreviewUrl(url = '') {
+  const txt = String(url || '').trim();
+  if (!txt) return '';
+
+  const matchId = txt.match(/\/d\/([^/]+)/) || txt.match(/[?&]id=([^&]+)/);
+  const driveId = matchId?.[1] || txt;
+  return `https://drive.google.com/file/d/${driveId}/preview`;
+}
+
+/* -------------------------------
+   Render helpers
+--------------------------------*/
+function mediaCardImage(url, fallback = '🎬', title = '') {
+  if (url) {
+    return `<div class="media-image-shell" data-media-fallback="true"><img src="${escapeHtml(url)}" alt="" loading="lazy" decoding="async" data-fallback="${escapeHtml(fallback)}" data-title="${escapeHtml(title)}" onerror="handleMediaImageError(this)"></div>`;
+  }
+  return buildMediaFallbackMarkup(fallback, title);
+}
+
+function buildMediaFallbackMarkup(fallback = '🎬', title = '') {
+  const safeFallback = escapeHtml(fallback);
+  const safeTitle = escapeHtml(String(title || '').trim());
+  return `
+    <div class="media-fallback">
+      <strong>${safeFallback}</strong>
+      ${safeTitle ? `<span>${safeTitle}</span>` : ''}
+    </div>
+  `;
+}
+
+function mediaYear(item = {}) {
+  return item.anio || item['año'] || item['aÃ±o'] || '';
+}
+
+function handleMediaImageError(imgEl) {
+  if (!imgEl) return;
+  const fallback = imgEl.getAttribute('data-fallback') || '🎬';
+  const title = imgEl.getAttribute('data-title') || imgEl.getAttribute('alt') || '';
+  const container = imgEl.closest('[data-media-fallback]');
+  if (container) {
+    container.innerHTML = buildMediaFallbackMarkup(fallback, title);
+  }
+}
+
+function mediaBadge(itemType, progressPercent) {
+  if (progressPercent >= 100) return '<div class="badge badge-done">✓ Visto</div>';
+  if (progressPercent > 0) return `<div class="badge badge-wip">${progressPercent}%</div>`;
+  return itemType === 'serie'
+    ? '<div class="badge badge-serie">SERIE</div>'
+    : '<div class="badge badge-new">NUEVO</div>';
+}
+
+function buildMediaCard(item) {
+  const type = item.tipo || 'pelicula';
+  const progress = getContentProgressState(item).percent;
+  const img = mediaCardImage(item.portadaUrl, type === 'serie' ? '📺' : '🎬', item.titulo);
+  const year = mediaYear(item);
+  const metaText = [
+    item.categoria || '',
+    year ? String(year) : '',
+    formatRatingShortText(item)
+  ].filter(Boolean).join(' • ');
+  return `
+    <article class="media-card" data-id="${escapeHtml(item.id)}" data-type="${escapeHtml(type)}">
+      <button class="media-card__btn" type="button" onclick="openContentDetail('${escapeHtml(item.id)}')">
+        <div class="media-card__image">${img}</div>
+        ${mediaBadge(type, progress)}
+        <div class="media-card__body">
+          <h3 class="media-card__title">${escapeHtml(item.titulo)}</h3>
+          <p class="media-card__meta">${escapeHtml(metaText)}</p>
+        </div>
+      </button>
+    </article>
+  `;
+}
+
+function buildEpisodeCard(ep, serie) {
+  const progress = getProgressPercent('episodio', serie.id, ep.id);
+  const img = mediaCardImage(ep.portadaUrl || serie.portadaUrl, '🎞️', ep.titulo || serie.titulo);
+  return `
+    <article class="episode-card" data-id="${escapeHtml(ep.id)}">
+      <button class="episode-card__btn" type="button" onclick="goToPlayer('${escapeHtml(serie.id)}','${escapeHtml(ep.id)}')">
+        <div class="episode-card__image">${img}</div>
+        ${mediaBadge('episodio', progress)}
+        <div class="episode-card__body">
+          <h4 class="episode-card__title">T${ep.temporada} · E${ep.numeroEpisodio} · ${escapeHtml(ep.titulo)}</h4>
+          <p class="episode-card__meta">${escapeHtml(ep.duracion || '')}</p>
+        </div>
+      </button>
+    </article>
+  `;
+}
+
+/* -------------------------------
+   Navegación
+--------------------------------*/
+function goToHome() {
+  window.location.href = 'home.html';
+}
+
+function goToAdmin() {
+  window.location.href = 'admin.html';
+}
+
+function goToPlayer(contenidoId, episodioId = '') {
+  const url = new URL('player.html', window.location.href);
+  url.searchParams.set('id', contenidoId);
+  if (episodioId) url.searchParams.set('episode', episodioId);
+  window.location.href = url.toString();
+}
+
+function openContentDetail(contenidoId) {
+  const item = getContentById(contenidoId);
+  if (!item) return;
+
+  const modal = document.getElementById('detailModal');
+  if (!modal) {
+    if (item.tipo === 'pelicula') {
+      goToPlayer(item.id);
+    }
+    return;
+  }
+
+  const titleEl = modal.querySelector('[data-detail="title"]');
+  const metaEl = modal.querySelector('[data-detail="meta"]');
+  const synopsisEl = modal.querySelector('[data-detail="synopsis"]');
+  const imageEl = modal.querySelector('[data-detail="image"]');
+  const actionsEl = modal.querySelector('[data-detail="actions"]');
+  const seasonsEl = modal.querySelector('[data-detail="seasons"]');
+  const metaValues = [item.categoria, mediaYear(item)]
+    .filter(Boolean)
+    .map((value) => `<span class="modal-meta-item">${escapeHtml(String(value))}</span>`);
+  const ratingMarkup = buildRatingPill(item, { showCount: true, showSource: true });
+
+  if (titleEl) titleEl.textContent = item.titulo || '';
+  if (metaEl) metaEl.innerHTML = [...metaValues, ratingMarkup].filter(Boolean).join('');
+  if (synopsisEl) synopsisEl.textContent = item.sinopsis || 'Sin sinopsis disponible.';
+  if (imageEl) imageEl.innerHTML = mediaCardImage(item.portadaUrl, item.tipo === 'serie' ? '📺' : '🎬', item.titulo);
+
+  if (actionsEl) {
+    const favText = isFavorite(item.tipo, item.id) ? 'Quitar favorito' : 'Favorito';
+    actionsEl.innerHTML = `
+      <button class="btn btn-primary" type="button" onclick="${item.tipo === 'serie' ? `playFirstEpisode('${escapeHtml(item.id)}')` : `goToPlayer('${escapeHtml(item.id)}')`}">
+        ▶ Reproducir
+      </button>
+      <button class="btn btn-secondary" type="button" onclick="toggleFavoriteFromUI('${escapeHtml(item.tipo)}','${escapeHtml(item.id)}','')">♡ ${favText}</button>
+      <button class="btn btn-ghost" type="button" onclick="closeDetailModal()">Cerrar</button>
+    `;
+  }
+
+  if (seasonsEl) {
+    if (item.tipo !== 'serie') {
+      seasonsEl.innerHTML = '';
+    } else {
+      const episodes = getSeriesEpisodes(item.id);
+      const seasons = buildSeasonsMap(episodes);
+      seasonsEl.innerHTML = [...seasons.entries()].map(([season, eps]) => `
+        <section class="season-block">
+          <h4>Temporada ${season}</h4>
+          <div class="episode-grid">
+            ${eps.map(ep => buildEpisodeCard(ep, item)).join('')}
+          </div>
+        </section>
+      `).join('');
+    }
+  }
+
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeDetailModal() {
+  const modal = document.getElementById('detailModal');
+  if (!modal) return;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+}
+
+function playFirstEpisode(serieId) {
+  const first = getSeriesEpisodes(serieId)[0];
+  if (!first) {
+    showToast('Esta serie todavía no tiene episodios.', 'error');
+    return;
+  }
+  goToPlayer(serieId, first.id);
+}
+
+async function toggleFavoriteFromUI(tipo, contenidoId, episodioId = '') {
+  try {
+    await toggleFavorite(tipo, contenidoId, episodioId);
+    showToast('Favoritos actualizados.');
+    return true;
+  } catch (error) {
+    console.error(error);
+    showToast(error.message || 'No se pudo actualizar favorito.', 'error');
+    return false;
+  }
+}
+
+/* -------------------------------
+   Navegacion TV / teclado
+--------------------------------*/
+const FF_TV_NAV = {
+  focusClass: 'ff-tv-focusable',
+  activeClass: 'is-tv-focus',
+  nativeSelector: 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"]',
+  enrichSelector: '[onclick], .episode-link, [data-tv-focus]'
+};
+
+let ffTvNavigationBooted = false;
+
+function isNativeFocusableElement(el) {
+  return el instanceof HTMLElement && el.matches(FF_TV_NAV.nativeSelector);
+}
+
+function isManualTextEntry(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  if (el.matches('textarea, select, [contenteditable=""], [contenteditable="true"]')) return true;
+  if (!el.matches('input')) return false;
+  return !el.matches('[type="checkbox"], [type="radio"], [type="button"], [type="submit"], [type="reset"]');
+}
+
+function hasFocusableChild(el) {
+  return el instanceof HTMLElement
+    && Boolean(el.querySelector('a[href], button, input:not([type="hidden"]), select, textarea, summary, [tabindex]:not([tabindex="-1"]), [role="button"]'));
+}
+
+function shouldPrepareCustomFocusable(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  if (isNativeFocusableElement(el)) return false;
+  if (el.matches('html, body, label, form, .modal-bd, [data-tv-ignore]')) return false;
+  if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') return false;
+  if (hasFocusableChild(el)) return false;
+  return true;
+}
+
+function markTvFocusable(el) {
+  if (!(el instanceof HTMLElement)) return;
+  el.classList.add(FF_TV_NAV.focusClass);
+}
+
+function prepareTvFocusableElements(root = document) {
+  const scope = root?.querySelectorAll ? root : document;
+
+  qsa(FF_TV_NAV.nativeSelector, scope).forEach(markTvFocusable);
+  qsa(FF_TV_NAV.enrichSelector, scope).forEach((el) => {
+    if (!shouldPrepareCustomFocusable(el)) return;
+    if (!el.hasAttribute('tabindex')) el.tabIndex = 0;
+    if (!el.hasAttribute('role')) el.setAttribute('role', 'button');
+    markTvFocusable(el);
+  });
+}
+
+function isTvCandidateVisible(el) {
+  if (!(el instanceof HTMLElement) || !el.isConnected) return false;
+  if (el.hidden || el.closest('[hidden], [inert]')) return false;
+  if (el.hasAttribute('disabled') || el.getAttribute('aria-disabled') === 'true') return false;
+
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden') return false;
+
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
+function getTvFocusCandidates() {
+  return uniqueBy(qsa(`.${FF_TV_NAV.focusClass}`), el => el).filter(isTvCandidateVisible);
+}
+
+function getTvRect(el) {
+  const rect = el.getBoundingClientRect();
+  return {
+    left: rect.left,
+    right: rect.right,
+    top: rect.top,
+    bottom: rect.bottom,
+    centerX: rect.left + (rect.width / 2),
+    centerY: rect.top + (rect.height / 2)
+  };
+}
+
+function sortTvCandidatesByReadingOrder(candidates = []) {
+  return [...candidates].sort((a, b) => {
+    const rectA = a.getBoundingClientRect();
+    const rectB = b.getBoundingClientRect();
+    const topDiff = rectA.top - rectB.top;
+    if (Math.abs(topDiff) > 10) return topDiff;
+    return rectA.left - rectB.left;
+  });
+}
+
+function focusTvElement(el) {
+  if (!(el instanceof HTMLElement)) return false;
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  return document.activeElement === el;
+}
+
+function getDirectionalScore(currentRect, candidateRect, direction) {
+  const dx = candidateRect.centerX - currentRect.centerX;
+  const dy = candidateRect.centerY - currentRect.centerY;
+
+  let primary = 0;
+  let secondary = 0;
+  let overlap = 0;
+
+  if (direction === 'left') {
+    if (dx >= -6) return Number.POSITIVE_INFINITY;
+    primary = Math.abs(dx);
+    secondary = Math.abs(dy);
+    overlap = Math.max(0, Math.min(currentRect.bottom, candidateRect.bottom) - Math.max(currentRect.top, candidateRect.top));
+  } else if (direction === 'right') {
+    if (dx <= 6) return Number.POSITIVE_INFINITY;
+    primary = dx;
+    secondary = Math.abs(dy);
+    overlap = Math.max(0, Math.min(currentRect.bottom, candidateRect.bottom) - Math.max(currentRect.top, candidateRect.top));
+  } else if (direction === 'up') {
+    if (dy >= -6) return Number.POSITIVE_INFINITY;
+    primary = Math.abs(dy);
+    secondary = Math.abs(dx);
+    overlap = Math.max(0, Math.min(currentRect.right, candidateRect.right) - Math.max(currentRect.left, candidateRect.left));
+  } else if (direction === 'down') {
+    if (dy <= 6) return Number.POSITIVE_INFINITY;
+    primary = dy;
+    secondary = Math.abs(dx);
+    overlap = Math.max(0, Math.min(currentRect.right, candidateRect.right) - Math.max(currentRect.left, candidateRect.left));
+  } else {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return (primary * 1000) + (secondary * 20) - overlap;
+}
+
+function moveTvFocus(direction) {
+  const candidates = getTvFocusCandidates();
+  if (!candidates.length) return false;
+
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  if (!(active instanceof HTMLElement) || !active.classList.contains(FF_TV_NAV.focusClass)) {
+    return focusTvElement(sortTvCandidatesByReadingOrder(candidates)[0]);
+  }
+
+  const currentRect = getTvRect(active);
+  let best = null;
+  let bestScore = Number.POSITIVE_INFINITY;
+
+  candidates.forEach((candidate) => {
+    if (candidate === active) return;
+    const score = getDirectionalScore(currentRect, getTvRect(candidate), direction);
+    if (score < bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  });
+
+  return best ? focusTvElement(best) : false;
+}
+
+function updateTvActiveClass(nextFocused = null) {
+  qsa(`.${FF_TV_NAV.focusClass}.${FF_TV_NAV.activeClass}`).forEach((el) => {
+    if (el !== nextFocused) el.classList.remove(FF_TV_NAV.activeClass);
+  });
+  if (nextFocused instanceof HTMLElement) {
+    nextFocused.classList.add(FF_TV_NAV.activeClass);
+  }
+}
+
+function handleTvFocusIn(event) {
+  const target = event.target instanceof HTMLElement ? event.target.closest(`.${FF_TV_NAV.focusClass}`) : null;
+  updateTvActiveClass(target);
+}
+
+function handleTvFocusOut(event) {
+  const target = event.target instanceof HTMLElement ? event.target.closest(`.${FF_TV_NAV.focusClass}`) : null;
+  if (target && document.activeElement !== target) {
+    target.classList.remove(FF_TV_NAV.activeClass);
+  }
+}
+
+function handleTvNavigationKeydown(event) {
+  const key = event.key;
+  const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+
+  if (key === 'Enter' || key === ' ') {
+    if (!active || isNativeFocusableElement(active) || isManualTextEntry(active)) return;
+    if (!active.classList.contains(FF_TV_NAV.focusClass)) return;
+    event.preventDefault();
+    active.click();
+    return;
+  }
+
+  if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(key)) return;
+  if (active && isManualTextEntry(active)) return;
+
+  event.preventDefault();
+  moveTvFocus(key.replace('Arrow', '').toLowerCase());
+}
+
+function initTvNavigation() {
+  return;
+  if (ffTvNavigationBooted) return;
+  ffTvNavigationBooted = true;
+
+  const start = () => {
+    prepareTvFocusableElements(document);
+
+    document.addEventListener('keydown', handleTvNavigationKeydown, true);
+    document.addEventListener('focusin', handleTvFocusIn, true);
+    document.addEventListener('focusout', handleTvFocusOut, true);
+
+    const rescan = debounce(() => prepareTvFocusableElements(document), 80);
+    const observer = new MutationObserver(rescan);
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'style', 'hidden', 'disabled', 'tabindex', 'role']
+    });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start, { once: true });
+    return;
+  }
+
+  start();
+}
+
+/* -------------------------------
+   Inicialización global
+--------------------------------*/
+function bootstrapShared() {
+  initTheme();
+
+  Object.assign(window, {
+    FF_CONFIG,
+    FF_STATE,
+    escapeHtml,
+    slugify,
+    fmtDateTime,
+    fmtDurationSeconds,
+    parseDurationToSeconds,
+    safeJsonParse,
+    debounce,
+    handleMediaImageError,
+    splitTags,
+    qs,
+    qsa,
+    sleep,
+    initTheme,
+    toggleTheme,
+    showToast,
+    getSession,
+    setSession,
+    clearSession,
+    isLoggedIn,
+    getCurrentUser,
+    isAdmin,
+    logout,
+    requireAuth,
+    requireAdmin,
+    apiCall,
+    loginUser,
+    createUser,
+    listUsers,
+    updateUser,
+    deleteUserRemote,
+    addContent,
+    deleteContentRemote,
+    addEpisode,
+    deleteEpisodeRemote,
+    listCatalogFromApi,
+    listEpisodesFromApi,
+    saveProgressRemote,
+    getUserStateRemote,
+    toggleFavoriteRemote,
+    getVideoBaseUrlRemote,
+    setVideoBaseUrlRemote,
+    ensureVideoBaseUrlLoaded,
+    getAdminSecret,
+    setAdminSecret,
+    getVideoBaseUrl,
+    setVideoBaseUrl,
+    isAbsoluteHttpUrl,
+    workerRequest,
+    uploadFileToR2,
+    listR2Files,
+    deleteR2File,
+    analyzeWithAI,
+    getTrailerData,
+    buildR2Url,
+    fetchTsv,
+    parseTsv,
+    normalizeContentRow,
+    normalizeEpisodeRow,
+    getRatingState,
+    formatRatingShortText,
+    buildRatingPill,
+    fetchContent,
+    fetchEpisodes,
+    loadCatalog,
+    loadUserState,
+    favoriteKeyFor,
+    isFavorite,
+    canUserAccessContent,
+    getProgressRecord,
+    getProgressPercent,
+    getContentProgressState,
+    getEpisodeProgressState,
+    getContinueWatchingItems,
+    toggleFavorite,
+    savePlaybackProgress,
+    getSeriesEpisodes,
+    buildSeasonsMap,
+    getContentById,
+    getEpisodeById,
+    getFeaturedContent,
+    getMovies,
+    getSeries,
+    searchCatalog,
+    getCategories,
+    getItemsByCategory,
+    getHeroItem,
+    getPlayableUrl,
+    isDriveUrl,
+    toDrivePreviewUrl,
+    mediaCardImage,
+    mediaBadge,
+    buildMediaCard,
+    buildEpisodeCard,
+    goToHome,
+    goToAdmin,
+    goToPlayer,
+    openContentDetail,
+    closeDetailModal,
+    playFirstEpisode,
+    toggleFavoriteFromUI
+  });
+}
+
+bootstrapShared();
