@@ -109,6 +109,48 @@ function safeJsonParse(text, fallback = null) {
   }
 }
 
+function getSafeStorage(kind = 'local') {
+  try {
+    if (kind === 'session') return window.sessionStorage || null;
+    return window.localStorage || null;
+  } catch {
+    return null;
+  }
+}
+
+function storageGet(key, fallback = null, kind = 'local') {
+  try {
+    const storage = getSafeStorage(kind);
+    if (!storage) return fallback;
+    const value = storage.getItem(key);
+    return value === null ? fallback : value;
+  } catch {
+    return fallback;
+  }
+}
+
+function storageSet(key, value, kind = 'local') {
+  try {
+    const storage = getSafeStorage(kind);
+    if (!storage) return false;
+    storage.setItem(key, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function storageRemove(key, kind = 'local') {
+  try {
+    const storage = getSafeStorage(kind);
+    if (!storage) return false;
+    storage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function debounce(fn, delay = 500) {
   let t;
   return (...args) => {
@@ -243,12 +285,12 @@ function sleep(ms = 0) {
 --------------------------------*/
 function initTheme() {
   document.documentElement.setAttribute('data-theme', 'dark');
-  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
+  storageSet(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
 }
 
 function toggleTheme() {
   document.documentElement.setAttribute('data-theme', 'dark');
-  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
+  storageSet(FF_CONFIG.STORAGE_KEYS.THEME, 'dark');
 }
 
 /* -------------------------------
@@ -277,14 +319,14 @@ function showToast(message, type = 'success') {
    Sesión y auth
 --------------------------------*/
 function getSession() {
-  const local = safeJsonParse(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.SESSION), null);
+  const local = safeJsonParse(storageGet(FF_CONFIG.STORAGE_KEYS.SESSION, null), null);
   if (local?.ok && local?.user?.id) {
     return local;
   }
 
-  const session = safeJsonParse(sessionStorage.getItem(FF_CONFIG.STORAGE_KEYS.SESSION), null);
+  const session = safeJsonParse(storageGet(FF_CONFIG.STORAGE_KEYS.SESSION, null, 'session'), null);
   if (session?.ok && session?.user?.id) {
-    localStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(session));
+    storageSet(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(session));
     return session;
   }
 
@@ -292,13 +334,13 @@ function getSession() {
 }
 
 function setSession(data) {
-  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
-  sessionStorage.setItem(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
+  storageSet(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data));
+  storageSet(FF_CONFIG.STORAGE_KEYS.SESSION, JSON.stringify(data), 'session');
 }
 
 function clearSession() {
-  localStorage.removeItem(FF_CONFIG.STORAGE_KEYS.SESSION);
-  sessionStorage.removeItem(FF_CONFIG.STORAGE_KEYS.SESSION);
+  storageRemove(FF_CONFIG.STORAGE_KEYS.SESSION);
+  storageRemove(FF_CONFIG.STORAGE_KEYS.SESSION, 'session');
 }
 
 function isLoggedIn() {
@@ -451,11 +493,11 @@ function normalizeWorkerBaseUrl(url = '') {
 }
 
 function getAdminSecret() {
-  return localStorage.getItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET) || '';
+  return storageGet(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET, '') || '';
 }
 
 function setAdminSecret(secret) {
-  localStorage.setItem(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET, secret || '');
+  storageSet(FF_CONFIG.STORAGE_KEYS.ADMIN_SECRET, secret || '');
 }
 
 function isAbsoluteHttpUrl(value = '') {
@@ -468,7 +510,7 @@ function normalizeVideoBaseUrl(url = '') {
 
 function getVideoBaseUrl() {
   return FF_STATE.videoBaseUrl
-    || normalizeVideoBaseUrl(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL) || '')
+    || normalizeVideoBaseUrl(storageGet(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL, '') || '')
     || detectCurrentAppVideoBaseUrl();
 }
 
@@ -477,9 +519,9 @@ function setVideoBaseUrl(url) {
   FF_STATE.videoBaseUrl = normalized;
   FF_STATE.videoBaseLoaded = true;
   if (normalized) {
-    localStorage.setItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL, normalized);
+    storageSet(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL, normalized);
   } else {
-    localStorage.removeItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL);
+    storageRemove(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL);
   }
   return normalized;
 }
@@ -495,7 +537,7 @@ async function ensureVideoBaseUrlLoaded(force = false) {
 
   FF_STATE.videoBaseLoadingPromise = (async () => {
     const currentOrigin = detectCurrentAppVideoBaseUrl();
-    const localValue = normalizeVideoBaseUrl(localStorage.getItem(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL) || '');
+    const localValue = normalizeVideoBaseUrl(storageGet(FF_CONFIG.STORAGE_KEYS.VIDEO_BASE_URL, '') || '');
     let remoteValue = '';
 
     try {
@@ -763,7 +805,7 @@ function pickApiList(res, keys = []) {
 function readCatalogCache(storageKey, options = {}) {
   const allowExpired = Boolean(options.allowExpired);
   try {
-    const raw = localStorage.getItem(storageKey);
+    const raw = storageGet(storageKey, null);
     if (!raw) return [];
 
     const payload = JSON.parse(raw);
@@ -780,7 +822,7 @@ function readCatalogCache(storageKey, options = {}) {
 
 function writeCatalogCache(storageKey, items = []) {
   try {
-    localStorage.setItem(storageKey, JSON.stringify({
+    storageSet(storageKey, JSON.stringify({
       ts: Date.now(),
       items: Array.isArray(items) ? items : []
     }));
