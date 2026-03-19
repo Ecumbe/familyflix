@@ -161,6 +161,8 @@
             <div class="form-g"><label>Portada URL</label><input class="inp" id="movie_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="movie_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
             <div class="form-g"><label>Logo titulo URL</label><input class="inp" id="movie_logoUrl" placeholder="https://.../logo-titulo.png"></div>
+            <div class="form-g"><label>Corto preview URL</label><input class="inp" id="movie_previewVideoUrl" placeholder="https://.../preview.mp4"></div>
+            <div class="form-g"><label>Inicio del corto</label><input class="inp" id="movie_previewStart" placeholder="12 o 00:00:12"></div>
           </div>
           <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="movie_sinopsis"></textarea></div>
           <div class="form-g">
@@ -216,6 +218,8 @@
             <div class="form-g"><label>Portada URL</label><input class="inp" id="series_portadaUrl"></div>
             <div class="form-g"><label>Backdrop URL(s)</label><textarea class="inp" id="series_backdropUrl" placeholder="https://.../backdrop-1.jpg&#10;https://.../backdrop-2.jpg&#10;https://.../backdrop-3.jpg"></textarea><div class="muted" style="margin-top:6px">Puedes pegar varios backdrops: uno por linea, o separados por <code>|</code> o coma.</div></div>
             <div class="form-g"><label>Logo titulo URL</label><input class="inp" id="series_logoUrl" placeholder="https://.../logo-serie.png"></div>
+            <div class="form-g"><label>Corto preview URL</label><input class="inp" id="series_previewVideoUrl" placeholder="https://.../preview-serie.mp4"></div>
+            <div class="form-g"><label>Inicio del corto</label><input class="inp" id="series_previewStart" placeholder="12 o 00:00:12"></div>
             <div class="form-g"><label>Destacado</label><select class="inp" id="series_destacado"><option value="">No</option><option value="si">Sí</option></select></div>
           </div>
           <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="series_sinopsis"></textarea></div>
@@ -240,6 +244,8 @@
             <div class="form-g"><label>Título original</label><input class="inp" id="episode_tituloOriginal"></div>
             <div class="form-g"><label>Duración</label><input class="inp" id="episode_duracion"></div>
             <div class="form-g"><label>Portada URL</label><input class="inp" id="episode_portadaUrl"></div>
+            <div class="form-g"><label>Corto preview URL</label><input class="inp" id="episode_previewVideoUrl" placeholder="https://.../preview-episodio.mp4"></div>
+            <div class="form-g"><label>Inicio del corto</label><input class="inp" id="episode_previewStart" placeholder="12 o 00:00:12"></div>
           </div>
           <div class="form-g"><label>Sinopsis</label><textarea class="inp" id="episode_sinopsis"></textarea></div>
           <div class="grid2">
@@ -394,6 +400,14 @@
           <div class="form-g">
             <label>Logo titulo URL</label>
             <input class="inp" id="sheetEditorLogoUrl" type="text" placeholder="https://.../logo-titulo.png">
+          </div>
+          <div class="form-g">
+            <label>Corto preview URL</label>
+            <input class="inp" id="sheetEditorPreviewVideoUrl" type="text" placeholder="https://.../preview.mp4">
+          </div>
+          <div class="form-g">
+            <label>Inicio del corto</label>
+            <input class="inp" id="sheetEditorPreviewStart" type="text" placeholder="12 o 00:00:12">
           </div>
         </div>
         <div class="form-g">
@@ -792,6 +806,8 @@
       setFormValue(`${target}_portadaUrl`, item.portadaUrl || '');
       setFormValue(`${target}_backdropUrl`, item.backdropUrl || '');
       setFormValue(`${target}_logoUrl`, item.logoUrl || '');
+      setFormValue(`${target}_previewVideoUrl`, item.previewVideoUrl || '');
+      setFormValue(`${target}_previewStart`, item.previewStart || '');
       setFormValue(`${target}_clasificacion`, item.clasificacion || '');
       setFormValue(`${target}_idioma`, item.idioma || '');
       setFormValue(`${target}_rating`, item.rating || '');
@@ -830,6 +846,8 @@
       setFormValue('episode_sinopsis', item.sinopsis || '');
       setFormValue('episode_duracion', item.duracion || '');
       setFormValue('episode_portadaUrl', item.portadaUrl || '');
+      setFormValue('episode_previewVideoUrl', item.previewVideoUrl || '');
+      setFormValue('episode_previewStart', item.previewStart || '');
       setFormValue('episode_airDate', item.airDate || '');
       setFormValue('episode_subtitulos', item.subtitulos || '');
       const episodeSubtitleFile = document.getElementById('episode_subtitleFile');
@@ -1476,6 +1494,8 @@
         'movie_portadaUrl',
         'movie_backdropUrl',
         'movie_logoUrl',
+        'movie_previewVideoUrl',
+        'movie_previewStart',
         'movie_duracion',
         'movie_clasificacion',
         'movie_idioma',
@@ -1502,6 +1522,8 @@
         'series_portadaUrl',
         'series_backdropUrl',
         'series_logoUrl',
+        'series_previewVideoUrl',
+        'series_previewStart',
         'series_clasificacion',
         'series_idioma',
         'series_rating',
@@ -1521,6 +1543,8 @@
         'episode_sinopsis',
         'episode_duracion',
         'episode_portadaUrl',
+        'episode_previewVideoUrl',
+        'episode_previewStart',
         'episode_airDate'
       ].forEach((id) => setFormValue(id, ''));
       setFormValue('episode_temporada', 1);
@@ -1553,6 +1577,8 @@
           portadaUrl: document.getElementById('movie_portadaUrl').value.trim(),
           backdropUrl: document.getElementById('movie_backdropUrl').value.trim(),
           logoUrl: document.getElementById('movie_logoUrl').value.trim(),
+          previewVideoUrl: document.getElementById('movie_previewVideoUrl').value.trim(),
+          previewStart: document.getElementById('movie_previewStart').value.trim(),
           r2Url: video.r2Url,
           driveUrl: video.driveUrl,
           destacado: document.getElementById('movie_destacado').value,
@@ -1596,6 +1622,8 @@
           portadaUrl: document.getElementById('series_portadaUrl').value.trim(),
           backdropUrl: document.getElementById('series_backdropUrl').value.trim(),
           logoUrl: document.getElementById('series_logoUrl').value.trim(),
+          previewVideoUrl: document.getElementById('series_previewVideoUrl').value.trim(),
+          previewStart: document.getElementById('series_previewStart').value.trim(),
           r2Url: '',
           driveUrl: '',
           destacado: document.getElementById('series_destacado').value,
@@ -1637,6 +1665,8 @@
           r2Url: video.r2Url,
           driveUrl: video.driveUrl,
           portadaUrl: document.getElementById('episode_portadaUrl').value.trim(),
+          previewVideoUrl: document.getElementById('episode_previewVideoUrl').value.trim(),
+          previewStart: document.getElementById('episode_previewStart').value.trim(),
           airDate: document.getElementById('episode_airDate').value.trim(),
           subtitulos,
           estado: 'activo',
@@ -2190,6 +2220,8 @@
       document.getElementById('sheetEditorDriveUrl').value = record.driveUrl || '';
       document.getElementById('sheetEditorPosterUrl').value = record.portadaUrl || '';
       document.getElementById('sheetEditorLogoUrl').value = record.logoUrl || '';
+      document.getElementById('sheetEditorPreviewVideoUrl').value = record.previewVideoUrl || '';
+      document.getElementById('sheetEditorPreviewStart').value = record.previewStart || '';
       document.getElementById('sheetEditorSynopsis').value = record.sinopsis || '';
       document.getElementById('sheetEditorSubtitles').value = record.subtitulos || '';
       if (kind === 'episode') {
@@ -2227,6 +2259,8 @@
       const nextDriveUrl = document.getElementById('sheetEditorDriveUrl').value.trim();
       const nextPosterUrl = document.getElementById('sheetEditorPosterUrl').value.trim();
       const nextLogoUrl = document.getElementById('sheetEditorLogoUrl').value.trim();
+      const nextPreviewVideoUrl = document.getElementById('sheetEditorPreviewVideoUrl').value.trim();
+      const nextPreviewStart = document.getElementById('sheetEditorPreviewStart').value.trim();
       const nextSynopsis = document.getElementById('sheetEditorSynopsis').value.trim();
       const nextSubtitles = document.getElementById('sheetEditorSubtitles').value.trim();
 
@@ -2244,6 +2278,8 @@
             r2Url: nextR2Url,
             driveUrl: nextDriveUrl,
             portadaUrl: nextPosterUrl,
+            previewVideoUrl: nextPreviewVideoUrl,
+            previewStart: nextPreviewStart,
             airDate: record.airDate || '',
             subtitulos: nextSubtitles,
             estado: record.estado || 'activo',
@@ -2263,6 +2299,8 @@
             tags: toDelimitedText(record.tags),
             portadaUrl: nextPosterUrl,
             logoUrl: nextLogoUrl,
+            previewVideoUrl: nextPreviewVideoUrl,
+            previewStart: nextPreviewStart,
             backdropUrl: record.backdropUrl || '',
             r2Url: nextR2Url,
             driveUrl: nextDriveUrl,
