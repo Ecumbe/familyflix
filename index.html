@@ -87,7 +87,7 @@
     if (typeof isLoggedIn !== 'function' || typeof loginUser !== 'function') {
       console.error('FamilyFlix no pudo cargar js/shared.js correctamente.');
       loginBtn.disabled = true;
-      setError('No se pudo cargar la app. Recarga la pagina y verifica que entraste usando la URL completa del sitio.');
+      setError('No se pudo iniciar la app en este navegador. Recarga la pagina y, si sigue igual, prueba desactivar el bloqueo estricto de almacenamiento para este sitio.');
     } else if (isLoggedIn()) {
       window.location.href = 'home.html';
     }
@@ -103,7 +103,7 @@
 
     async function doLogin() {
       if (typeof loginUser !== 'function' || typeof setSession !== 'function') {
-        setError('No se pudo cargar la app. Recarga la pagina y verifica la URL del sitio.');
+        setError('No se pudo iniciar la app en este navegador. Recarga la pagina y revisa si el navegador esta bloqueando almacenamiento para este sitio.');
         return;
       }
 
