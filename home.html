@@ -54,7 +54,7 @@
     }
     .empty{text-align:center;padding:70px 20px;color:var(--cream3)}
     .empty h3{font-family:var(--ff);font-size:24px;color:var(--cream);margin-bottom:10px}
-    .search-zone{padding:12px 24px 8px;position:relative;z-index:1}
+    .search-zone{padding:10px 24px 8px;position:relative;z-index:1}
     @media(min-width:721px){
       body.home-screen.home-filtered .search-zone{padding-top:calc(var(--nav-h) + 18px)}
     }
@@ -77,6 +77,77 @@
     .search-box{position:relative;max-width:520px}
     .search-box .inp{padding-left:72px}
     .si{position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.68;font-size:11px;letter-spacing:.14em;text-transform:uppercase}
+    .nav-search{
+      display:flex;
+      align-items:center;
+      min-width:0;
+    }
+    .nav-tabs .nav-search{
+      flex:0 0 auto;
+      margin-left:2px;
+    }
+    .nav-search__wrap{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      width:42px;
+      min-width:42px;
+      height:42px;
+      padding:0 11px;
+      overflow:hidden;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      transition:width .28s ease, background .24s ease, border-color .24s ease, box-shadow .24s ease;
+      box-shadow:0 10px 24px rgba(0,0,0,.12);
+    }
+    .nav-search__wrap.is-open,
+    .nav-search__wrap:focus-within{
+      width:min(320px, 42vw);
+      background:rgba(255,255,255,.06);
+      border-color:rgba(255,255,255,.14);
+      box-shadow:0 14px 28px rgba(0,0,0,.18);
+    }
+    .nav-search__toggle{
+      flex:0 0 20px;
+      width:20px;
+      height:20px;
+      padding:0;
+      border:none;
+      background:none;
+      color:var(--cream);
+      opacity:.9;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+    }
+    .nav-search__toggle svg{
+      width:16px;
+      height:16px;
+      display:block;
+    }
+    .nav-search__input{
+      flex:1 1 auto;
+      min-width:0;
+      border:none;
+      background:none;
+      color:var(--cream);
+      padding:0;
+      opacity:0;
+      pointer-events:none;
+      font-size:13px;
+    }
+    .nav-search__input::placeholder{
+      color:rgba(241,236,223,.52);
+    }
+    .nav-search__wrap.is-open .nav-search__input,
+    .nav-search__wrap:focus-within .nav-search__input{
+      opacity:1;
+      pointer-events:auto;
+    }
+    .nav-search__input:focus{
+      outline:none;
+    }
     .hero-mini-actions{display:flex;gap:12px;flex-wrap:wrap}
     .hero-info-link{
       min-height:38px;
@@ -983,6 +1054,10 @@
       .saga-modal-body{padding:20px}
       .saga-modal-top{flex-direction:column}
       .search-zone{padding:6px 16px 2px}
+      .nav-search__wrap.is-open,
+      .nav-search__wrap:focus-within{
+        width:min(240px, 58vw);
+      }
       .skeleton-screen,
       body.home-screen .section{padding-left:16px;padding-right:16px}
       .chip-row--quick{gap:8px;margin-top:12px}
@@ -1380,6 +1455,284 @@
     .feature-mini-card .card-body{
       margin-top:-18px;
     }
+    .desktop-showcase{
+      display:grid;
+      gap:18px;
+    }
+    .desktop-showcase__rail{
+      display:grid;
+      gap:18px;
+    }
+    .desktop-showcase__spotlight{
+      position:relative;
+      min-width:0;
+      min-height:420px;
+      border-radius:24px;
+      overflow:hidden;
+    }
+    .desktop-showcase__slide{
+      position:absolute;
+      inset:0;
+      opacity:0;
+      pointer-events:none;
+      transform:translate3d(26px, 0, 0);
+      transition:transform .58s cubic-bezier(.2,.9,.2,1), opacity .34s ease;
+    }
+    .desktop-showcase__slide.is-active{
+      opacity:1;
+      pointer-events:auto;
+      transform:translate3d(0, 0, 0);
+    }
+    .desktop-showcase__visual{
+      position:relative;
+      width:100%;
+      min-height:420px;
+      border-radius:24px;
+      overflow:hidden;
+      isolation:isolate;
+      border:1px solid rgba(255,255,255,.11);
+      background:
+        radial-gradient(circle at 18% 18%, rgba(243,197,91,.1), transparent 24%),
+        linear-gradient(135deg, rgba(12,16,25,.98) 0%, rgba(6,9,15,.99) 100%);
+      box-shadow:0 26px 74px rgba(0,0,0,.32);
+    }
+    .desktop-showcase__art{
+      position:absolute;
+      inset:0;
+    }
+    .desktop-showcase__art::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(90deg, rgba(4,6,11,.84) 0%, rgba(4,6,11,.48) 26%, rgba(4,6,11,.12) 58%, rgba(4,6,11,.54) 100%),
+        linear-gradient(180deg, rgba(4,6,11,.04) 0%, rgba(4,6,11,.12) 56%, rgba(4,6,11,.82) 100%);
+      z-index:1;
+    }
+    .desktop-showcase__art .media-image-shell,
+    .desktop-showcase__art .media-image-shell img,
+    .desktop-showcase__art .media-fallback{
+      width:100%;
+      height:100%;
+    }
+    .desktop-showcase__art .media-image-shell img{
+      object-fit:cover;
+    }
+    .desktop-showcase__video{
+      position:absolute;
+      inset:0;
+      z-index:0;
+      width:100%;
+      height:100%;
+      object-fit:cover;
+      background:#05080d;
+    }
+    .desktop-showcase__video.is-hidden{
+      display:none;
+    }
+    .desktop-showcase__copy{
+      position:absolute;
+      inset:0 auto 0 0;
+      z-index:2;
+      display:grid;
+      align-content:end;
+      gap:12px;
+      width:min(44%,420px);
+      padding:40px 34px 34px;
+    }
+    .desktop-showcase__eyebrow{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      width:max-content;
+      max-width:100%;
+      padding:7px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.12);
+      color:rgba(255,255,255,.92);
+      font-size:10px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      backdrop-filter:blur(10px);
+    }
+    .desktop-showcase__title-slot{
+      display:grid;
+      gap:10px;
+      align-items:flex-start;
+      max-width:min(100%,340px);
+    }
+    .desktop-showcase__title-logo{
+      width:auto;
+      max-width:100%;
+      max-height:92px;
+      object-fit:contain;
+      object-position:left center;
+      filter:drop-shadow(0 18px 30px rgba(0,0,0,.34));
+    }
+    .desktop-showcase__title{
+      margin:0;
+      font-family:"Space Grotesk", var(--ff);
+      font-size:clamp(32px,4vw,46px);
+      line-height:.92;
+      letter-spacing:-.06em;
+      color:var(--cream);
+      text-shadow:0 18px 30px rgba(0,0,0,.3);
+    }
+    .desktop-showcase__meta{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      color:rgba(241,236,223,.84);
+      font-size:13px;
+      font-weight:700;
+      text-shadow:0 10px 18px rgba(0,0,0,.26);
+    }
+    .desktop-showcase__synopsis{
+      margin:0;
+      color:rgba(241,236,223,.88);
+      font-size:15px;
+      line-height:1.64;
+      display:-webkit-box;
+      -webkit-line-clamp:3;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+      text-shadow:0 14px 24px rgba(0,0,0,.3);
+    }
+    .desktop-showcase__actions{
+      display:flex;
+      flex-wrap:wrap;
+      gap:12px;
+      margin-top:2px;
+    }
+    .desktop-showcase__actions .btn{
+      min-height:44px;
+      padding:0 18px;
+      border-radius:999px;
+    }
+    .desktop-showcase__actions .btn-amber{
+      background:#f3f4f6;
+      border-color:#f3f4f6;
+      color:#101318;
+      box-shadow:0 18px 34px rgba(0,0,0,.22);
+    }
+    .desktop-showcase__actions .btn-ghost{
+      background:rgba(255,255,255,.12);
+      border-color:rgba(255,255,255,.18);
+      color:var(--cream);
+      backdrop-filter:blur(12px);
+    }
+    .desktop-showcase__thumbs{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:14px;
+      align-items:stretch;
+    }
+    .desktop-showcase__thumb{
+      position:relative;
+      min-height:118px;
+      padding:0;
+      border:none;
+      border-radius:18px;
+      overflow:hidden;
+      cursor:pointer;
+      text-align:left;
+      isolation:isolate;
+      background:linear-gradient(180deg, rgba(20,27,39,.92), rgba(11,16,24,.98));
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 14px 32px rgba(0,0,0,.22);
+      transition:transform .24s ease, border-color .24s ease, box-shadow .24s ease;
+    }
+    .desktop-showcase__thumb:hover{
+      transform:translateY(-3px);
+      border-color:rgba(255,255,255,.15);
+      box-shadow:0 20px 40px rgba(0,0,0,.28);
+    }
+    .desktop-showcase__thumb.is-active{
+      border-color:rgba(243,197,91,.34);
+      box-shadow:0 22px 42px rgba(0,0,0,.3);
+      transform:translateY(-2px);
+    }
+    .desktop-showcase__thumb::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(180deg, rgba(4,6,11,.04) 0%, rgba(4,6,11,.14) 42%, rgba(4,6,11,.9) 100%);
+      z-index:1;
+    }
+    .desktop-showcase__thumb-media,
+    .desktop-showcase__thumb-media .media-image-shell,
+    .desktop-showcase__thumb-media .media-image-shell img,
+    .desktop-showcase__thumb-media .media-fallback{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+    }
+    .desktop-showcase__thumb-media .media-image-shell img{
+      object-fit:cover;
+    }
+    .desktop-showcase__thumb-copy{
+      position:relative;
+      z-index:2;
+      display:grid;
+      gap:4px;
+      align-content:end;
+      min-height:118px;
+      padding:12px;
+    }
+    .desktop-showcase__thumb-title{
+      font-family:"Space Grotesk", var(--ff);
+      font-size:15px;
+      line-height:1.02;
+      letter-spacing:-.04em;
+      color:var(--cream);
+      display:-webkit-box;
+      -webkit-line-clamp:2;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    .desktop-showcase__thumb-meta{
+      font-size:11px;
+      line-height:1.45;
+      color:rgba(241,236,223,.74);
+      display:-webkit-box;
+      -webkit-line-clamp:1;
+      -webkit-box-orient:vertical;
+      overflow:hidden;
+    }
+    .desktop-showcase__thumb-badge{
+      display:inline-flex;
+      align-items:center;
+      gap:6px;
+      width:max-content;
+      max-width:100%;
+      padding:5px 8px;
+      border-radius:999px;
+      background:rgba(255,255,255,.1);
+      border:1px solid rgba(255,255,255,.14);
+      color:var(--cream);
+      font-size:9px;
+      font-weight:900;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    @media(max-width:1260px){
+      .desktop-showcase__spotlight,
+      .desktop-showcase__visual{
+        min-height:380px;
+      }
+      .desktop-showcase__copy{
+        width:min(48%,400px);
+        padding:34px 28px 28px;
+      }
+      .desktop-showcase__thumbs{
+        grid-template-columns:repeat(4,minmax(0,1fr));
+      }
+    }
     .modal-title-shell{
       flex:1;
       display:grid;
@@ -1543,6 +1896,9 @@
       .continue-spotlight__title-logo{
         max-height:94px;
       }
+      .desktop-showcase{
+        grid-template-columns:minmax(0,1fr);
+      }
     }
     @media(max-width:640px){
       body.home-screen .hero-content{
@@ -1693,6 +2049,17 @@
         <button class="nav-tab active" data-type="">Inicio</button>
         <button class="nav-tab" data-type="pelicula">Peliculas</button>
         <button class="nav-tab" data-type="serie">Series</button>
+        <div class="nav-search" id="navSearch">
+          <div class="nav-search__wrap" id="navSearchWrap">
+            <button class="nav-search__toggle" id="navSearchToggle" type="button" aria-label="Buscar" aria-expanded="false" aria-controls="searchInput">
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"></circle>
+                <path d="M16 16L21 21" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path>
+              </svg>
+            </button>
+            <input class="nav-search__input" id="searchInput" type="text" placeholder="Buscar en inicio..." autocomplete="off">
+          </div>
+        </div>
       </div>
       <div class="nav-r">
         <span id="navProfile" style="font-size:12px;color:var(--cream3)"></span>
@@ -1711,10 +2078,6 @@
     </section>
 
     <div class="search-zone">
-      <div class="search-box">
-        <span class="si">Buscar</span>
-        <input class="inp" id="searchInput" type="text" placeholder="Buscar pelicula, serie, episodio o genero...">
-      </div>
       <div class="chip-row" id="chipRow"></div>
     </div>
 
@@ -1803,6 +2166,10 @@
     const WELCOME_PENDING_KEY = 'ff_welcome_pending';
     const navProfile = document.getElementById('navProfile');
     const adminBtn = document.getElementById('adminBtn');
+    const navSearch = document.getElementById('navSearch');
+    const navSearchWrap = document.getElementById('navSearchWrap');
+    const navSearchToggle = document.getElementById('navSearchToggle');
+    const searchInput = document.getElementById('searchInput');
     const heroBanner = document.getElementById('heroBanner');
     const heroBg = document.getElementById('heroBg');
     const heroContent = document.getElementById('heroContent');
@@ -1840,6 +2207,7 @@
     let activeSagaGroups = [];
     let homeDeferredWorkToken = 0;
     let mobileViewport = false;
+    let desktopShowcaseViewport = false;
     let contentReady = false;
     let episodesReady = false;
     let userStateReady = false;
@@ -1852,10 +2220,12 @@
     let deferInitialDesktopHome = false;
     let initialDesktopHomeRenderToken = 0;
     let homeRowsRenderToken = 0;
+    let navSearchOpen = false;
     const HERO_BACKDROP_ROTATION_MS = 6200;
     const HERO_LAYER_CROSSFADE_MS = 820;
     const MODAL_BACKDROP_ROTATION_MS = 6400;
     const MODAL_LAYER_CROSSFADE_MS = 980;
+    const SHOWCASE_PREVIEW_DELAY_MS = 1400;
 
     document.querySelectorAll('.nav-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -1864,6 +2234,7 @@
         btn.classList.add('active');
         activeType = btn.dataset.type || '';
         activeCategory = '';
+        syncNavSearchUi();
         renderHero();
         renderChips();
         renderHome();
@@ -1873,18 +2244,54 @@
     const handleHomeSearchInput = debounce((value) => {
       disableInitialDesktopHomeDefer();
       searchText = String(value || '').trim().toLowerCase();
+      syncNavSearchUi();
       renderChips();
       renderHome();
     }, 120);
 
-    document.getElementById('searchInput').addEventListener('input', (event) => {
+    searchInput.addEventListener('input', (event) => {
       handleHomeSearchInput(event.target.value);
+    });
+
+    navSearchToggle.addEventListener('click', () => {
+      if (!navSearchOpen) {
+        setNavSearchOpen(true, { focus: true });
+        return;
+      }
+
+      if (String(searchInput.value || '').trim()) {
+        searchInput.focus();
+        searchInput.select();
+        return;
+      }
+
+      setNavSearchOpen(false, { focus: false });
+    });
+
+    searchInput.addEventListener('focus', () => {
+      setNavSearchOpen(true, { focus: false });
+    });
+
+    searchInput.addEventListener('blur', () => {
+      setTimeout(closeNavSearchIfIdle, 0);
+    });
+
+    searchInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Escape') return;
+      if (searchInput.value) {
+        searchInput.value = '';
+        handleHomeSearchInput('');
+      }
+      setNavSearchOpen(false, { focus: false });
+      navSearchToggle.focus();
     });
 
     async function init() {
       showWelcomeIfPending();
       mobileViewport = isMobileViewport();
+      desktopShowcaseViewport = isDesktopShowcaseViewport();
       deferInitialDesktopHome = !mobileViewport;
+      syncNavSearchUi();
       wireHomeInteractions();
       const contentPromise = fetchContent();
       const episodesPromise = fetchEpisodes();
@@ -1961,6 +2368,44 @@
 
     function isMobileViewport() {
       return typeof window !== 'undefined' && window.matchMedia('(max-width: 640px)').matches;
+    }
+
+    function getHomeSearchPlaceholder() {
+      if (activeType === 'pelicula') return 'Buscar en peliculas...';
+      if (activeType === 'serie') return 'Buscar en series...';
+      return 'Buscar en inicio...';
+    }
+
+    function setNavSearchOpen(nextOpen, options = {}) {
+      navSearchOpen = Boolean(nextOpen);
+      navSearchWrap.classList.toggle('is-open', navSearchOpen);
+      navSearchToggle.setAttribute('aria-expanded', String(navSearchOpen));
+
+      if (navSearchOpen && options.focus !== false) {
+        requestAnimationFrame(() => {
+          searchInput.focus();
+          if (options.select) searchInput.select();
+        });
+      }
+    }
+
+    function syncNavSearchUi() {
+      searchInput.placeholder = getHomeSearchPlaceholder();
+      if (searchText) {
+        setNavSearchOpen(true, { focus: false });
+      } else if (document.activeElement !== searchInput) {
+        setNavSearchOpen(false, { focus: false });
+      }
+    }
+
+    function closeNavSearchIfIdle() {
+      if (String(searchInput.value || '').trim()) return;
+      if (document.activeElement === searchInput) return;
+      setNavSearchOpen(false, { focus: false });
+    }
+
+    function isDesktopShowcaseViewport() {
+      return typeof window !== 'undefined' && window.matchMedia('(min-width: 1025px)').matches;
     }
 
     function getItemFilterValues(item = {}) {
@@ -2617,28 +3062,45 @@
       showcaseTimer = null;
       showcaseRotationIds = [];
       showcaseState = {};
+      syncAllShowcasePreviewPlayback(true);
     }
 
     function setShowcaseIndex(id, nextIndex) {
       const root = document.querySelector(`[data-showcase-id="${id}"]`);
       if (!root) return;
-      const slides = [...root.querySelectorAll('.showcase-slide')];
+      const slides = [...root.querySelectorAll('[data-showcase-slide], .showcase-slide:not([data-showcase-detail])')];
+      const details = [...root.querySelectorAll('[data-showcase-detail]')];
       const dots = [...root.querySelectorAll('.showcase-dot')];
+      const thumbs = [...root.querySelectorAll('[data-showcase-thumb]')];
       if (!slides.length) return;
 
       const normalized = (nextIndex + slides.length) % slides.length;
       showcaseState[id] = normalized;
 
-      slides.forEach((slide, index) => slide.classList.toggle('is-active', index === normalized));
+      slides.forEach((slide, index) => {
+        const isActive = index === normalized;
+        slide.classList.toggle('is-active', isActive);
+        slide.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      });
+      details.forEach((detail, index) => {
+        const isActive = index === normalized;
+        detail.classList.toggle('is-active', isActive);
+        detail.setAttribute('aria-hidden', isActive ? 'false' : 'true');
+      });
       dots.forEach((dot, index) => dot.classList.toggle('is-active', index === normalized));
+      thumbs.forEach((thumb, index) => {
+        const isActive = index === normalized;
+        thumb.classList.toggle('is-active', isActive);
+        thumb.setAttribute('aria-pressed', String(isActive));
+      });
+      syncShowcasePreviewPlayback(root, normalized);
     }
 
     function setupShowcaseRotators() {
       stopShowcaseRotators();
-      const rotatableIds = [];
       document.querySelectorAll('[data-showcase-id]').forEach((root) => {
         const id = root.dataset.showcaseId;
-        const slides = root.querySelectorAll('.showcase-slide');
+        const slides = root.querySelectorAll('[data-showcase-slide], .showcase-slide:not([data-showcase-detail])');
         if (!slides.length) return;
 
         showcaseState[id] = 0;
@@ -2650,19 +3112,17 @@
           });
         });
 
-        if (slides.length > 1) {
-          rotatableIds.push(id);
-        }
-      });
-
-      showcaseRotationIds = rotatableIds;
-      if (!canAutoRotateHomeRows() || !showcaseRotationIds.length) return;
-
-      showcaseTimer = setInterval(() => {
-        showcaseRotationIds.forEach((id) => {
-          setShowcaseIndex(id, (showcaseState[id] || 0) + 1);
+        root.querySelectorAll('[data-showcase-thumb]').forEach((thumb) => {
+          const activateThumb = () => {
+            setShowcaseIndex(id, Number(thumb.dataset.index || 0));
+          };
+          thumb.addEventListener('click', activateThumb);
+          if (desktopShowcaseViewport) {
+            thumb.addEventListener('pointerenter', activateThumb);
+          }
         });
-      }, 9800);
+      });
+      showcaseRotationIds = [];
     }
 
     function stopSagaRotators() {
@@ -2720,6 +3180,7 @@
         stopHeroBackdropRotation();
         stopShowcaseRotators();
         stopSagaRotators();
+        syncAllShowcasePreviewPlayback(true);
         return;
       }
 
@@ -2783,6 +3244,317 @@
       }
 
       return `<h2 class="modal-title modal-title--text">${escapeHtml(safeTitle)}</h2>`;
+    }
+
+    function parsePreviewOffsetValue(value = '') {
+      if (value === null || value === undefined || value === '') return NaN;
+      const numeric = Number(value);
+      if (Number.isFinite(numeric) && numeric >= 0) return numeric;
+      return parseDurationToSeconds(String(value || '').trim());
+    }
+
+    function isLikelyDirectPreviewUrl(url = '') {
+      const text = String(url || '').trim();
+      if (!text) return false;
+      if (isDriveUrl(text) || /youtube\.com|youtu\.be/i.test(text)) return false;
+      return /^(https?:)?\/\//i.test(text)
+        || text.startsWith('/')
+        || text.startsWith('./')
+        || text.startsWith('../')
+        || /\.(mp4|webm|ogg|m4v|mov)(?:[?#].*)?$/i.test(text);
+    }
+
+    function computeDefaultPreviewStart(durationValue = '') {
+      const totalSeconds = Number(parseDurationToSeconds(durationValue || ''));
+      if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return 18;
+      const suggested = Math.round(totalSeconds * 0.22);
+      return Math.max(12, Math.min(suggested, Math.max(0, totalSeconds - 12)));
+    }
+
+    function getPreviewMediaFromItem(item = {}) {
+      const explicitUrl = [
+        item.previewVideoUrl,
+        item.previewUrl,
+        item.previewClipUrl,
+        item.clipPreviewUrl,
+        item.previewMediaUrl,
+        item.previewSrc
+      ]
+        .map((value) => String(value || '').trim())
+        .find(Boolean) || '';
+      const startSeconds = [
+        item.previewStartSeconds,
+        item.previewStart,
+        item.previewOffset,
+        item.previewAt,
+        item.previewTime
+      ]
+        .map((value) => parsePreviewOffsetValue(value))
+        .find((value) => Number.isFinite(value) && value >= 0);
+
+      return {
+        url: isLikelyDirectPreviewUrl(explicitUrl) ? explicitUrl : '',
+        startSeconds: Number.isFinite(startSeconds)
+          ? startSeconds
+          : computeDefaultPreviewStart(item.duracion || '')
+      };
+    }
+
+    function getSeriesPreviewEpisode(serie = {}) {
+      const episodes = getSeriesEpisodes(serie.id);
+      if (!episodes.length) return null;
+      return sortNewest(
+        episodes,
+        (episode) => getTimestampValue(episode.fechaRegistro, episode.airDate, episode.temporada, episode.numeroEpisodio)
+      )[0] || episodes[0];
+    }
+
+    function getFeatureShowcasePreviewMedia(entry, summaryContent = null) {
+      if (!entry) return { url: '', startSeconds: 18 };
+
+      if (entry.kind === 'episode') {
+        const episodePreview = getPreviewMediaFromItem(entry.episode || {});
+        if (episodePreview.url) return episodePreview;
+        return getPreviewMediaFromItem(entry.serie || {});
+      }
+
+      if (entry.kind === 'series') {
+        const previewEpisode = getSeriesPreviewEpisode(entry.serie || {});
+        if (previewEpisode) {
+          const episodePreview = getPreviewMediaFromItem(previewEpisode);
+          if (episodePreview.url) return episodePreview;
+        }
+        return getPreviewMediaFromItem(entry.serie || {});
+      }
+
+      return getPreviewMediaFromItem(entry.content || entry.item || summaryContent || {});
+    }
+
+    function getFeatureShowcaseStageImage(summary = {}) {
+      return getHeroBackdropSources(summary.content)[0]
+        || summary.ambientArt
+        || summary.image
+        || '';
+    }
+
+    function renderDesktopShowcaseTitleVisual(item = {}, title = '') {
+      const safeTitle = title || item?.titulo || 'Contenido';
+      const logoUrl = getHeroTitleLogoUrl(item);
+      if (logoUrl) {
+        return `
+          <div class="desktop-showcase__title-slot">
+            <img class="desktop-showcase__title-logo" src="${escapeHtml(logoUrl)}" alt="${escapeHtml(safeTitle)}">
+          </div>
+        `;
+      }
+
+      return `
+        <div class="desktop-showcase__title-slot">
+          <h2 class="desktop-showcase__title">${escapeHtml(safeTitle)}</h2>
+        </div>
+      `;
+    }
+
+    function renderDesktopShowcaseSlide(summary, index) {
+      if (!summary?.content) return '';
+      const previewMedia = summary.previewMedia || { url: '', startSeconds: 18 };
+      const stageImage = getFeatureShowcaseStageImage(summary);
+      const metaParts = [
+        ...(summary.meta || []).filter(Boolean)
+      ];
+      const metaHtml = metaParts.length
+        ? metaParts.map((value) => `<span>${escapeHtml(value)}</span>`).join('<span>•</span>')
+        : '';
+
+      return `
+        <div class="desktop-showcase__slide showcase-slide ${index === 0 ? 'is-active' : ''}" data-showcase-slide aria-hidden="${index === 0 ? 'false' : 'true'}">
+          <div class="desktop-showcase__visual" data-content-id="${escapeHtml(summary.content.id)}">
+            <div class="desktop-showcase__art">
+              ${mediaCardImage(stageImage, summary.content.tipo === 'serie' ? 'TV' : 'PLAY', summary.title)}
+            </div>
+            ${previewMedia.url ? `
+              <video
+                class="desktop-showcase__video"
+                data-showcase-video
+                data-start-seconds="${escapeHtml(String(previewMedia.startSeconds || 0))}"
+                muted
+                playsinline
+                loop
+                preload="none"
+                poster="${escapeHtml(stageImage)}"
+                onerror="handleShowcasePreviewError(this)"
+                aria-hidden="true"
+                tabindex="-1"
+              >
+                <source src="${escapeHtml(previewMedia.url)}">
+              </video>
+            ` : ''}
+            <div class="desktop-showcase__copy">
+              <div class="desktop-showcase__eyebrow">${escapeHtml(summary.typeLabel || 'Destacado')}</div>
+              ${renderDesktopShowcaseTitleVisual(summary.content, summary.title)}
+              ${metaHtml ? `<div class="desktop-showcase__meta">${metaHtml}</div>` : ''}
+              <p class="desktop-showcase__synopsis">${escapeHtml(summary.synopsis || 'Sinopsis no disponible.')}</p>
+              <div class="desktop-showcase__actions">
+                <button class="btn btn-amber" type="button" onclick="${summary.onclick}">${escapeHtml(summary.buttonLabel || 'Abrir')}</button>
+                ${summary.detailAction ? `<button class="btn btn-ghost" type="button" onclick="${summary.detailAction}">Mas informacion</button>` : ''}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderDesktopShowcaseThumb(summary, index) {
+      if (!summary?.content) return '';
+      const thumbImage = getFeatureShowcaseStageImage(summary) || summary.image || summary.ambientArt;
+      const thumbMeta = [summary.meta?.[0] || '', summary.meta?.[1] || ''].filter(Boolean).join(' • ');
+      const previewLabel = summary.previewMedia?.url ? 'Clip' : '';
+
+      return `
+        <button
+          class="desktop-showcase__thumb ${index === 0 ? 'is-active' : ''}"
+          type="button"
+          data-showcase-thumb
+          data-index="${index}"
+          aria-label="Mostrar ${escapeHtml(summary.title)}"
+          aria-pressed="${index === 0 ? 'true' : 'false'}"
+        >
+          <span class="desktop-showcase__thumb-media">
+            ${mediaCardImage(thumbImage, summary.content.tipo === 'serie' ? 'TV' : 'FILM', summary.title)}
+          </span>
+          <span class="desktop-showcase__thumb-copy">
+            ${previewLabel ? `<span class="desktop-showcase__thumb-badge">${escapeHtml(previewLabel)}</span>` : ''}
+            <span class="desktop-showcase__thumb-title">${escapeHtml(summary.title)}</span>
+            <span class="desktop-showcase__thumb-meta">${escapeHtml(thumbMeta || summary.typeLabel || 'Destacado')}</span>
+          </span>
+        </button>
+      `;
+    }
+
+    function renderDesktopFeatureShowcaseSection(title, id, summaries, subtitle = '', options = {}) {
+
+      return renderSection(
+        title,
+        options.icon || 'Nuevo',
+        `
+          <div class="desktop-showcase" data-showcase-id="${escapeHtml(id)}">
+            <div class="desktop-showcase__rail">
+              <div class="desktop-showcase__spotlight">
+                ${summaries.map((summary, index) => renderDesktopShowcaseSlide(summary, index)).join('')}
+              </div>
+              ${summaries.length > 1 ? `
+                <div class="desktop-showcase__thumbs">
+                  ${summaries.map((summary, index) => renderDesktopShowcaseThumb(summary, index)).join('')}
+                </div>
+              ` : ''}
+            </div>
+          </div>
+        `,
+        subtitle,
+        {
+          art: options.art || summaries[0]?.ambientArt || getItemAmbientArt(summaries[0]?.content),
+          contentId: summaries[0]?.content?.id || '',
+          className: options.className || 'section--feature-showcase'
+        }
+      );
+    }
+
+    function handleShowcasePreviewError(videoEl) {
+      if (!videoEl) return;
+      videoEl.classList.add('is-hidden');
+    }
+
+    function canPlayShowcasePreviewVideos() {
+      return desktopShowcaseViewport
+        && typeof document !== 'undefined'
+        && !document.hidden
+        && !(typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    }
+
+    function primeShowcasePreviewVideo(videoEl) {
+      if (!(videoEl instanceof HTMLVideoElement) || videoEl.dataset.previewReady === '1') return;
+      videoEl.dataset.previewReady = '1';
+      videoEl.muted = true;
+      videoEl.playsInline = true;
+      videoEl.loop = true;
+      videoEl.preload = 'none';
+
+      videoEl.addEventListener('error', () => {
+        videoEl.classList.add('is-hidden');
+      });
+      videoEl.addEventListener('loadedmetadata', () => {
+        const startSeconds = Number(videoEl.dataset.startSeconds || 0);
+        if (!Number.isFinite(startSeconds) || startSeconds <= 0) return;
+        try {
+          videoEl.currentTime = Math.min(startSeconds, Math.max(0, (videoEl.duration || startSeconds) - 0.25));
+        } catch (error) {
+          // Ignore media seek issues and keep the browser default.
+        }
+      });
+    }
+
+    function clearShowcasePreviewDelay(videoEl) {
+      if (!videoEl?._previewDelayTimer) return;
+      clearTimeout(videoEl._previewDelayTimer);
+      videoEl._previewDelayTimer = null;
+    }
+
+    function syncShowcasePreviewPlayback(root, activeIndex = 0) {
+      if (!(root instanceof HTMLElement)) return;
+      const canPlay = canPlayShowcasePreviewVideos();
+      const slides = [...root.querySelectorAll('[data-showcase-slide], .showcase-slide:not([data-showcase-detail])')];
+
+      slides.forEach((slide, index) => {
+        slide.querySelectorAll('[data-showcase-video]').forEach((videoEl) => {
+          primeShowcasePreviewVideo(videoEl);
+          clearShowcasePreviewDelay(videoEl);
+          if (!canPlay || index !== activeIndex || videoEl.classList.contains('is-hidden')) {
+            videoEl.pause();
+            const startSeconds = Number(videoEl.dataset.startSeconds || 0);
+            if (Number.isFinite(startSeconds) && startSeconds >= 0 && Number.isFinite(videoEl.duration)) {
+              try {
+                videoEl.currentTime = Math.min(startSeconds, Math.max(0, videoEl.duration - 0.25));
+              } catch (error) {
+                // Ignore media seek issues while resetting the preview.
+              }
+            }
+            return;
+          }
+
+          const startSeconds = Number(videoEl.dataset.startSeconds || 0);
+          const playVideo = () => {
+            if (Number.isFinite(startSeconds) && startSeconds >= 0 && Number.isFinite(videoEl.duration) && Math.abs(videoEl.currentTime - startSeconds) > 1.5) {
+              try {
+                videoEl.currentTime = Math.min(startSeconds, Math.max(0, videoEl.duration - 0.25));
+              } catch (error) {
+                // Ignore seek errors and try to play from the current position.
+              }
+            }
+            const playPromise = videoEl.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+              playPromise.catch(() => {});
+            }
+          };
+
+          videoEl._previewDelayTimer = setTimeout(() => {
+            if (videoEl.classList.contains('is-hidden')) return;
+            if (videoEl.readyState >= 1) {
+              playVideo();
+              return;
+            }
+            videoEl.addEventListener('loadedmetadata', playVideo, { once: true });
+            videoEl.load();
+          }, SHOWCASE_PREVIEW_DELAY_MS);
+        });
+      });
+    }
+
+    function syncAllShowcasePreviewPlayback(forcePause = false) {
+      document.querySelectorAll('[data-showcase-id]').forEach((root) => {
+        const id = root.dataset.showcaseId;
+        const activeIndex = forcePause ? -1 : Number(showcaseState[id] || 0);
+        syncShowcasePreviewPlayback(root, activeIndex);
+      });
     }
 
     function renderHero() {
@@ -3180,6 +3952,11 @@
 
       heroBanner.addEventListener('pointermove', onHeroPointerMove);
       heroBanner.addEventListener('pointerleave', resetHeroParallax);
+      document.addEventListener('pointerdown', (event) => {
+        if (!navSearchOpen) return;
+        if (navSearch.contains(event.target)) return;
+        closeNavSearchIfIdle();
+      });
     }
 
     function scheduleLowPriority(callback, timeout = 220) {
@@ -3532,7 +4309,8 @@
           buttonLabel: item.tipo === 'pelicula' ? 'Reproducir' : 'Abrir serie',
           typeLabel: item.tipo === 'pelicula' ? 'Pelicula recien anadida' : 'Serie recien anadida',
           ratingItem: item,
-          showProgress: progressState.percent > 0
+          showProgress: progressState.percent > 0,
+          previewMedia: getFeatureShowcasePreviewMedia(entry, item)
         };
       }
 
@@ -3558,7 +4336,8 @@
           buttonLabel: 'Abrir serie',
           typeLabel: 'Novedad en series',
           ratingItem: serie,
-          showProgress: progressState.percent > 0
+          showProgress: progressState.percent > 0,
+          previewMedia: getFeatureShowcasePreviewMedia(entry, serie)
         };
       }
 
@@ -3586,7 +4365,8 @@
           buttonLabel: 'Ver episodio',
           typeLabel: 'Novedad en series',
           ratingItem: serie,
-          showProgress: progressState.percent > 0
+          showProgress: progressState.percent > 0,
+          previewMedia: getFeatureShowcasePreviewMedia(entry, serie)
         };
       }
 
@@ -3662,6 +4442,10 @@
     function renderFeatureShowcaseSection(title, id, entries, subtitle = '', options = {}) {
       const summaries = entries.map(buildFeatureSpotlightSummary).filter((entry) => entry?.content);
       if (!summaries.length) return '';
+
+      if (desktopShowcaseViewport) {
+        return renderDesktopFeatureShowcaseSection(title, id, summaries, subtitle, options);
+      }
 
       return renderSection(
         title,
@@ -3873,10 +4657,11 @@
       const sagaGroups = buildSagaGroups(movies);
       activeSagaGroups = sagaGroups;
       const sagaLookup = getSagaLookup(sagaGroups);
-      const recentMovies = getRecentContentItems(movies, 3);
-      const recentSeriesUpdates = getRecentSeriesUpdates(series, 3);
+      const showcaseLimit = desktopShowcaseViewport ? 4 : 3;
+      const recentMovies = getRecentContentItems(movies, showcaseLimit);
+      const recentSeriesUpdates = getRecentSeriesUpdates(series, showcaseLimit);
       const recentMovieEntries = recentMovies.map(buildShowcaseEntryFromContent);
-      const recentHomeShowcase = getHomeRecentShowcaseEntries(items, 3, sagaGroups);
+      const recentHomeShowcase = getHomeRecentShowcaseEntries(items, showcaseLimit, sagaGroups);
       const homeContinue = getHomeContinueWatchingItems(continueWatchingAll);
       const movieContinue = getContinueWatchingForType(continueWatchingAll, 'pelicula');
       const seriesContinue = getContinueWatchingForType(continueWatchingAll, 'serie');
@@ -4581,9 +5366,11 @@
     window.addEventListener('resize', debounce(() => {
       disableInitialDesktopHomeDefer();
       const nextMobileViewport = isMobileViewport();
-      if (nextMobileViewport === mobileViewport) return;
+      const nextDesktopShowcaseViewport = isDesktopShowcaseViewport();
+      if (nextMobileViewport === mobileViewport && nextDesktopShowcaseViewport === desktopShowcaseViewport) return;
       mobileViewport = nextMobileViewport;
-       resetHeroParallax();
+      desktopShowcaseViewport = nextDesktopShowcaseViewport;
+      resetHeroParallax();
       renderChips();
       renderHome();
     }, 140));
